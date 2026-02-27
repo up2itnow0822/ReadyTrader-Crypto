@@ -21,4 +21,4 @@ uvicorn==0.40.0
 eth-keys==0.7.0
 eth-utils==5.3.1
 rlp==4.1.0
-cryptography==46.0.3
+cryptography==46.0.5

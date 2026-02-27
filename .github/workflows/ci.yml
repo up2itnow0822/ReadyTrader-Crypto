@@ -63,6 +63,7 @@ jobs:
         run: bandit -q -r . -c bandit.yaml
 
       - name: Dependency audit (pip-audit)
+        continue-on-error: true
         run: pip-audit -r requirements.txt || echo "⚠️ Known vulnerabilities found (non-blocking)"
 
       - name: Secret scan (trufflehog, verified only)
