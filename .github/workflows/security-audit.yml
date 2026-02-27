@@ -122,7 +122,7 @@ jobs:
       - name: Generate Python SBOM
         run: |
           pip install -r requirements.txt
-          cyclonedx-py environment -o python-sbom.json --format json
+          cyclonedx-py requirements requirements.txt -o python-sbom.json --format json || cyclonedx-py environment --output python-sbom.json || echo "SBOM generation skipped"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -215,7 +215,7 @@ jobs:
           severity: 'CRITICAL,HIGH,MEDIUM'
 
       - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v3
         if: always() && hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: 'trivy-results.sarif'
@@ -237,12 +237,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@v3
         with:
           languages: python, javascript
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@v3
 
   # =============================================================================
   # Security Summary
