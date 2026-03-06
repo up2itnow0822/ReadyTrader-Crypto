@@ -1,7 +1,12 @@
+import json
+import logging
 import os
+import time
 from typing import Any, Dict, Optional
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 
 class WebhookManager:
@@ -21,8 +26,18 @@ class WebhookManager:
 
         try:
             requests.post(webhook_url, json=payload, timeout=5)
-        except Exception:  # nosec
-            pass  # Silent failure for observability
+        except Exception as e:
+            logger.error(f"Webhook delivery failed to Discord: {type(e).__name__}: {e}")
+            # Retry once after 2 seconds
+            try:
+                time.sleep(2)
+                requests.post(webhook_url, json=payload, timeout=5)
+            except Exception as retry_err:
+                logger.error(f"Webhook retry also failed (Discord): {retry_err}")
+                dead_letter_path = os.path.join(os.path.dirname(__file__), '../logs/webhook_dead_letter.jsonl')
+                os.makedirs(os.path.dirname(dead_letter_path), exist_ok=True)
+                with open(dead_letter_path, 'a') as f:
+                    f.write(json.dumps({"url": webhook_url, "payload": payload, "error": str(retry_err), "ts": time.time()}) + '\n')
 
     @staticmethod
     def send_telegram_notification(message: str):
@@ -36,8 +51,18 @@ class WebhookManager:
 
         try:
             requests.post(url, json=payload, timeout=5)
-        except Exception:  # nosec
-            pass
+        except Exception as e:
+            logger.error(f"Webhook delivery failed to Telegram: {type(e).__name__}: {e}")
+            # Retry once after 2 seconds
+            try:
+                time.sleep(2)
+                requests.post(url, json=payload, timeout=5)
+            except Exception as retry_err:
+                logger.error(f"Webhook retry also failed (Telegram): {retry_err}")
+                dead_letter_path = os.path.join(os.path.dirname(__file__), '../logs/webhook_dead_letter.jsonl')
+                os.makedirs(os.path.dirname(dead_letter_path), exist_ok=True)
+                with open(dead_letter_path, 'a') as f:
+                    f.write(json.dumps({"url": url, "payload": payload, "error": str(retry_err), "ts": time.time()}) + '\n')
 
     @classmethod
     def notify_approval_required(cls, kind: str, amount: float, symbol: str, request_id: str):
