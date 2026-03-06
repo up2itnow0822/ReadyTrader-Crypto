@@ -34,10 +34,10 @@ class WebhookManager:
                 requests.post(webhook_url, json=payload, timeout=5)
             except Exception as retry_err:
                 logger.error(f"Webhook retry also failed (Discord): {retry_err}")
-                dead_letter_path = os.path.join(os.path.dirname(__file__), '../logs/webhook_dead_letter.jsonl')
+                dead_letter_path = os.path.join(os.path.dirname(__file__), "../logs/webhook_dead_letter.jsonl")
                 os.makedirs(os.path.dirname(dead_letter_path), exist_ok=True)
-                with open(dead_letter_path, 'a') as f:
-                    f.write(json.dumps({"url": webhook_url, "payload": payload, "error": str(retry_err), "ts": time.time()}) + '\n')
+                with open(dead_letter_path, "a") as f:
+                    f.write(json.dumps({"url": webhook_url, "payload": payload, "error": str(retry_err), "ts": time.time()}) + "\n")
 
     @staticmethod
     def send_telegram_notification(message: str):
@@ -59,10 +59,10 @@ class WebhookManager:
                 requests.post(url, json=payload, timeout=5)
             except Exception as retry_err:
                 logger.error(f"Webhook retry also failed (Telegram): {retry_err}")
-                dead_letter_path = os.path.join(os.path.dirname(__file__), '../logs/webhook_dead_letter.jsonl')
+                dead_letter_path = os.path.join(os.path.dirname(__file__), "../logs/webhook_dead_letter.jsonl")
                 os.makedirs(os.path.dirname(dead_letter_path), exist_ok=True)
-                with open(dead_letter_path, 'a') as f:
-                    f.write(json.dumps({"url": url, "payload": payload, "error": str(retry_err), "ts": time.time()}) + '\n')
+                with open(dead_letter_path, "a") as f:
+                    f.write(json.dumps({"url": url, "payload": payload, "error": str(retry_err), "ts": time.time()}) + "\n")
 
     @classmethod
     def notify_approval_required(cls, kind: str, amount: float, symbol: str, request_id: str):
