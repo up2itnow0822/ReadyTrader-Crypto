@@ -1,6 +1,6 @@
 # ReadyTrader-Crypto
 
-[![CI](https://github.com/up2itnow/ReadyTrader-Crypto/actions/workflows/ci.yml/badge.svg)](https://github.com/up2itnow/ReadyTrader-Crypto/actions/workflows/ci.yml)
+[![CI](https://github.com/up2itnow0822/ReadyTrader-Crypto/actions/workflows/ci.yml/badge.svg)](https://github.com/up2itnow0822/ReadyTrader-Crypto/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## Important Disclaimer (Read Before Use)
