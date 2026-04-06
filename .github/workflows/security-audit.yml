@@ -207,7 +207,7 @@ jobs:
           load: true
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.31.0
+        uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: readytrader-crypto:security-scan
           format: 'sarif'
@@ -222,7 +222,7 @@ jobs:
         continue-on-error: true
 
       - name: Trivy Table Output
-        uses: aquasecurity/trivy-action@0.31.0
+        uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: readytrader-crypto:security-scan
           format: 'table'
