@@ -9,13 +9,13 @@
 # =============================================================================
 # Build stage
 # =============================================================================
-FROM python:3.12-slim AS builder
+FROM python:3.12-slim-bookworm AS builder
 
 WORKDIR /build
 
 # Install build dependencies
 # hadolint ignore=DL3008
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
@@ -28,7 +28,7 @@ RUN python -m pip install --no-cache-dir --upgrade pip && \
 # =============================================================================
 # Base production stage (shared by MCP and API)
 # =============================================================================
-FROM python:3.12-slim AS base
+FROM python:3.12-slim-bookworm AS base
 
 # Security: Create non-root user
 RUN groupadd --gid 1000 readytrader && \
@@ -38,15 +38,17 @@ WORKDIR /app
 
 # Security: Install only runtime dependencies
 # hadolint ignore=DL3008
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     ca-certificates \
-    curl \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
 # Copy wheels from builder and install
 COPY --from=builder /wheels /wheels
-RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
+COPY requirements.txt .
+RUN python -m pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt && \
+    rm -rf /wheels
 
 # Copy application code
 COPY --chown=readytrader:readytrader . .
@@ -118,7 +120,7 @@ EXPOSE 8000
 
 # Healthcheck for API server
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8000/api/health || exit 1
+    CMD python -c "import sys, urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=5); sys.exit(0)" || exit 1
 
 CMD ["python", "-m", "uvicorn", "api_server:app", "--host", "0.0.0.0", "--port", "8000"]
 
