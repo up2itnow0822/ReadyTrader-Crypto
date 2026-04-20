@@ -454,7 +454,7 @@ async def approve_trade(req: ApprovalRequest, user: dict = Depends(require_auth)
         return JSONResponse(status_code=400, content=json_error_response(e))
     except Exception as e:
         log_event("trade_approval_error", ctx=API_CTX, data={"error": str(e)})
-        error = InternalError(component="approve_trade", reason=str(e))
+        error = InternalError(component="approve_trade", reason="unexpected internal failure")
         return JSONResponse(status_code=500, content=json_error_response(error))
 
 
