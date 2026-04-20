@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import time
 from typing import Any, Dict, Optional
@@ -21,6 +22,8 @@ from execution.evm import (
 )
 from execution.router import venue_allowed
 from observability.audit import now_ms
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_int(v: Any, default: int = 0) -> int:
@@ -53,6 +56,16 @@ def _json_ok(data: Dict[str, Any] | None = None) -> str:
 def _json_err(code: str, message: str, data: Dict[str, Any] | None = None) -> str:
     payload = {"ok": False, "error": {"code": code, "message": message, "data": data or {}}}
     return json.dumps(payload, indent=2, sort_keys=True)
+
+
+def _json_internal_error(
+    code: str,
+    public_message: str,
+    exc: Exception,
+    data: Dict[str, Any] | None = None,
+) -> str:
+    logger.exception("%s: %s", code, exc)
+    return _json_err(code, public_message, data)
 
 
 def _require_live_allowed(*, venue: str) -> None:
@@ -239,7 +252,7 @@ def swap_tokens(
             global_container.idempotency_store.set(idempotency_key, summary)
         return _json_ok({"venue": "dex", "mode": "live", **summary})
     except Exception as e:
-        return _json_err("execution_error", str(e))
+        return _json_internal_error("execution_error", "Execution failed.", e)
 
 
 def transfer_eth(to_address: str, amount: float, chain: str = "ethereum", idempotency_key: str = "") -> str:
@@ -315,7 +328,7 @@ def transfer_eth(to_address: str, amount: float, chain: str = "ethereum", idempo
             global_container.idempotency_store.set(idempotency_key, summary)
         return _json_ok({"venue": "dex", "mode": "live", **summary})
     except Exception as e:
-        return _json_err("transfer_error", str(e))
+        return _json_internal_error("transfer_error", "Transfer failed.", e)
 
 
 def place_cex_order(
@@ -418,7 +431,7 @@ def place_cex_order(
             global_container.idempotency_store.set(idempotency_key, summary)
         return _json_ok({"venue": "cex", "mode": "live", **summary})
     except Exception as e:
-        return _json_err("cex_error", str(e))
+        return _json_internal_error("cex_error", "Exchange operation failed.", e)
 
 
 def get_cex_balance(exchange: str = "binance", market_type: str = "spot") -> str:
@@ -435,7 +448,7 @@ def get_cex_balance(exchange: str = "binance", market_type: str = "spot") -> str
         bal = ex.fetch_balance()
         return _json_ok({"exchange": exchange, "market_type": market_type, "balance": bal})
     except Exception as e:
-        return _json_err("cex_error", str(e))
+        return _json_internal_error("cex_error", "Exchange operation failed.", e)
 
 
 def get_cex_order(order_id: str, symbol: str = "", exchange: str = "binance", market_type: str = "spot") -> str:
@@ -452,7 +465,7 @@ def get_cex_order(order_id: str, symbol: str = "", exchange: str = "binance", ma
         raw = ex.fetch_order(order_id=order_id, symbol=(symbol or None))
         return _json_ok({"exchange": exchange, "market_type": market_type, "order": ex.normalize_order(raw)})
     except Exception as e:
-        return _json_err("cex_error", str(e))
+        return _json_internal_error("cex_error", "Exchange operation failed.", e)
 
 
 def cancel_cex_order(order_id: str, symbol: str = "", exchange: str = "binance", market_type: str = "spot") -> str:
@@ -469,7 +482,7 @@ def cancel_cex_order(order_id: str, symbol: str = "", exchange: str = "binance",
         raw = ex.cancel_order(order_id=order_id, symbol=(symbol or None))
         return _json_ok({"exchange": exchange, "market_type": market_type, "result": raw})
     except Exception as e:
-        return _json_err("cex_error", str(e))
+        return _json_internal_error("cex_error", "Exchange operation failed.", e)
 
 
 def get_cex_capabilities(exchange: str = "binance", symbol: str = "", market_type: str = "spot") -> str:
@@ -488,7 +501,7 @@ def get_cex_capabilities(exchange: str = "binance", symbol: str = "", market_typ
         cap = ex.get_capabilities(symbol=symbol or "")
         return _json_ok({"capabilities": cap})
     except Exception as e:
-        return _json_err("cex_error", str(e))
+        return _json_internal_error("cex_error", "Exchange operation failed.", e)
 
 
 def list_cex_open_orders(exchange: str = "binance", symbol: str = "", market_type: str = "spot", limit: int = 100) -> str:
@@ -506,7 +519,7 @@ def list_cex_open_orders(exchange: str = "binance", symbol: str = "", market_typ
         normalized = [ex.normalize_order(o) for o in (orders or [])][-max(0, int(limit)) :]
         return _json_ok({"exchange": exchange, "market_type": market_type, "orders": normalized})
     except Exception as e:
-        return _json_err("cex_error", str(e))
+        return _json_internal_error("cex_error", "Exchange operation failed.", e)
 
 
 def list_cex_orders(exchange: str = "binance", symbol: str = "", market_type: str = "spot", limit: int = 100) -> str:
@@ -524,7 +537,7 @@ def list_cex_orders(exchange: str = "binance", symbol: str = "", market_type: st
         normalized = [ex.normalize_order(o) for o in (orders or [])]
         return _json_ok({"exchange": exchange, "market_type": market_type, "orders": normalized})
     except Exception as e:
-        return _json_err("cex_error", str(e))
+        return _json_internal_error("cex_error", "Exchange operation failed.", e)
 
 
 def get_cex_my_trades(exchange: str = "binance", symbol: str = "", market_type: str = "spot", limit: int = 100) -> str:
@@ -541,7 +554,7 @@ def get_cex_my_trades(exchange: str = "binance", symbol: str = "", market_type: 
         trades = ex.fetch_my_trades(symbol=(symbol or None), limit=int(limit) if limit else None)
         return _json_ok({"exchange": exchange, "market_type": market_type, "trades": trades})
     except Exception as e:
-        return _json_err("cex_error", str(e))
+        return _json_internal_error("cex_error", "Exchange operation failed.", e)
 
 
 def cancel_all_cex_orders(exchange: str = "binance", symbol: str = "", market_type: str = "spot") -> str:
@@ -559,7 +572,7 @@ def cancel_all_cex_orders(exchange: str = "binance", symbol: str = "", market_ty
         res = ex.cancel_all_orders(symbol=(symbol or None))
         return _json_ok({"exchange": exchange, "market_type": market_type, "result": res})
     except Exception as e:
-        return _json_err("cex_error", str(e))
+        return _json_internal_error("cex_error", "Exchange operation failed.", e)
 
 
 def replace_cex_order(
@@ -594,7 +607,7 @@ def replace_cex_order(
         )
         return _json_ok({"exchange": exchange, "market_type": market_type, "order": ex.normalize_order(res)})
     except Exception as e:
-        return _json_err("cex_error", str(e))
+        return _json_internal_error("cex_error", "Exchange operation failed.", e)
 
 
 def wait_for_cex_order(
@@ -627,7 +640,7 @@ def wait_for_cex_order(
                 return _json_err("timeout", "Timed out waiting for order terminal status.", {"order": order})
             time.sleep(max(0.25, float(poll_interval_sec)))
     except Exception as e:
-        return _json_err("cex_error", str(e))
+        return _json_internal_error("cex_error", "Exchange operation failed.", e)
 
 
 def start_cex_private_ws(exchange: str = "binance", market_type: str = "spot") -> str:
@@ -663,7 +676,7 @@ def start_cex_private_ws(exchange: str = "binance", market_type: str = "spot") -
         global_container.cex_private_updates.start(exchange=ex, market_type=mt, poll_interval_sec=poll)
         return _json_ok({"mode": "poll", "exchange": ex, "market_type": mt, "status": "started"})
     except Exception as e:
-        return _json_err("cex_error", str(e))
+        return _json_internal_error("cex_error", "Exchange operation failed.", e)
 
 
 def stop_cex_private_ws(exchange: str = "binance", market_type: str = "spot") -> str:
@@ -694,7 +707,7 @@ def stop_cex_private_ws(exchange: str = "binance", market_type: str = "spot") ->
         global_container.cex_private_updates.stop(exchange=ex, market_type=mt)
         return _json_ok({"mode": "poll", "exchange": ex, "market_type": mt, "status": "stopped"})
     except Exception as e:
-        return _json_err("cex_error", str(e))
+        return _json_internal_error("cex_error", "Exchange operation failed.", e)
 
 
 def list_cex_private_updates(exchange: str = "binance", market_type: str = "spot", limit: int = 100) -> str:
@@ -726,7 +739,7 @@ def list_cex_private_updates(exchange: str = "binance", market_type: str = "spot
         events = global_container.cex_private_updates.list_events(exchange=ex, market_type=mt, limit=int(limit))
         return _json_ok({"mode": "poll", "exchange": ex, "market_type": mt, "events": events})
     except Exception as e:
-        return _json_err("cex_error", str(e))
+        return _json_internal_error("cex_error", "Exchange operation failed.", e)
 
 
 def register_execution_tools(mcp: FastMCP):
