@@ -96,7 +96,7 @@ PyJWT==2.10.1
 pyperclip==1.11.0
 pytest==9.0.2
 python-dateutil==2.9.0.post0
-python-dotenv==1.2.1
+python-dotenv==1.2.2
 python-json-logger==4.0.0
 python-multipart==0.0.21
 pytz==2025.2
