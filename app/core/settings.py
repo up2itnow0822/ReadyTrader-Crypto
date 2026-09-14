@@ -28,7 +28,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class ExecutionMode(Enum):
+class ExecutionMode(str, Enum):
     """Execution routing mode."""
 
     DEX = "dex"
@@ -37,14 +37,14 @@ class ExecutionMode(Enum):
     AUTO = "auto"
 
 
-class ApprovalMode(Enum):
+class ApprovalMode(str, Enum):
     """Execution approval mode."""
 
     AUTO = "auto"
     APPROVE_EACH = "approve_each"
 
 
-class RiskProfile(Enum):
+class RiskProfile(str, Enum):
     """Risk profile presets."""
 
     CONSERVATIVE = "conservative"
