@@ -60,7 +60,7 @@ Update the closest owning AGENTS.md when a change affects purpose, scope, owners
 - `make security` (bandit + pip-audit)
 - Paper BTC harness: `python examples/paper_btc_uat.py`
 - UAT evidence: `docs/UAT_BTC_PRODUCTION_MINUS_DUST.md`
-- Hermes skill (sibling repo): `hermes-agent/optional-skills/finance/readytrader-crypto/`
+- Hermes skill (public MIT package): https://github.com/up2itnow0822/readytrader-crypto-hermes → install as `optional-skills/finance/readytrader-crypto/`
 
 ## Child DOX Index
 
@@ -156,4 +156,4 @@ When the user requests a durable behavior change, record it here or in the relev
 
 ## Child DOX Index
 
-This project is not yet indexed. Before continuing you must scan the project, build the DOX tree and replace this message with the actual index. Go deep and scan files recursively to properly evaluate complexity and create nested DOX files where needed.
+See the operational Child DOX Index in the first half of this file (`signing/`, `docs/`, parent-owned `app/` / `execution/` / `tests/`).
