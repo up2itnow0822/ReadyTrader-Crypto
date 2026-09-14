@@ -278,3 +278,81 @@ class TestTradeHistoryEndpoint:
         data = response.json()
         assert "trades" in data
         assert "mode" in data
+
+
+class TestWebSocketAuth:
+    """WebSocket /ws must require JWT when API_AUTH_REQUIRED=true (SEC-001)."""
+
+    def test_ws_rejects_without_token_when_auth_required(self):
+        from fastapi.testclient import TestClient
+
+        with patch.dict(
+            os.environ,
+            {
+                "PAPER_MODE": "true",
+                "SIGNER_TYPE": "null",
+                "RATE_LIMIT_ENABLED": "false",
+                "API_AUTH_REQUIRED": "true",
+                "API_JWT_SECRET": "test-secret-for-ws-auth-32chars!!",
+                "DEV_MODE": "true",
+                "CORS_ORIGINS": "http://localhost:3000",
+            },
+        ):
+            import importlib
+
+            import app.core.settings
+
+            importlib.reload(app.core.settings)
+            import api_server
+
+            importlib.reload(api_server)
+
+            client = TestClient(api_server.app)
+            with pytest.raises(Exception):
+                # Starlette TestClient raises on rejected WS close before accept
+                with client.websocket_connect("/ws"):
+                    pass
+
+    def test_ws_accepts_with_query_token_when_auth_required(self):
+        from datetime import datetime, timedelta, timezone
+
+        from fastapi.testclient import TestClient
+
+        secret = "test-secret-for-ws-auth-32chars!!"
+        with patch.dict(
+            os.environ,
+            {
+                "PAPER_MODE": "true",
+                "SIGNER_TYPE": "null",
+                "RATE_LIMIT_ENABLED": "false",
+                "API_AUTH_REQUIRED": "true",
+                "API_JWT_SECRET": secret,
+                "DEV_MODE": "true",
+                "CORS_ORIGINS": "http://localhost:3000",
+            },
+        ):
+            import importlib
+
+            import jwt as pyjwt
+
+            import app.core.settings
+
+            importlib.reload(app.core.settings)
+            import api_server
+
+            importlib.reload(api_server)
+
+            now = datetime.now(timezone.utc)
+            token = pyjwt.encode(
+                {
+                    "sub": "admin",
+                    "role": "admin",
+                    "iat": now,
+                    "exp": now + timedelta(hours=1),
+                },
+                secret,
+                algorithm="HS256",
+            )
+            client = TestClient(api_server.app)
+            with client.websocket_connect(f"/ws?token={token}") as ws:
+                ws.send_text("ping")

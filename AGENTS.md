@@ -42,7 +42,7 @@ Update the closest owning AGENTS.md when a change affects purpose, scope, owners
 
 ## User Preferences
 
-- Fail closed for production: when `DEV_MODE=false`, API auth required, CORS must not be `*`, `TRADING_HALTED` defaults true
+- Fail closed for production: when `DEV_MODE=false`, API auth required (including WebSocket `/ws` JWT), CORS must not be `*`, `TRADING_HALTED` defaults true; keep `.env.live` / `.env.*.local` gitignored
 - Never use `SIGNER_TYPE=env_private_key` when `PAPER_MODE=false` or `LIVE_TRADING_ENABLED=true`
 - Hermes integration is stdio MCP + skill — do not grow core Hermes tools for ReadyTrader
 - Live dust trades are out of scope until a dedicated Phase 4 UAT

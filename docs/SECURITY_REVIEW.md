@@ -106,6 +106,8 @@ applicable items are verified.**
 
   - [x] API endpoints behind authentication (`API_AUTH_REQUIRED=true`)
     - **Enforced:** `api_server` refuses start when `DEV_MODE=false` without auth; live/non-paper settings also require auth
+  - [x] WebSocket `/ws` requires JWT when `API_AUTH_REQUIRED=true` (prefer `Authorization: Bearer`; `?token=` is browser fallback only — can leak via logs/proxies)
+    - **Enforced:** `api_server.websocket_endpoint` closes with 1008 if token missing/invalid
   - [x] CORS configured to specific origins (not `*`)
     - **Enforced:** `api_server` + live settings reject CORS `*` when `DEV_MODE=false`
   - [ ] TLS/HTTPS for all external connections
@@ -115,8 +117,7 @@ applicable items are verified.**
 
   - [ ] All secrets in environment variables or secrets manager
   - [ ] No secrets in source code, config files, or logs
-  - [ ] `.env` file NOT committed to repository
-
+  - [x] `.env` / `.env.live` / `.env.*.local` gitignored (templates `env*.example` stay tracked)
 - [ ] **Container Security**
 
   - [ ] Running as non-root user
