@@ -4,7 +4,7 @@
 
 #### Verify health
 
-- Use MCP tool: `get_health()`
+- HTTP API: `GET /api/health` (`api_server.py`) returns `mode`, `trading_halted`, `live_enabled`, `version`. There is no health MCP tool; from an MCP client, a successful `get_crypto_price` call is the liveness check.
 - If health fails:
   - confirm required environment variables are set
   - confirm exchange endpoints are reachable (REST + websocket if enabled)
@@ -12,8 +12,7 @@
 
 #### View metrics
 
-- Use MCP tool: `get_metrics_snapshot()`
-- Prometheus text format (no HTTP server): `get_metrics_prometheus()`
+- HTTP API: `GET /api/metrics` (`api_server.py`, JWT-protected) returns the metrics snapshot. There is no metrics MCP tool.
 
 #### Kill switch (live trading)
 
@@ -40,7 +39,7 @@
 #### Debug execution failures
 
 - Look for JSON logs with `event=tool_error` (and check `level`).
-- In approve-each mode, use `list_pending_executions()` to inspect pending proposals.
+- In approve-each mode, inspect pending proposals with `GET /api/pending-approvals` and confirm with `POST /api/approve-trade` (HTTP API; there is no MCP approval tool).
 - Re-run failed operations with an `idempotency_key` to avoid duplicates.
 
 #### Websocket market streams
@@ -59,7 +58,7 @@ ______________________________________________________________________
   - Tools start failing with `rate_limited`
   - Metrics show rising `counters.rate_limited_total`
 - **Triage**:
-  - Call `get_metrics_snapshot()` and inspect:
+  - Call `GET /api/metrics` and inspect:
     - `counters.rate_limit_checks_total`
     - `counters.rate_limited_total`
   - Check tool call patterns (agents may be looping/retrying too aggressively)
@@ -73,10 +72,10 @@ ______________________________________________________________________
 #### 2) Websocket disconnect loop (public streams)
 
 - **Symptoms**:
-  - `get_marketdata_status()` shows websocket stream `last_error`
+  - `GET /api/marketdata/status` shows websocket stream `last_error`
   - Metrics show increasing websocket error/connect counters (e.g. `ws_*_error_total`)
 - **Triage**:
-  - Call `get_marketdata_status()` and inspect:
+  - Call `GET /api/marketdata/status` and inspect:
     - `ws_streams`
     - `stores.ws` freshness
   - Ensure outbound network access is available in the deployment environment
