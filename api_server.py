@@ -57,21 +57,12 @@ if settings.DEV_MODE:
 else:
     # Fail closed: production API must require auth + non-wildcard CORS
     if not settings.API_AUTH_REQUIRED:
-        raise RuntimeError(
-            "API_AUTH_REQUIRED must be true when DEV_MODE=false. "
-            "Set DEV_MODE=true for local development, or enable JWT auth for production."
-        )
+        raise RuntimeError("API_AUTH_REQUIRED must be true when DEV_MODE=false. Set DEV_MODE=true for local development, or enable JWT auth for production.")
     if settings.CORS_ALLOW_ALL:
-        raise RuntimeError(
-            "CORS_ORIGINS must not be '*' when DEV_MODE=false. "
-            "Set explicit origins (e.g. https://your-domain.com)."
-        )
+        raise RuntimeError("CORS_ORIGINS must not be '*' when DEV_MODE=false. Set explicit origins (e.g. https://your-domain.com).")
     JWT_SECRET = settings.API_JWT_SECRET
     if settings.API_AUTH_REQUIRED and not JWT_SECRET:
-        raise RuntimeError(
-            "API_JWT_SECRET must be set when API_AUTH_REQUIRED=true in production mode. "
-            "Set DEV_MODE=true for development."
-        )
+        raise RuntimeError("API_JWT_SECRET must be set when API_AUTH_REQUIRED=true in production mode. Set DEV_MODE=true for development.")
 
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = settings.API_JWT_EXPIRATION_HOURS
@@ -271,8 +262,41 @@ async def broadcast_all(payload: dict):
 global_container.marketdata_ws_store.subscribe(broadcast_tick)
 
 
+def _ws_token_from_request(websocket: WebSocket) -> str | None:
+    """Extract JWT from Authorization header or ?token= query (browser WS clients)."""
+    auth = websocket.headers.get("authorization") or websocket.headers.get("Authorization")
+    if auth and auth.lower().startswith("bearer "):
+        return auth.split(" ", 1)[1].strip() or None
+    token = websocket.query_params.get("token")
+    return token.strip() if token else None
+
+
+def _decode_access_token(token: str) -> dict | None:
+    if not JWT_AVAILABLE or not JWT_SECRET or not token:
+        return None
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return payload if isinstance(payload, dict) else None
+    except Exception:
+        return None
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    """
+    Real-time ticker stream.
+
+    When API_AUTH_REQUIRED=true, clients must pass a valid JWT via
+    `Authorization: Bearer <token>` or `?token=<jwt>`.
+    """
+    if settings.API_AUTH_REQUIRED:
+        token = _ws_token_from_request(websocket)
+        payload = _decode_access_token(token) if token else None
+        if not payload:
+            await websocket.close(code=1008)
+            log_event("api_ws_auth_rejected", ctx=API_CTX, data={"reason": "missing_or_invalid_token"})
+            return
+
     await websocket.accept()
     active_connections.add(websocket)
     log_event("api_client_connected", ctx=API_CTX, data={"active_connections": len(active_connections)})
@@ -281,7 +305,7 @@ async def websocket_endpoint(websocket: WebSocket):
             # Keep connection open
             await websocket.receive_text()
     except WebSocketDisconnect:
-        active_connections.remove(websocket)
+        active_connections.discard(websocket)
         log_event("api_client_disconnected", ctx=API_CTX, data={"active_connections": len(active_connections)})
 
 

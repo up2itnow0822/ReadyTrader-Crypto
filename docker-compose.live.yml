@@ -142,6 +142,11 @@ services:
       - TRADING_HALTED=${TRADING_HALTED:-true}
       - DEV_MODE=false
 
+      # Auth/CORS (required for live Settings fail-closed even though MCP is stdio)
+      - API_AUTH_REQUIRED=true
+      - API_JWT_SECRET=${API_JWT_SECRET:?API_JWT_SECRET is required for live trading}
+      - CORS_ORIGINS=${CORS_ORIGINS:?Configure allowed CORS origins}
+
       # Signer (remote only)
       - SIGNER_TYPE=${SIGNER_TYPE:-remote}
       - SIGNER_REMOTE_URL=${SIGNER_REMOTE_URL:?SIGNER_REMOTE_URL is required}

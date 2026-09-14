@@ -5,6 +5,7 @@ This project follows a lightweight changelog format. Major changes are summarize
 ### Unreleased
 
 - **Fail-closed production gates:** `TRADING_HALTED` defaults to `true`; `api_server` refuses start when `DEV_MODE=false` without JWT auth or with CORS `*`; live/non-paper settings require auth + non-wildcard CORS; `SIGNER_TYPE=env_private_key` forbidden when `PAPER_MODE=false` or `LIVE_TRADING_ENABLED=true`.
+- **SEC-001/002:** `/ws` requires JWT when auth is on; `.env.live` / `.env.*.local` gitignored; live MCP compose gets auth/CORS env so Settings can boot.
 - **BTC ops pack:** `env.live.btc.example`, `docs/OPS_BTC_PRODUCTION.md`, Hermes stdio MCP guide `docs/HERMES_INTEGRATION.md`, UAT harness `examples/paper_btc_uat.py`, UAT evidence `docs/UAT_BTC_PRODUCTION_MINUS_DUST.md`.
 - **Hermes skill:** public package [readytrader-crypto-hermes](https://github.com/up2itnow0822/readytrader-crypto-hermes) (install as `optional-skills/finance/readytrader-crypto`).
 - **DOX:** root `AGENTS.md` plus `signing/` and `docs/` child contracts.

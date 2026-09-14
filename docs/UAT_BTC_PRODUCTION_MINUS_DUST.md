@@ -81,9 +81,26 @@ ______________________________________________________________________
 
 ### Agent team notes
 
-- Security auditor (self + checklist): auth fail-closed, CORS fail-closed, `env_private_key` ban (settings + factory), `TRADING_HALTED` default true — **PASS**. Residual: unauthenticated health/ws recon in paper; operator must not run `DEV_MODE=true` on live compose; CEX auth probe pending real keys.
+- Security auditor: checklist **PASS**; **SEC-001** `/ws` JWT enforced; **SEC-002** `.env.live` gitignored. Residual: unauthenticated `/api/health` recon (intentional); operator CEX auth pending secrets.
 - Test engineer: `pytest tests/test_settings_validation.py tests/test_risk.py tests/test_api_server.py` → **39 passed**; `examples/paper_btc_uat.py` → **pass**.
-- UAT conductor: Phases 1–3 evidence in this doc; compose allowlists wired; Phase 4 excluded.
+- UAT conductor: Phases 1–3 **PASS**; P1.5 CEX auth **BLOCKED-pending-operator-secrets**; Phase 4 excluded.
+
+### Residual risks (pre–Phase 4)
+
+1. No live CEX credentials — trade+read / no-withdraw / IP allowlist unverified.
+2. Remote signer — template URL only; TLS/reachability/address pin unproven.
+3. Host conda `base` (Python 3.14) may lack runtime ccxt; validate marketdata inside the compose image.
+4. Binance may return geo HTTP 451 from this host — prefer Kraken/Coinbase or proxy for probes.
+5. Multi-day paper metrics / stress lab (protocol 2.2/2.5) not required for this gate.
+
+### Ready for dust UAT — operator gates
+
+1. `env.live.btc.example` → `.env.live` with JWT, admin hash, CEX trade+read keys (no withdraw).
+2. Reachable `SIGNER_REMOTE_URL` + `ALLOW_SIGNER_ADDRESSES` + TLS.
+3. CEX auth probe: read+trade, confirm **no withdraw**.
+4. `docker compose -f docker-compose.live.yml --env-file .env.live up` with `TRADING_HALTED=true`; authenticated health OK.
+5. Keep `EXECUTION_APPROVAL_MODE=approve_each`; dust-sized `MAX_CEX_ORDER_AMOUNT` / `MAX_TRADE_AMOUNT`.
+6. Written operator OK to unhalt + confirm **one** dust BTC spot order only.
 
 ______________________________________________________________________
 
@@ -91,11 +108,10 @@ ______________________________________________________________________
 
 ```bash
 source ~/miniconda3/etc/profile.d/conda.sh && conda activate base
-docker-compose -f docker-compose.live.yml --env-file <dummy-from-env.live.btc.example> config
-# settings / api_server fail-closed via isolated python -c subprocesses
-# 22× paper_engine.execute_trade BTC/USDT on tempfile DB
-pytest tests/test_settings_validation.py tests/test_risk.py tests/test_policy_engine.py -q
-# ccxt.kraken fetch_ticker BTC/USDT
+docker compose -f docker-compose.live.yml --env-file <dummy-from-env.live.btc.example> config
+PAPER_MODE=true DEV_MODE=true TRADING_HALTED=true pytest tests/test_settings_validation.py -q
+python examples/paper_btc_uat.py
+pytest tests/test_settings_validation.py tests/test_risk.py tests/test_api_server.py -q
 ```
 
 No live orders. No commits.
