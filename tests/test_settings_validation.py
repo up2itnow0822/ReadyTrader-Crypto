@@ -23,7 +23,7 @@ class TestSettingsValidation:
             # Safe defaults
             assert settings.PAPER_MODE is True
             assert settings.LIVE_TRADING_ENABLED is False
-            assert settings.TRADING_HALTED is False
+            assert settings.TRADING_HALTED is True
             assert settings.DEV_MODE is False
 
     def test_settings_version_from_pyproject(self):
@@ -105,11 +105,13 @@ class TestSettingsValidation:
                 assert len(dev_warnings) >= 1
 
     def test_settings_warns_on_unauthenticated_production(self):
-        """Test that unauthenticated API in production emits warning."""
+        """Test that unauthenticated API in production emits warning (paper path)."""
         with patch.dict(
             os.environ,
             {
                 "DEV_MODE": "false",
+                "PAPER_MODE": "true",
+                "LIVE_TRADING_ENABLED": "false",
                 "API_AUTH_REQUIRED": "false",
             },
         ):
@@ -123,6 +125,65 @@ class TestSettingsValidation:
 
                 auth_warnings = [x for x in w if "API_AUTH_REQUIRED" in str(x.message)]
                 assert len(auth_warnings) >= 1
+
+    def test_settings_rejects_unauthenticated_live_production(self):
+        """Live/non-paper + DEV_MODE=false requires API auth."""
+        from app.core.settings import Settings, SettingsValidationError
+
+        with patch.dict(
+            os.environ,
+            {
+                "DEV_MODE": "false",
+                "PAPER_MODE": "false",
+                "LIVE_TRADING_ENABLED": "true",
+                "API_AUTH_REQUIRED": "false",
+                "CORS_ORIGINS": "http://localhost:3000",
+                "SIGNER_TYPE": "remote",
+                "SIGNER_REMOTE_URL": "https://signer.example:8080",
+            },
+        ):
+            with pytest.raises(SettingsValidationError) as exc_info:
+                Settings()
+            assert "API_AUTH_REQUIRED" in str(exc_info.value)
+
+    def test_settings_rejects_cors_wildcard_live_production(self):
+        """Live production refuses CORS wildcard."""
+        from app.core.settings import Settings, SettingsValidationError
+
+        with patch.dict(
+            os.environ,
+            {
+                "DEV_MODE": "false",
+                "PAPER_MODE": "false",
+                "LIVE_TRADING_ENABLED": "true",
+                "API_AUTH_REQUIRED": "true",
+                "API_JWT_SECRET": "x" * 32,
+                "CORS_ORIGINS": "*",
+                "SIGNER_TYPE": "remote",
+                "SIGNER_REMOTE_URL": "https://signer.example:8080",
+            },
+        ):
+            with pytest.raises(SettingsValidationError) as exc_info:
+                Settings()
+            assert "CORS" in str(exc_info.value)
+
+    def test_settings_forbids_env_private_key_when_live(self):
+        """env_private_key banned when LIVE_TRADING_ENABLED or PAPER_MODE=false."""
+        from app.core.settings import Settings, SettingsValidationError
+
+        with patch.dict(
+            os.environ,
+            {
+                "DEV_MODE": "true",
+                "PAPER_MODE": "false",
+                "LIVE_TRADING_ENABLED": "true",
+                "SIGNER_TYPE": "env_private_key",
+                "PRIVATE_KEY": "0x" + "11" * 32,
+            },
+        ):
+            with pytest.raises(SettingsValidationError) as exc_info:
+                Settings()
+            assert "env_private_key" in str(exc_info.value)
 
     def test_settings_warns_on_cors_wildcard_production(self):
         """Test that CORS wildcard in production emits warning."""
@@ -144,8 +205,8 @@ class TestSettingsValidation:
                 cors_warnings = [x for x in w if "CORS" in str(x.message)]
                 assert len(cors_warnings) >= 1
 
-    def test_settings_live_mode_requires_signer(self):
-        """Test that live mode requires signer configuration."""
+    def test_settings_live_mode_requires_remote_signer_url(self):
+        """Test that live mode with remote signer requires URL."""
         from app.core.settings import Settings, SettingsValidationError
 
         with patch.dict(
@@ -154,14 +215,14 @@ class TestSettingsValidation:
                 "DEV_MODE": "true",
                 "PAPER_MODE": "false",
                 "LIVE_TRADING_ENABLED": "true",
-                "SIGNER_TYPE": "env_private_key",
-                "PRIVATE_KEY": "",  # Missing
+                "SIGNER_TYPE": "remote",
+                "SIGNER_REMOTE_URL": "",
             },
         ):
             with pytest.raises(SettingsValidationError) as exc_info:
                 Settings()
 
-            assert "PRIVATE_KEY" in str(exc_info.value)
+            assert "SIGNER_REMOTE_URL" in str(exc_info.value)
 
     def test_settings_to_dict_redacts_secrets(self):
         """Test that to_dict redacts sensitive values."""
@@ -206,13 +267,14 @@ class TestSettingsValidation:
 
     def test_settings_is_live_execution_allowed(self):
         """Test is_live_execution_allowed property."""
-        # Paper mode = not allowed
+        # Paper mode = not allowed (LIVE flag alone is insufficient)
         with patch.dict(
             os.environ,
             {
                 "DEV_MODE": "true",
                 "PAPER_MODE": "true",
-                "LIVE_TRADING_ENABLED": "true",
+                "LIVE_TRADING_ENABLED": "false",
+                "SIGNER_TYPE": "null",
             },
         ):
             import app.core.settings
@@ -229,7 +291,8 @@ class TestSettingsValidation:
                 "PAPER_MODE": "false",
                 "LIVE_TRADING_ENABLED": "true",
                 "TRADING_HALTED": "true",
-                "PRIVATE_KEY": "0x1234",  # Required for live mode
+                "SIGNER_TYPE": "remote",
+                "SIGNER_REMOTE_URL": "https://signer.example:8080",
             },
         ):
             import app.core.settings
@@ -237,6 +300,38 @@ class TestSettingsValidation:
             importlib.reload(app.core.settings)
             settings = app.core.settings.Settings()
             assert settings.is_live_execution_allowed is False
+
+    def test_factory_rejects_env_private_key_when_live(self):
+        """signing.factory refuses env_private_key under live flags (defense in depth)."""
+        with patch.dict(
+            os.environ,
+            {
+                "DEV_MODE": "true",
+                "PAPER_MODE": "true",
+                "LIVE_TRADING_ENABLED": "false",
+                "SIGNER_TYPE": "env_private_key",
+                "PRIVATE_KEY": "0x" + "11" * 32,
+            },
+            clear=False,
+        ):
+            import importlib
+            from unittest.mock import MagicMock
+
+            import app.core.settings
+
+            importlib.reload(app.core.settings)
+            import signing.factory as factory
+
+            importlib.reload(factory)
+            factory.get_signer.cache_clear()
+
+            mock_settings = MagicMock()
+            mock_settings.PAPER_MODE = True
+            mock_settings.LIVE_TRADING_ENABLED = True
+            with patch("app.core.config.settings", mock_settings):
+                with pytest.raises(ValueError, match="env_private_key"):
+                    factory.get_signer()
+            factory.get_signer.cache_clear()
 
 
 class TestExecutionStoreEdgeCases:

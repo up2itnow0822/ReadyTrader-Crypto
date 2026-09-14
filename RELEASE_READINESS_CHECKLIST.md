@@ -81,17 +81,23 @@ Use this additional checklist when deploying to production with live trading ena
 - [ ] Complete all items above
 - [ ] Review `docs/SECURITY_REVIEW.md` checklist
 - [ ] Configure `docker-compose.live.yml` (not the default compose file)
-- [ ] Set `SIGNER_TYPE=remote` (never use `env_private_key` in production)
+- [ ] Use BTC profile template `env.live.btc.example` → `.env.live` (CEX spot BTC)
+- [x] **Code-enforced:** `SIGNER_TYPE=env_private_key` refused when `PAPER_MODE=false` or `LIVE_TRADING_ENABLED=true`
+- [ ] Set `SIGNER_TYPE=remote` (or keystore / cb_mpc_2pc) — never `env_private_key`
 - [ ] Configure signer policy (`SIGNER_POLICY_ENABLED=true`)
 - [ ] Set strict policy limits:
-  - [ ] `ALLOW_CHAINS` (e.g., `ethereum,polygon`)
-  - [ ] `ALLOW_TOKENS` (e.g., `eth,usdc,usdt`)
-  - [ ] `ALLOW_EXCHANGES` (e.g., `binance,kraken`)
-  - [ ] `MAX_TRADE_AMOUNT` (e.g., `1000`)
-  - [ ] `MAX_CEX_ORDER_AMOUNT` (e.g., `0.05`)
-- [ ] Enable API authentication (`API_AUTH_REQUIRED=true`)
+  - [ ] `ALLOW_CHAINS` (DEX only; e.g., `ethereum`)
+  - [ ] `ALLOW_TOKENS` (DEX only)
+  - [ ] `ALLOW_EXCHANGES` (e.g., `binance,kraken,coinbase`)
+  - [ ] `ALLOW_CEX_SYMBOLS` (e.g., `btc/usdt,btc/usd`)
+  - [ ] `MAX_TRADE_AMOUNT` / `MAX_CEX_ORDER_AMOUNT`
+- [x] **Code-enforced:** `api_server` refuses start when `DEV_MODE=false` and (`API_AUTH_REQUIRED=false` or CORS `*`)
+- [x] **Code-enforced:** live/non-paper + `DEV_MODE=false` requires auth + non-wildcard CORS in settings
+- [x] **Code-enforced:** `TRADING_HALTED` defaults to `true`
+- [ ] Enable API authentication (`API_AUTH_REQUIRED=true`) + JWT secret + admin hash
 - [ ] Configure CORS origins (no wildcards)
-- [ ] Set up monitoring/alerting (Discord/Telegram webhooks)
+- [ ] Set up monitoring/alerting (Discord/Telegram webhooks or Prometheus scrape)
+- [ ] Hermes MCP: see `docs/HERMES_INTEGRATION.md` (paper-first; live tools gated)
 
 ### Deployment
 

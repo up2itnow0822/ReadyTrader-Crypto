@@ -10,7 +10,8 @@ applicable items are verified.**
 
 - [ ] **Signer Type Selection**
 
-  - [ ] NOT using `SIGNER_TYPE=env_private_key` in production
+  - [x] NOT using `SIGNER_TYPE=env_private_key` in production
+    - **Enforced:** settings + `signing/factory.py` refuse `env_private_key` when `PAPER_MODE=false` or `LIVE_TRADING_ENABLED=true`
   - [ ] Using `keystore`, `remote`, or `cb_mpc_2pc` signer type
   - [ ] Keystore file encrypted with strong passphrase (if applicable)
   - [ ] Remote signer URL uses HTTPS with valid certificate (if applicable)
@@ -79,7 +80,8 @@ applicable items are verified.**
 
 - [ ] **Kill Switch**
 
-  - [ ] `TRADING_HALTED=true` as default startup state
+  - [x] `TRADING_HALTED=true` as default startup state
+    - **Enforced:** settings default `TRADING_HALTED=true`
   - [ ] Manual enable required to begin trading
   - [ ] Verified kill switch halts all trading immediately
 
@@ -102,8 +104,10 @@ applicable items are verified.**
 
 - [ ] **Network**
 
-  - [ ] API endpoints behind authentication (`API_AUTH_REQUIRED=true`)
-  - [ ] CORS configured to specific origins (not `*`)
+  - [x] API endpoints behind authentication (`API_AUTH_REQUIRED=true`)
+    - **Enforced:** `api_server` refuses start when `DEV_MODE=false` without auth; live/non-paper settings also require auth
+  - [x] CORS configured to specific origins (not `*`)
+    - **Enforced:** `api_server` + live settings reject CORS `*` when `DEV_MODE=false`
   - [ ] TLS/HTTPS for all external connections
   - [ ] Private network for internal services
 
