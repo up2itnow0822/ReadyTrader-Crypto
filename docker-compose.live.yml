@@ -68,7 +68,7 @@ services:
       - CORS_ORIGINS=${CORS_ORIGINS:?Configure allowed CORS origins}
 
       # === EXECUTION SETTINGS ===
-      - EXECUTION_MODE=${EXECUTION_MODE:-hybrid}
+      - EXECUTION_MODE=${EXECUTION_MODE:-cex}
       - EXECUTION_APPROVAL_MODE=${EXECUTION_APPROVAL_MODE:-approve_each}  # Require approval
       - RISK_PROFILE=${RISK_PROFILE:-conservative}
 
@@ -76,6 +76,8 @@ services:
       - ALLOW_CHAINS=${ALLOW_CHAINS:?Configure allowed chains}
       - ALLOW_TOKENS=${ALLOW_TOKENS:?Configure allowed tokens}
       - ALLOW_EXCHANGES=${ALLOW_EXCHANGES:?Configure allowed exchanges}
+      - ALLOW_CEX_SYMBOLS=${ALLOW_CEX_SYMBOLS:-btc/usdt,btc/usd}
+      - ALLOW_CEX_MARKET_TYPES=${ALLOW_CEX_MARKET_TYPES:-spot}
       - MAX_TRADE_AMOUNT=${MAX_TRADE_AMOUNT:?Configure max trade amount}
       - MAX_CEX_ORDER_AMOUNT=${MAX_CEX_ORDER_AMOUNT:?Configure max CEX order amount}
 
@@ -86,6 +88,8 @@ services:
       - CEX_BINANCE_API_SECRET=${CEX_BINANCE_API_SECRET}
       - CEX_KRAKEN_API_KEY=${CEX_KRAKEN_API_KEY}
       - CEX_KRAKEN_API_SECRET=${CEX_KRAKEN_API_SECRET}
+      - CEX_COINBASE_API_KEY=${CEX_COINBASE_API_KEY}
+      - CEX_COINBASE_API_SECRET=${CEX_COINBASE_API_SECRET}
 
       # === MARKET DATA ===
       - MARKETDATA_EXCHANGES=${MARKETDATA_EXCHANGES:-binance,kraken,coinbase}
@@ -145,18 +149,28 @@ services:
       - SIGNER_ALLOWED_CHAIN_IDS=${SIGNER_ALLOWED_CHAIN_IDS:?Configure allowed chain IDs}
 
       # Execution
-      - EXECUTION_MODE=${EXECUTION_MODE:-hybrid}
+      - EXECUTION_MODE=${EXECUTION_MODE:-cex}
       - EXECUTION_APPROVAL_MODE=${EXECUTION_APPROVAL_MODE:-approve_each}
       - RISK_PROFILE=${RISK_PROFILE:-conservative}
 
       # Policy limits
       - ALLOW_CHAINS=${ALLOW_CHAINS:?Configure allowed chains}
       - ALLOW_TOKENS=${ALLOW_TOKENS:?Configure allowed tokens}
+      - ALLOW_EXCHANGES=${ALLOW_EXCHANGES:?Configure allowed exchanges}
+      - ALLOW_CEX_SYMBOLS=${ALLOW_CEX_SYMBOLS:-btc/usdt,btc/usd}
+      - ALLOW_CEX_MARKET_TYPES=${ALLOW_CEX_MARKET_TYPES:-spot}
       - MAX_TRADE_AMOUNT=${MAX_TRADE_AMOUNT:?Configure max trade amount}
+      - MAX_CEX_ORDER_AMOUNT=${MAX_CEX_ORDER_AMOUNT:?Configure max CEX order amount}
 
       # CEX credentials
       - CEX_API_KEY=${CEX_API_KEY}
       - CEX_API_SECRET=${CEX_API_SECRET}
+      - CEX_BINANCE_API_KEY=${CEX_BINANCE_API_KEY}
+      - CEX_BINANCE_API_SECRET=${CEX_BINANCE_API_SECRET}
+      - CEX_KRAKEN_API_KEY=${CEX_KRAKEN_API_KEY}
+      - CEX_KRAKEN_API_SECRET=${CEX_KRAKEN_API_SECRET}
+      - CEX_COINBASE_API_KEY=${CEX_COINBASE_API_KEY}
+      - CEX_COINBASE_API_SECRET=${CEX_COINBASE_API_SECRET}
       - MARKETDATA_EXCHANGES=${MARKETDATA_EXCHANGES:-binance,kraken,coinbase}
 
       # Persistence

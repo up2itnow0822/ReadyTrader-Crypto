@@ -17,12 +17,25 @@
 
 #### Kill switch (live trading)
 
-- Set `TRADING_HALTED=true` and restart the container.
+- Default is `TRADING_HALTED=true` (safe). Set `TRADING_HALTED=false` only after UAT.
+- To halt immediately: set `TRADING_HALTED=true` and restart the container/process.
+
+#### BTC CEX production path (spot)
+
+1. Copy `env.live.btc.example` → `.env.live`; fill JWT, CEX trade-only keys (no withdraw), remote signer URL.
+2. Validate compose (do not unhalt):  
+   `docker-compose -f docker-compose.live.yml --env-file .env.live config`
+3. Start halted: `docker-compose -f docker-compose.live.yml --env-file .env.live up -d`
+4. Verify `GET /api/health` with JWT; confirm `trading_halted: true`.
+5. Paper/MCP first via Hermes — see `docs/HERMES_INTEGRATION.md`.
+6. Full ops pack (monitoring, keys, compose): `docs/OPS_BTC_PRODUCTION.md`.
+7. Do **not** place live orders until Phase 4 dust UAT is explicitly authorized.
 
 #### Rotate secrets
 
 - Prefer keystore or remote signer in live environments.
 - Rotate `CEX_*` credentials by updating env vars and restarting.
+- See `docs/CUSTODY.md` for rotation cadence.
 
 #### Debug execution failures
 

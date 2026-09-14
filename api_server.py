@@ -55,9 +55,23 @@ security = HTTPBearer(auto_error=False)
 if settings.DEV_MODE:
     JWT_SECRET = settings.API_JWT_SECRET or secrets.token_hex(32)
 else:
+    # Fail closed: production API must require auth + non-wildcard CORS
+    if not settings.API_AUTH_REQUIRED:
+        raise RuntimeError(
+            "API_AUTH_REQUIRED must be true when DEV_MODE=false. "
+            "Set DEV_MODE=true for local development, or enable JWT auth for production."
+        )
+    if settings.CORS_ALLOW_ALL:
+        raise RuntimeError(
+            "CORS_ORIGINS must not be '*' when DEV_MODE=false. "
+            "Set explicit origins (e.g. https://your-domain.com)."
+        )
     JWT_SECRET = settings.API_JWT_SECRET
     if settings.API_AUTH_REQUIRED and not JWT_SECRET:
-        raise RuntimeError("API_JWT_SECRET must be set when API_AUTH_REQUIRED=true in production mode. Set DEV_MODE=true for development.")
+        raise RuntimeError(
+            "API_JWT_SECRET must be set when API_AUTH_REQUIRED=true in production mode. "
+            "Set DEV_MODE=true for development."
+        )
 
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = settings.API_JWT_EXPIRATION_HOURS
