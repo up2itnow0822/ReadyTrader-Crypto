@@ -76,7 +76,7 @@ def _require_live_allowed(*, venue: str) -> None:
     if settings.TRADING_HALTED:
         raise ValueError("TRADING_HALTED=true (live execution is halted)")
     if not venue_allowed(settings.EXECUTION_MODE, venue):
-        raise ValueError(f"Execution blocked by EXECUTION_MODE={settings.EXECUTION_MODE} for venue={venue}")
+        raise ValueError(f"Execution blocked by EXECUTION_MODE={settings.EXECUTION_MODE.value} for venue={venue}")
 
 
 def _maybe_propose(kind: str, payload: Dict[str, Any]) -> Optional[str]:
@@ -130,7 +130,7 @@ def swap_tokens(
         if not global_container.paper_engine:
             return _json_err("paper_engine_missing", "Paper engine not initialized.")
         res = global_container.paper_engine.execute_trade(
-            agent_id="agent_zero",
+            user_id="agent_zero",
             side="sell",
             symbol=symbol,
             amount=amount,
@@ -353,7 +353,7 @@ def place_cex_order(
         if not global_container.paper_engine:
             return _json_err("paper_engine_missing", "Paper engine not initialized.")
         res = global_container.paper_engine.execute_trade(
-            agent_id="agent_zero",
+            user_id="agent_zero",
             side=side,
             symbol=symbol,
             amount=amount,
