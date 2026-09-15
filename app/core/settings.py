@@ -325,23 +325,15 @@ class Settings:
         production_live = (not self.DEV_MODE) and (self.LIVE_TRADING_ENABLED or not self.PAPER_MODE)
         if production_live:
             if not self.API_AUTH_REQUIRED:
-                errors.append(
-                    "API_AUTH_REQUIRED must be true when DEV_MODE=false and "
-                    "(LIVE_TRADING_ENABLED=true or PAPER_MODE=false)"
-                )
+                errors.append("API_AUTH_REQUIRED must be true when DEV_MODE=false and (LIVE_TRADING_ENABLED=true or PAPER_MODE=false)")
             if self.CORS_ALLOW_ALL:
-                errors.append(
-                    "CORS_ORIGINS must not be '*' when DEV_MODE=false for live/non-paper; "
-                    "set explicit origins"
-                )
+                errors.append("CORS_ORIGINS must not be '*' when DEV_MODE=false for live/non-paper; set explicit origins")
 
         if not self.DEV_MODE and self.API_AUTH_REQUIRED and not self.API_JWT_SECRET:
             errors.append("API_JWT_SECRET must be set when API_AUTH_REQUIRED=true in production mode")
 
         if not self.DEV_MODE and self.API_AUTH_REQUIRED and self.CORS_ALLOW_ALL:
-            errors.append(
-                "CORS_ORIGINS should not be '*' when API_AUTH_REQUIRED=true in production mode"
-            )
+            errors.append("CORS_ORIGINS should not be '*' when API_AUTH_REQUIRED=true in production mode")
 
         # Security warnings (non-fatal but important)
         if self.DEV_MODE:
@@ -353,16 +345,14 @@ class Settings:
 
         if not self.API_AUTH_REQUIRED and not self.DEV_MODE:
             warnings.warn(
-                "API_AUTH_REQUIRED=false: API endpoints are unauthenticated. "
-                "api_server refuses to start without auth when DEV_MODE=false.",
+                "API_AUTH_REQUIRED=false: API endpoints are unauthenticated. api_server refuses to start without auth when DEV_MODE=false.",
                 UserWarning,
                 stacklevel=3,
             )
 
         if self.CORS_ALLOW_ALL and not self.DEV_MODE:
             warnings.warn(
-                "CORS_ORIGINS='*': Accepting requests from any origin. "
-                "api_server refuses wildcard CORS when DEV_MODE=false.",
+                "CORS_ORIGINS='*': Accepting requests from any origin. api_server refuses wildcard CORS when DEV_MODE=false.",
                 UserWarning,
                 stacklevel=3,
             )
@@ -370,10 +360,7 @@ class Settings:
         # env_private_key is development-only — refuse for any non-paper or live-enabled path
         live_or_non_paper = (not self.PAPER_MODE) or self.LIVE_TRADING_ENABLED
         if live_or_non_paper and self.SIGNER_TYPE == SignerType.ENV_PRIVATE_KEY:
-            errors.append(
-                "SIGNER_TYPE=env_private_key is forbidden when PAPER_MODE=false or "
-                "LIVE_TRADING_ENABLED=true; use keystore, remote, or cb_mpc_2pc"
-            )
+            errors.append("SIGNER_TYPE=env_private_key is forbidden when PAPER_MODE=false or LIVE_TRADING_ENABLED=true; use keystore, remote, or cb_mpc_2pc")
 
         # Live trading validations (after env_private_key ban)
         if not self.PAPER_MODE and self.LIVE_TRADING_ENABLED:

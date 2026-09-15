@@ -32,10 +32,8 @@ def main() -> int:
             side = "buy" if i % 2 == 0 else "sell"
             amount = 0.01
             trade_price = price if side == "buy" else price + 50.0
-            msg = engine.execute_trade(
-                user_id, side, "BTC/USDT", amount=amount, price=trade_price, rationale=f"uat-{i}"
-            )
-            print(f"{i+1:02d} {side}: {msg}")
+            msg = engine.execute_trade(user_id, side, "BTC/USDT", amount=amount, price=trade_price, rationale=f"uat-{i}")
+            print(f"{i + 1:02d} {side}: {msg}")
             if "Insufficient" not in msg and "Error" not in msg.lower():
                 trades += 1
             price += 25.0 if side == "buy" else -10.0
