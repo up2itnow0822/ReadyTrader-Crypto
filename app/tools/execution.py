@@ -99,6 +99,21 @@ def _maybe_propose(kind: str, payload: Dict[str, Any]) -> Optional[str]:
     )
 
 
+def _paper_reference_price(symbol: str) -> float | None:
+    """
+    Resolve a reference price for a paper fill from the market-data bus.
+
+    Returns None (never a fabricated price) if the bus has no usable ticker for
+    `symbol`; callers must then require an explicit price from the caller.
+    """
+    try:
+        ticker = global_container.marketdata_bus.fetch_ticker(symbol).data or {}
+        price = float(ticker.get("last") or ticker.get("close") or 0.0)
+        return price if price > 0 else None
+    except Exception:
+        return None
+
+
 def _resolve_token(chain: str, token: str) -> str:
     addr = global_container.dex_handler.resolve_token(chain, token)
     if addr:
@@ -352,12 +367,18 @@ def place_cex_order(
     if settings.PAPER_MODE:
         if not global_container.paper_engine:
             return _json_err("paper_engine_missing", "Paper engine not initialized.")
+        fill_price = float(price) if price and float(price) > 0 else _paper_reference_price(symbol)
+        if fill_price is None:
+            return _json_err(
+                "paper_price_required",
+                f"No price provided and no market-data bus price is available for {symbol}; pass an explicit price for the paper fill.",
+            )
         res = global_container.paper_engine.execute_trade(
             user_id="agent_zero",
             side=side,
             symbol=symbol,
             amount=amount,
-            price=float(price or 0.0) if (price or 0.0) > 0 else 100000.0,
+            price=fill_price,
             rationale="cex_order_paper",
         )
         return _json_ok({"venue": "cex", "mode": "paper", "result": res})
@@ -438,9 +459,21 @@ def get_cex_balance(exchange: str = "binance", market_type: str = "spot") -> str
     """
     Fetch account balance from a centralized exchange.
 
-    Returns the balance of all assets in the account. Requires CEX credentials
-    configured via environment variables (CEX_API_KEY, CEX_API_SECRET).
+    In paper mode, returns the paper wallet's balances and does not require CEX
+    credentials. Live mode requires CEX credentials configured via environment
+    variables (CEX_API_KEY, CEX_API_SECRET).
     """
+    if settings.PAPER_MODE:
+        if not global_container.paper_engine:
+            return _json_err("paper_engine_missing", "Paper engine not initialized.")
+        return _json_ok(
+            {
+                "exchange": exchange,
+                "market_type": market_type,
+                "mode": "paper",
+                "balance": global_container.paper_engine.get_balances("agent_zero"),
+            }
+        )
     try:
         _require_live_allowed(venue="cex")
         global_container.policy_engine.validate_cex_access(exchange_id=exchange)

@@ -11,9 +11,19 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
+import pytest
+
 from app.core.container import global_container
 from app.core.settings import ExecutionMode, settings
-from app.tools.execution import start_cex_private_ws
+from app.tools.execution import get_cex_balance, place_cex_order, start_cex_private_ws
+from paper_engine import PaperTradingEngine
+
+
+@pytest.fixture
+def real_paper_engine(tmp_path):
+    engine = PaperTradingEngine(db_path=str(tmp_path / "paper.db"))
+    with patch.object(global_container, "paper_engine", engine):
+        yield engine
 
 
 def test_start_cex_private_ws_blocked_when_halted():
@@ -57,3 +67,46 @@ def test_start_cex_private_ws_allowed_when_live_and_not_halted():
         res = json.loads(start_cex_private_ws(exchange="binance"))
     assert res["ok"] is True, res
     start.assert_called_once()
+
+
+def test_paper_order_without_price_uses_bus_price(real_paper_engine):
+    real_paper_engine.deposit("agent_zero", "USDT", 10_000.0)
+    with (
+        patch.multiple(settings, PAPER_MODE=True, EXECUTION_MODE=ExecutionMode.CEX),
+        patch("app.tools.execution._paper_reference_price", return_value=60_000.0),
+    ):
+        res = json.loads(place_cex_order("BTC/USDT", "buy", 0.01, order_type="market"))
+    assert res["ok"] is True, res
+    assert res["data"]["mode"] == "paper"
+    assert real_paper_engine.get_balance("agent_zero", "BTC") == pytest.approx(0.01)
+    assert real_paper_engine.get_balance("agent_zero", "USDT") == pytest.approx(10_000.0 - 600.0)
+
+
+def test_paper_order_without_price_and_without_bus_price_fails(real_paper_engine):
+    real_paper_engine.deposit("agent_zero", "USDT", 10_000.0)
+    with (
+        patch.multiple(settings, PAPER_MODE=True, EXECUTION_MODE=ExecutionMode.CEX),
+        patch("app.tools.execution._paper_reference_price", return_value=None),
+    ):
+        res = json.loads(place_cex_order("BTC/USDT", "buy", 0.01, order_type="market"))
+    assert res["ok"] is False
+    assert res["error"]["code"] == "paper_price_required"
+    assert real_paper_engine.get_balances("agent_zero") == {"USDT": 10_000.0}
+
+
+def test_get_cex_balance_paper_mode(real_paper_engine):
+    real_paper_engine.deposit("agent_zero", "USDT", 10_000.0)
+    with patch.object(settings, "PAPER_MODE", True):
+        res = json.loads(get_cex_balance())
+    assert res["ok"] is True, res
+    assert res["data"]["mode"] == "paper"
+    assert res["data"]["balance"] == {"USDT": 10_000.0}
+
+
+def test_get_cex_balance_paper_mode_without_engine():
+    with (
+        patch.object(settings, "PAPER_MODE", True),
+        patch.object(global_container, "paper_engine", None),
+    ):
+        res = json.loads(get_cex_balance())
+    assert res["ok"] is False
