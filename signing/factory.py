@@ -38,10 +38,7 @@ def get_signer() -> Signer:
         paper_mode = bool(getattr(settings, "PAPER_MODE", True))
         live_enabled = bool(getattr(settings, "LIVE_TRADING_ENABLED", False))
         if (not paper_mode) or live_enabled:
-            raise ValueError(
-                "SIGNER_TYPE=env_private_key is forbidden when PAPER_MODE=false or "
-                "LIVE_TRADING_ENABLED=true; use keystore, remote, or cb_mpc_2pc"
-            )
+            raise ValueError("SIGNER_TYPE=env_private_key is forbidden when PAPER_MODE=false or LIVE_TRADING_ENABLED=true; use keystore, remote, or cb_mpc_2pc")
         return maybe_wrap_signer(EnvPrivateKeySigner())
     if signer_type == "keystore":
         return maybe_wrap_signer(EncryptedKeystoreSigner())

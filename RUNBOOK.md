@@ -42,11 +42,12 @@
 - In approve-each mode, inspect pending proposals with `GET /api/pending-approvals` and confirm with `POST /api/approve-trade` (HTTP API; there is no MCP approval tool).
 - Re-run failed operations with an `idempotency_key` to avoid duplicates.
 
-#### Websocket market streams
+#### Market data
 
-- Start public streams with `start_marketdata_ws(...)` and stop with `stop_marketdata_ws(...)`.
-- For Binance private order updates, use `start_cex_private_ws(...)` / `stop_cex_private_ws(...)`, and inspect with
-  `list_cex_private_updates(...)`.
+- Public price/OHLCV data is pull-based via `get_crypto_price(symbol)` / `fetch_ohlcv(symbol, ...)`; there is no MCP
+  tool to start/stop a public streaming feed. Check provider health with `GET /api/marketdata/status`.
+- For private order updates, use `start_cex_private_ws(...)` (requires live execution to be allowed) /
+  `stop_cex_private_ws(...)` (always available, even while halted), and inspect with `list_cex_private_updates(...)`.
 
 ______________________________________________________________________
 
@@ -80,9 +81,8 @@ ______________________________________________________________________
     - `stores.ws` freshness
   - Ensure outbound network access is available in the deployment environment
 - **Mitigation**:
-  - Stop and restart the stream:
-    - `stop_marketdata_ws(exchange, market_type)`
-    - `start_marketdata_ws(exchange, symbols_json, market_type)`
+  - There is no tool to restart the public stream; `MarketDataBus` already fails over automatically across providers
+    by priority (`exchange_ws` → `ingest` → `ccxt_rest`).
   - If unreliable, fall back to `ccxt_rest` and/or ingest your own feed.
 
 #### 3) Exchange outage / degraded mode
@@ -93,7 +93,8 @@ ______________________________________________________________________
 - **Triage**:
   - Check `docs/EXCHANGES.md` (Supported vs Experimental expectations)
   - Use `get_cex_capabilities(exchange)` for `has.*` and market metadata
-  - Check market data: `get_ticker(symbol)` meta → `candidates`
+  - Check market data: `get_crypto_price(symbol)` (response names the serving provider) or
+    `GET /api/marketdata/status` for per-provider candidates/health
 - **Mitigation**:
   - Switch market data sources (prefer websocket/ingest, reduce REST usage)
   - Temporarily disable live execution with `TRADING_HALTED=true`
@@ -115,7 +116,8 @@ ______________________________________________________________________
 - **Symptoms**:
   - Errors like `token_not_allowed`, `trade_amount_too_large`, `router_not_allowed`
 - **Triage**:
-  - Review `env.example` and current env values for `ALLOW_*`, `MAX_*`
+  - Review `env.example` and current env values for `ALLOW_*`, `MAX_*` (enforced on the live order path only; paper
+    orders are not filtered by them)
   - If you are intentionally loosening limits, ensure Advanced Risk consent is accepted
 - **Mitigation**:
   - Adjust allowlists/limits, or set a stricter risk profile
