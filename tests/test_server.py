@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 # Assuming standard python decorators, they are callable.
 from app.core.config import settings
 from app.core.container import global_container
+from app.core.settings import ExecutionMode
 
 # Import the specific functions from the new modules
 from app.tools.execution import place_cex_order, start_cex_private_ws, swap_tokens
@@ -19,13 +20,16 @@ def test_swap_tokens_real():
     # Mock DexHandler and Signer in global_container
     with patch.object(global_container, "dex_handler") as mock_dex:
         with patch.object(global_container, "signer") as mock_signer:
-            with patch.object(global_container, "policy_engine"):
-                # Setup
-                settings.PAPER_MODE = False
-                settings.LIVE_TRADING_ENABLED = True
-                settings.TRADING_HALTED = False
-                settings.EXECUTION_MODE = "dex"
-
+            with (
+                patch.object(global_container, "policy_engine"),
+                patch.multiple(
+                    settings,
+                    PAPER_MODE=False,
+                    LIVE_TRADING_ENABLED=True,
+                    TRADING_HALTED=False,
+                    EXECUTION_MODE=ExecutionMode.DEX,
+                ),
+            ):
                 mock_dex.resolve_token.side_effect = ["0xFROM", "0xTO"]
                 mock_dex.build_swap_tx.return_value = {
                     "tx": {
@@ -94,7 +98,13 @@ def test_private_ws_paper_mode_blocked():
 
 def test_private_ws_kraken():
     """Test Kraken WebSocket stream start - now supports native WS."""
-    with patch.object(settings, "PAPER_MODE", False):
+    with patch.multiple(
+        settings,
+        PAPER_MODE=False,
+        LIVE_TRADING_ENABLED=True,
+        TRADING_HALTED=False,
+        EXECUTION_MODE=ExecutionMode.CEX,
+    ):
         res_str = start_cex_private_ws("kraken", "spot")
         res = json.loads(res_str)
         assert res["ok"] is True

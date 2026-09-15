@@ -7,10 +7,16 @@ policy validation, execution, and audit logging.
 
 from __future__ import annotations
 
+import json
 import os
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
+
+from app.core.container import global_container
+from app.core.settings import ApprovalMode, ExecutionMode, settings
+from app.tools.execution import place_cex_order
 
 
 @pytest.fixture
@@ -94,24 +100,66 @@ class TestCexPaperModeFlow:
 class TestCexLiveModeFlow:
     """Test CEX execution in live mode (mocked).
 
-    Note: These tests require complex mocking of execution paths.
-    Core live mode behavior is validated in test_full_trade_lifecycle.py
+    These drive the real `place_cex_order` tool (not the paper/testing helpers)
+    so the live-safety gates are proven through the same code path agents use.
+    Each test also patches `CexExecutor` so no real exchange client can be built.
     """
 
-    @pytest.mark.skip(reason="Requires complex execution mode mocking - covered in other tests")
-    def test_live_mode_requires_consent(self, temp_data_dir):
-        """Test that live mode execution requires proper consent."""
-        pass
+    def test_live_mode_requires_consent(self):
+        """place_cex_order refuses to execute when LIVE_TRADING_ENABLED=false."""
+        with (
+            patch.multiple(
+                settings,
+                PAPER_MODE=False,
+                LIVE_TRADING_ENABLED=False,
+                TRADING_HALTED=False,
+                EXECUTION_MODE=ExecutionMode.CEX,
+            ),
+            patch("app.tools.execution.CexExecutor") as mock_executor,
+        ):
+            res = json.loads(place_cex_order("BTC/USDT", "buy", 0.01, order_type="market", price=50_000.0))
+        assert res["ok"] is False
+        mock_executor.assert_not_called()
+        # _json_internal_error logs the exception but never puts its text in the
+        # payload, so the generic "cex_error" code is the only stable signal here.
+        assert res["error"]["code"] == "cex_error"
 
-    @pytest.mark.skip(reason="Requires complex execution mode mocking - covered in other tests")
-    def test_live_mode_halted_blocks_execution(self, temp_data_dir):
+    def test_live_mode_halted_blocks_execution(self):
         """Test that TRADING_HALTED blocks live execution."""
-        pass
+        with (
+            patch.multiple(
+                settings,
+                PAPER_MODE=False,
+                LIVE_TRADING_ENABLED=True,
+                TRADING_HALTED=True,
+                EXECUTION_MODE=ExecutionMode.CEX,
+            ),
+            patch("app.tools.execution.CexExecutor") as mock_executor,
+        ):
+            res = json.loads(place_cex_order("BTC/USDT", "buy", 0.01, order_type="market", price=50_000.0))
+        assert res["ok"] is False
+        mock_executor.assert_not_called()
 
-    @pytest.mark.skip(reason="Requires complex execution mode mocking - covered in other tests")
-    def test_approval_mode_returns_proposal(self, temp_data_dir):
+    def test_approval_mode_returns_proposal(self):
         """Test approve_each mode returns proposal instead of executing."""
-        pass
+        proposal = SimpleNamespace(request_id="req-1", confirm_token="tok-1", expires_at=1.0, kind="place_cex_order")
+        with (
+            patch.multiple(
+                settings,
+                PAPER_MODE=False,
+                LIVE_TRADING_ENABLED=True,
+                TRADING_HALTED=False,
+                EXECUTION_MODE=ExecutionMode.CEX,
+                EXECUTION_APPROVAL_MODE=ApprovalMode.APPROVE_EACH,
+            ),
+            patch.object(global_container.execution_store, "create", return_value=proposal),
+            patch("app.tools.execution.CexExecutor") as mock_executor,
+        ):
+            res = json.loads(place_cex_order("BTC/USDT", "buy", 0.01, order_type="market", price=50_000.0))
+        assert res["ok"] is True, res
+        assert res["data"]["approval_required"] is True
+        assert res["data"]["request_id"] == "req-1"
+        mock_executor.assert_not_called()
 
 
 class TestIdempotencyFlow:

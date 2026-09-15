@@ -646,6 +646,7 @@ def wait_for_cex_order(
 def start_cex_private_ws(exchange: str = "binance", market_type: str = "spot") -> str:
     """
     Start a private WebSocket stream for real-time order/execution updates.
+    Requires live execution to be allowed (LIVE_TRADING_ENABLED=true, TRADING_HALTED=false).
 
     Supports native WebSocket for: Binance, Kraken, Coinbase.
     For other exchanges, falls back to REST polling.
@@ -654,6 +655,7 @@ def start_cex_private_ws(exchange: str = "binance", market_type: str = "spot") -
     if settings.PAPER_MODE:
         return _json_err("paper_mode_not_supported", "Private updates are not supported in paper mode.")
     try:
+        _require_live_allowed(venue="cex")
         global_container.policy_engine.validate_cex_access(exchange_id=exchange)
         ex = (exchange or "").strip().lower()
         mt = (market_type or "spot").strip().lower()
