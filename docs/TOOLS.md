@@ -188,6 +188,10 @@ Error Codes:
 Place an order on a CEX using CCXT authenticated credentials.
 
 In paper mode, this routes to the paper engine and does NOT require CEX credentials.
+If `price` is given (and > 0), the paper fill uses it as-is. If omitted, the paper
+engine resolves a reference price from the market-data bus; if the bus has no
+usable price for the symbol, the call fails with `paper_price_required` rather
+than fabricating a fill price.
 In live mode, executes against the real exchange.
 
 Parameters:
@@ -195,7 +199,8 @@ Parameters:
 - side: "buy" or "sell"
 - amount: Order quantity in base currency units
 - order_type: "market" (immediate) or "limit" (price-specified)
-- price: Limit price (required for limit orders, ignored for market)
+- price: Limit price (required for limit orders; optional for paper market orders,
+  where it falls back to the market-data bus)
 - exchange: Exchange ID (e.g., "binance", "kraken", "coinbase")
 - market_type: "spot", "swap", or "future"
 - idempotency_key: Optional unique key to prevent duplicate orders
@@ -217,6 +222,7 @@ Error Codes:
 - execution_mode_blocked: CEX disabled by EXECUTION_MODE=dex
 - exchange_not_allowed: Exchange not in ALLOW_EXCHANGES
 - order_amount_too_large: Exceeds MAX_CEX_ORDER_AMOUNT
+- paper_price_required: Paper mode, no price given, and no market-data bus price available
 ```
 
 ### `get_cex_balance`
@@ -226,23 +232,27 @@ Error Codes:
 ```text
 Fetch account balance from a centralized exchange.
 
-Returns the balance of all assets in the account. Requires CEX credentials
-configured via environment variables (CEX_API_KEY, CEX_API_SECRET).
+In paper mode, returns the paper wallet's balances and does not require CEX
+credentials. In live mode, returns the balance of all assets in the real account
+and requires CEX credentials configured via environment variables (CEX_API_KEY,
+CEX_API_SECRET).
 
 Parameters:
 - exchange: Exchange ID (e.g., "binance", "kraken", "coinbase")
 - market_type: "spot", "swap", or "future"
 
 Returns:
-- JSON with all asset balances (free, used, total)
+- Paper mode: JSON with the paper wallet's balances (`mode: "paper"`)
+- Live mode: JSON with all asset balances (free, used, total)
 
-Required Environment Variables:
+Required Environment Variables (live mode only):
 - CEX_API_KEY or CEX_{EXCHANGE}_API_KEY
 - CEX_API_SECRET or CEX_{EXCHANGE}_API_SECRET
 - CEX_API_PASSWORD (optional, for some exchanges)
 
 Error Codes:
 - cex_error: Exchange API error or authentication failure
+- paper_engine_missing: Paper mode but the paper engine is not initialized
 ```
 
 ### `get_cex_order`
