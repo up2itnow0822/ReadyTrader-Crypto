@@ -80,7 +80,9 @@ def test_place_cex_order_paper_mode():
             with patch.object(global_container, "paper_engine") as mock_engine:
                 mock_engine.execute_trade.return_value = "Paper Trade Executed"
 
-                res_str = place_cex_order("BTC/USDT", "buy", 0.01)
+                # Explicit price: paper price resolution has its own tests and
+                # must not make this routing test depend on the market-data bus.
+                res_str = place_cex_order("BTC/USDT", "buy", 0.01, price=50_000.0)
                 res = json.loads(res_str)
 
                 assert res["ok"] is True

@@ -9,13 +9,19 @@ returning the paper wallet without requiring CEX credentials.
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
 
 from app.core.container import global_container
 from app.core.settings import ExecutionMode, settings
-from app.tools.execution import get_cex_balance, place_cex_order, start_cex_private_ws
+from app.tools.execution import (
+    _paper_reference_price,
+    get_cex_balance,
+    place_cex_order,
+    start_cex_private_ws,
+)
 from paper_engine import PaperTradingEngine
 
 
@@ -110,3 +116,28 @@ def test_get_cex_balance_paper_mode_without_engine():
     ):
         res = json.loads(get_cex_balance())
     assert res["ok"] is False
+    # Pin the paper branch itself: pre-fix code also returned ok=False here, but
+    # via an unrelated "Missing CEX credentials" cex_error from a real executor.
+    assert res["error"]["code"] == "paper_engine_missing"
+
+
+def test_paper_reference_price_reads_bus_ticker():
+    with patch.object(global_container, "marketdata_bus") as bus:
+        bus.fetch_ticker.return_value = SimpleNamespace(data={"last": 60_000.0})
+        assert _paper_reference_price("BTC/USDT") == pytest.approx(60_000.0)
+        bus.fetch_ticker.assert_called_once_with("BTC/USDT")
+
+
+def test_paper_reference_price_falls_back_to_close():
+    with patch.object(global_container, "marketdata_bus") as bus:
+        bus.fetch_ticker.return_value = SimpleNamespace(data={"close": 59_500.0})
+        assert _paper_reference_price("BTC/USDT") == pytest.approx(59_500.0)
+
+
+def test_paper_reference_price_returns_none_when_bus_unusable():
+    with patch.object(global_container, "marketdata_bus") as bus:
+        for data in (None, {}, {"last": 0.0}, {"last": -1.0}, {"last": "n/a"}):
+            bus.fetch_ticker.return_value = SimpleNamespace(data=data)
+            assert _paper_reference_price("BTC/USDT") is None, data
+        bus.fetch_ticker.side_effect = RuntimeError("no providers")
+        assert _paper_reference_price("BTC/USDT") is None
