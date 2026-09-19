@@ -376,3 +376,33 @@ def test_end_to_end_with_the_real_paper_engine(open_api, tmp_path, monkeypatch):
 
     assert _approve(open_api, prop.request_id).status_code == 409
     assert engine.get_balance("agent_zero", "BTC") == pytest.approx(0.01), "second approval must not fill again"
+
+
+# --------------------------------------------------------------------------- Codex review, PR #13
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+def test_one_non_finite_proposal_cannot_500_the_whole_approvals_list(open_api, bad):
+    """
+    A proposal is stored BEFORE policy validation, so a non-finite amount can reach the summary.
+    Starlette serializes with allow_nan=False, so one such proposal used to make
+    /api/pending-approvals return 500 for every operator - hiding every other valid approval.
+    """
+    open_api.store.create(kind="place_cex_order", payload={**ORDER, "amount": bad})
+    good = open_api.store.create(kind="place_cex_order", payload=dict(ORDER))
+
+    res = open_api.client.get("/api/pending-approvals")
+    assert res.status_code == 200, res.text
+    assert "NaN" not in res.text and "Infinity" not in res.text
+
+    by_id = {item["request_id"]: item for item in res.json()["pending"]}
+    assert by_id[good.request_id]["summary"]["amount"] == 0.01, "the valid proposal is still visible"
+    assert len(by_id) == 2
+    assert [v for k, v in by_id.items() if k != good.request_id][0]["summary"]["amount"] is None
+
+
+def test_summarize_payload_drops_non_finite_numbers():
+    from execution_store import summarize_payload
+
+    out = summarize_payload("place_cex_order", {"symbol": "BTC/USDT", "amount": float("inf"), "price": 5.0})
+    assert out["amount"] is None and out["price"] == 5.0
