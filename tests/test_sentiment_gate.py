@@ -380,12 +380,17 @@ def test_one_source_down_cannot_reopen_the_gate(monkeypatch):
     assert _risk_check("buy", "BTC/USDT")["result"]["allowed"] is False
 
 
-def test_source_returning_no_text_cannot_reopen_the_gate(monkeypatch):
-    """An empty successful response still loses a feed that contributed to the bearish reading."""
+@pytest.mark.parametrize(
+    "reddit_posts",
+    [[], [types.SimpleNamespace(title=""), types.SimpleNamespace(title="   ")]],
+    ids=["empty", "blank-only"],
+)
+def test_source_returning_no_usable_text_cannot_reopen_the_gate(monkeypatch, reddit_posts):
+    """A successful response without scored text still loses a previously contributing feed."""
     tweepy, praw = _feed(monkeypatch, PANIC[:10], PANIC[10:])
     core.analyze_social_sentiment("BTC")
     tweepy.Client.return_value.search_recent_tweets.return_value = types.SimpleNamespace(data=[types.SimpleNamespace(text=t) for t in JARGON[:10]])
-    praw.Reddit.return_value.subreddit.return_value.search.return_value = []
+    praw.Reddit.return_value.subreddit.return_value.search.return_value = reddit_posts
 
     out = core.analyze_social_sentiment("BTC")
 

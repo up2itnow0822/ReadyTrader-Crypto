@@ -262,7 +262,7 @@ def analyze_social_sentiment(symbol: str) -> str:
     tweets, twitter_result, twitter_state = _recent_tweets(asset)
     titles, reddit_result, reddit_state = _recent_reddit_titles(asset)
     states = (twitter_state, reddit_state)
-    sources = frozenset(name for name, texts in (("twitter", tweets), ("reddit", titles)) if texts)
+    sources = frozenset(name for name, texts in (("twitter", tweets), ("reddit", titles)) if any(isinstance(text, str) and text.strip() for text in texts))
     configured = any(state != "not_configured" for state in states)
     reading = score_texts(tweets + titles)
 
