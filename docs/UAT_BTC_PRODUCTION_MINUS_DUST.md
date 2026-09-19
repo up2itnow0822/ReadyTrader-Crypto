@@ -61,7 +61,7 @@ ______________________________________________________________________
 | Prod.7  | Signer policy enabled                              | **PASS** | Template: `SIGNER_POLICY_ENABLED=true` + chain/gas limits                                                            |
 | Prod.8  | Strict policy limits (exchanges/symbols/amounts)   | **PASS** | Template + compose now wire `ALLOW_EXCHANGES`, `ALLOW_CEX_SYMBOLS`, `ALLOW_CEX_MARKET_TYPES`, `MAX_CEX_ORDER_AMOUNT` |
 | Prod.9  | Code: `api_server` refuse unauth / wildcard CORS   | **PASS** | P1.5 + settings live CORS/auth tests                                                                                 |
-| Prod.10 | Code: `TRADING_HALTED` defaults true               | **PASS** | `settings.py` default_factory → True; templates set true                                                            |
+| Prod.10 | Code: `TRADING_HALTED` defaults true               | **PASS** | `settings.py` default_factory → True; templates set true                                                             |
 | Prod.11 | Enable API auth + JWT + admin hash                 | **PASS** | Template fields; compose requires `API_JWT_SECRET` / `API_ADMIN_PASSWORD_HASH`                                       |
 | Prod.12 | CORS non-wildcard                                  | **PASS** | Template `CORS_ORIGINS=http://localhost:3000`                                                                        |
 | Prod.13 | Monitoring/alerting setup                          | **PASS** | `deploy/observability/` (Prometheus/Grafana/Alertmanager); webhook slots in template                                 |
