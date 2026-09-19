@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Tuple
 import pandas as pd
 import ta
 
-from strategy_sandbox import run_strategy
+from strategy_sandbox import run_strategy, validate_source
 from synthetic_market import generate_synthetic_ohlcv
 
 
@@ -106,6 +106,11 @@ def run_synthetic_stress_test(
     base_vol = float(config.get("base_vol", 0.01))
     black_swan_prob = float(config.get("black_swan_prob", 0.02))
     parabolic_prob = float(config.get("parabolic_prob", 0.02))
+
+    # Reject forbidden strategy source BEFORE building any scenarios. `scenarios` and `length` come
+    # from the caller and every generated frame is retained, so a trivially rejected strategy paired
+    # with a large config would otherwise burn CPU and memory before run_strategy() ever looked at it.
+    validate_source(strategy_code)
 
     # Deterministic per-scenario seeds
     seeds = [master_seed + i for i in range(scenarios)]

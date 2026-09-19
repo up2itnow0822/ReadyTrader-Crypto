@@ -16,6 +16,7 @@ Safety rules:
 from __future__ import annotations
 
 import json
+import math
 import os
 import secrets
 import sqlite3
@@ -55,14 +56,22 @@ _SUMMARY_TEXT_LIMIT = 280
 
 
 def summarize_payload(kind: str, payload: Dict[str, Any] | None) -> Dict[str, Any]:
-    """Display-safe subset of a proposal payload (JSON scalars only, long text truncated)."""
+    """
+    Display-safe subset of a proposal payload (JSON scalars only, long text truncated).
+
+    Non-finite numbers become None. A proposal is stored before policy validation runs, so a
+    NaN or inf amount can reach this function; Starlette serializes responses with
+    `allow_nan=False`, and one such value would make /api/pending-approvals return 500 for every
+    operator - hiding every other valid approval - until that proposal expired.
+    """
     out: Dict[str, Any] = {}
     for name in _SUMMARY_FIELDS.get(str(kind), ()):
         value = (payload or {}).get(name)
         if value is None or isinstance(value, bool):
             out[name] = value
         elif isinstance(value, (int, float)):
-            out[name] = float(value)
+            number = float(value)
+            out[name] = number if math.isfinite(number) else None
         else:
             out[name] = str(value)[:_SUMMARY_TEXT_LIMIT]
     return out
