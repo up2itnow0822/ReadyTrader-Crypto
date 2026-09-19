@@ -209,12 +209,13 @@ def test_memory_bomb_is_stopped():
 
 
 def _probe_child(monkeypatch, body: str) -> dict:
-    """Run `body` as the child program through the REAL argv/env/cwd/rlimit configuration."""
-    probe = (
-        "import json, os, sys\nreq = json.loads(sys.stdin.read())\n"
-        + body
-        + '\nsys.stdout.write(json.dumps({"ok": False, "kind": "runtime", "message": json.dumps(report)}))\n'
-    )
+    """
+    Run `body` as the child program through the REAL argv/env/cwd/rlimit configuration.
+
+    The probe is prefixed with the production preamble, which is where the child now applies and
+    verifies its own rlimits - so a probe observes exactly the conditions strategy code does.
+    """
+    probe = sb._CHILD_PREAMBLE + "\n" + body + '\n_reply({"ok": False, "kind": "runtime", "message": json.dumps(report)})\n'
     monkeypatch.setattr(sb, "_CHILD_SOURCE", probe)
     return json.loads(_rejected(HOLD).message)
 
@@ -248,9 +249,47 @@ def test_child_cannot_write_file_contents(monkeypatch):
 @posix_only
 def test_child_refuses_to_run_when_limits_were_not_applied(monkeypatch):
     """Fail closed: a limit that silently failed to apply must not mean an unprotected run."""
-    monkeypatch.setattr(sb, "_limit_resources", lambda cpu_seconds: lambda: None)
+    real = sb._child_limits  # capture before patching, or the lambda recurses into itself
+    monkeypatch.setattr(sb, "_child_limits", lambda cpu_seconds: ({}, real(cpu_seconds)[1]))
     err = _rejected(HOLD)
     assert err.kind == "resource" and "was not applied" in err.message
+
+
+@posix_only
+def test_nothing_of_ours_runs_between_fork_and_exec():
+    """
+    preexec_fn runs Python in the forked child before exec, where only async-signal-safe work is
+    allowed; in a multithreaded host it can deadlock there, and Popen() does not return until exec,
+    so the parent's timeout would never start. The child applies its own limits after exec instead.
+    """
+    import inspect
+    import io
+    import tokenize
+
+    src = inspect.getsource(sb)
+    # Strip comments: this file *discusses* preexec_fn at length, and a guard that matched prose
+    # would fail on its own explanation. Strings are kept - start_new_session is a kwargs key.
+    code = "".join(" " if tok.type == tokenize.COMMENT else tok.string for tok in tokenize.generate_tokens(io.StringIO(src).readline))
+    assert "preexec_fn" not in code, "preexec_fn must not be used"
+    assert "setsid" not in code, "session isolation must not be done by hand in the child"
+    assert "start_new_session" in code, "session isolation must come from start_new_session"
+
+
+@posix_only
+def test_the_child_applies_the_limits_it_then_verifies(monkeypatch):
+    """The limits really are in force inside the child, not merely requested by the parent."""
+    import resource
+
+    report = _probe_child(
+        monkeypatch,
+        "import resource\n"
+        "report = {name: resource.getrlimit(getattr(resource, name))[0]\n"
+        '          for name in ("RLIMIT_AS", "RLIMIT_NOFILE", "RLIMIT_FSIZE", "RLIMIT_CORE")}\n',
+    )
+    assert report["RLIMIT_FSIZE"] == 0 and report["RLIMIT_CORE"] == 0
+    assert 0 < report["RLIMIT_AS"] <= sb.ADDRESS_SPACE_BYTES
+    assert 0 < report["RLIMIT_NOFILE"] <= sb.MAX_OPEN_FILES
+    assert resource.getrlimit(resource.RLIMIT_FSIZE)[0] != 0, "the PARENT must be unaffected"
 
 
 def test_garbage_reply_from_the_child_is_a_protocol_error(monkeypatch):
@@ -438,3 +477,21 @@ def test_backtest_runtime_error_keeps_its_documented_shape(engine):
     result = engine.run("def on_candle(p, r, s):\n    return 1 / 0\n", "BTC/USDT")
     assert result["error"].startswith("Runtime error in strategy at row "), result
     assert "ZeroDivisionError" in result["error"]
+
+
+def test_a_rejected_strategy_is_refused_before_any_scenario_is_generated(monkeypatch):
+    """
+    The stress engine batches every scenario into one sandbox run, so run_strategy() is called after
+    the generation loop. Source validation must happen BEFORE it: `scenarios` and `length` come from
+    the caller and every frame is retained, so `import os` plus a large config would otherwise burn
+    CPU and memory before the strategy was ever looked at.
+    """
+    import synthetic_market
+
+    def boom(*a, **k):  # pragma: no cover - must never be reached
+        raise AssertionError("a scenario was generated for a strategy that cannot run")
+
+    monkeypatch.setattr(synthetic_market, "generate_synthetic_ohlcv", boom)
+    with pytest.raises(StrategyError) as exc:
+        run_synthetic_stress_test(strategy_code="import os\n" + HOLD, config={"scenarios": 5_000, "length": 5_000})
+    assert exc.value.kind == "forbidden" and "Importing 'os' is forbidden" in exc.value.message
