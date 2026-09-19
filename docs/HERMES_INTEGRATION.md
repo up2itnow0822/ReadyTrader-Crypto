@@ -114,15 +114,15 @@ classes, and refuses live trading without explicit operator authorization.
 
 ReadyTrader registers 29 tools. Paper-safe without credentials:
 
-| Tool                                                                                         | Use                                                          |
-| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `get_crypto_price`, `fetch_ohlcv`                                                            | BTC market data                                              |
-| `get_sentiment`, `get_news`, `get_social_sentiment`, `get_financial_news`, `get_free_news`   | Read-only context (provider keys optional)                   |
-| `get_market_regime`, `run_backtest_simulation`, `post_market_insight`, `get_latest_insights` | Analysis and shared insights                                 |
-| `deposit_paper_funds`                                                                        | Seed the paper wallet (response includes balance)            |
-| `validate_trade_risk`                                                                        | Risk Guardian check                                          |
-| `place_cex_order`                                                                            | Paper order when `PAPER_MODE=true` — pass `price` explicitly |
-| `get_cex_capabilities`                                                                       | Public exchange metadata, no auth                            |
+| Tool                                                                                         | Use                                                         |
+| -------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `get_crypto_price`, `fetch_ohlcv`                                                            | BTC market data                                             |
+| `get_sentiment`, `get_news`, `get_social_sentiment`, `get_financial_news`, `get_free_news`   | Read-only context (provider keys optional)                  |
+| `get_market_regime`, `run_backtest_simulation`, `post_market_insight`, `get_latest_insights` | Analysis and shared insights                                |
+| `deposit_paper_funds`                                                                        | Seed the paper wallet (response includes balance)           |
+| `validate_trade_risk`                                                                        | Risk Guardian check                                         |
+| `place_cex_order`                                                                            | Paper order when `PAPER_MODE=true` — pass an explicit price |
+| `get_cex_capabilities`                                                                       | Public exchange metadata, no auth                           |
 
 Not usable in the paper profile — authenticated exchange calls even when `PAPER_MODE=true`:
 `get_cex_balance`, `get_cex_order`, `list_cex_open_orders`, `list_cex_orders`,
