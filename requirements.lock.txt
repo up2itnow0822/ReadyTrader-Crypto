@@ -129,6 +129,7 @@ tzdata==2025.3
 update-checker==0.18.0
 urllib3==2.6.2
 uvicorn==0.40.0
+vaderSentiment==3.3.2
 web3==7.14.0
 websocket-client==1.9.0
 websockets==15.0.1

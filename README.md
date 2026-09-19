@@ -310,7 +310,7 @@ For the complete (generated) tool catalog with signatures and docstrings, see: `
 |                  | `fetch_ohlcv`               | Historical candles for research.                                                      |
 |                  | `get_market_regime`         | **Trend/Chop Detection** (Phase 6).                                                   |
 | **Intelligence** | `get_sentiment`             | Fear & Greed Index.                                                                   |
-|                  | `get_social_sentiment`      | X/Reddit Analysis (Simulated).                                                        |
+|                  | `get_social_sentiment`      | X/Reddit text scored -1..+1; feeds the Falling Knife check.                           |
 |                  | `get_financial_news`        | Bloomberg/Reuters (Simulated).                                                        |
 | **Trading**      | `swap_tokens`               | Execute market order swap.                                                            |
 |                  | `place_limit_order`         | **Limit Order** (Paper Mode).                                                         |

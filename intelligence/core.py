@@ -1,8 +1,11 @@
 import os
+import re
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
+
+from .sentiment import MIN_DIRECTIONAL, MIN_TEXTS, SentimentReading, score_texts
 
 # Optional imports for Real APIs
 try:
@@ -102,103 +105,154 @@ def fetch_rss_news(symbol: str = "") -> str:
     return "Market News (Free RSS):\n" + "\n".join([f"{i + 1}. {h}" for i, h in enumerate(all_headlines[:6])])
 
 
+# Same asset under another ticker (mirrors exchange_provider's aliases).
+ASSET_ALIASES = {"XBT": "BTC"}
+
+
+def base_asset(symbol: str) -> str:
+    """
+    'BTC/USDT', 'btc-usd', 'BTC/USDT:USDT', 'BTCUSDT', 'XBT/USD' -> 'BTC'. Sentiment is tracked per asset, not per pair.
+
+    Without a separator only a USDT/USDC suffix is stripped; other concatenated quotes
+    ('BTCUSD', 'ETHBTC') are ambiguous with real tickers ('CRVUSD', 'WBTC') and are left as given.
+    """
+    asset = re.split(r"[/\-_:\s]", str(symbol or "").strip().upper(), maxsplit=1)[0]
+    if len(asset) > 5 and asset.endswith(("USDT", "USDC")):
+        asset = asset[:-4]
+    return ASSET_ALIASES.get(asset, asset)
+
+
 class SentimentCache:
+    """Readings per base asset. Ages use the monotonic clock so a wall-clock step cannot pin or expire an entry."""
+
     def __init__(self, ttl: int = 3600):
         self.cache = {}
         self.ttl = ttl
 
+    def _fresh(self, entry: Dict[str, Any]) -> bool:
+        return time.monotonic() - entry["time"] < self.ttl
+
     def get(self, symbol: str) -> Optional[Dict[str, Any]]:
-        if symbol in self.cache:
-            entry = self.cache[symbol]
-            if time.time() - entry["time"] < self.ttl:
-                return entry
+        key = base_asset(symbol)
+        entry = self.cache.get(key)
+        if entry and self._fresh(entry):
+            return entry
+        self.cache.pop(key, None)
         return None
 
-    def set(self, symbol: str, score: float, description: str):
-        self.cache[symbol] = {"time": time.time(), "score": score, "description": description}
+    def set(self, symbol: str, reading: SentimentReading, configured: bool = True):
+        self.cache = {key: entry for key, entry in self.cache.items() if self._fresh(entry)}
+        self.cache[base_asset(symbol)] = {"time": time.monotonic(), "reading": reading, "configured": configured}
+
+    def age_seconds(self, entry: Dict[str, Any]) -> int:
+        return int(time.monotonic() - entry["time"])
 
 
 _sentiment_cache = SentimentCache()
 
 
-def get_cached_sentiment_score(symbol: str) -> float:
-    """Return cached sentiment score or 0.0 if missing."""
+def get_cached_sentiment(symbol: str) -> Optional[Dict[str, Any]]:
+    """Return the fresh cached entry ({reading, configured, age_seconds}) for the symbol's base asset, or None."""
     entry = _sentiment_cache.get(symbol)
-    if entry:
-        return entry["score"]
-    return 0.0
+    if entry is None:
+        return None
+    return {"reading": entry["reading"], "configured": entry["configured"], "age_seconds": _sentiment_cache.age_seconds(entry)}
+
+
+def get_cached_sentiment_score(symbol: str) -> float:
+    """Return the cached sentiment score in [-1, 1], or 0.0 (neutral) if missing or stale."""
+    entry = _sentiment_cache.get(symbol)
+    return entry["reading"].score if entry else 0.0
+
+
+# A source is "ok" (it answered, possibly with nothing), "not_configured", or "error".
+SourceResult = Tuple[List[str], str, str]
+
+
+def _recent_tweets(asset: str) -> SourceResult:
+    bearer = os.getenv("TWITTER_BEARER_TOKEN")
+    if not (bearer and tweepy):
+        return [], "Twitter: API Key missing.", "not_configured"
+    try:
+        client = tweepy.Client(bearer_token=bearer)
+        tweets = client.search_recent_tweets(query=f"{asset} -is:retweet lang:en", max_results=10)
+        texts = [t.text for t in tweets.data or []]
+        if not texts:
+            return [], "Twitter (Real): No recent tweets found.", "ok"
+        preview = " | ".join(t[:50] + "..." for t in texts[:2])
+        return texts, f"Twitter (Real): Found {len(texts)} recent tweets. Preview: {preview}", "ok"
+    except Exception as e:
+        return [], f"Twitter Error: {str(e)}", "error"
+
+
+def _recent_reddit_titles(asset: str) -> SourceResult:
+    client_id = os.getenv("REDDIT_CLIENT_ID")
+    client_secret = os.getenv("REDDIT_CLIENT_SECRET")
+    if not (client_id and client_secret and praw):
+        return [], "Reddit: API Keys missing.", "not_configured"
+    try:
+        reddit = praw.Reddit(client_id=client_id, client_secret=client_secret, user_agent="agent_zero_crypto_bot/1.0")
+        titles = [p.title for p in reddit.subreddit("cryptocurrency").search(asset, limit=5, time_filter="day")]
+        if not titles:
+            return [], "Reddit (Real): No recent posts found.", "ok"
+        return titles, f"Reddit (Real): Found {len(titles)} posts in r/CC. Preview: {' | '.join(titles[:2])}", "ok"
+    except Exception as e:
+        return [], f"Reddit Error: {str(e)}", "error"
+
+
+def _describe(reading: SentimentReading) -> str:
+    neutral = reading.texts - reading.bullish - reading.bearish
+    mix = f"{reading.bearish} bearish / {reading.bullish} bullish / {neutral} neutral of {reading.texts} texts"
+    if not reading.sufficient:
+        return f"0.00 (not a measurement - only {reading.texts} distinct texts, need {MIN_TEXTS})"
+    if reading.score == 0.0 and reading.bullish != reading.bearish:
+        return f"+0.00 on [-1, +1] (no consensus - {mix}; need {MIN_DIRECTIONAL} directional texts to call a direction)"
+    return f"{reading.score:+.2f} on [-1, +1] ({mix})"
 
 
 def analyze_social_sentiment(symbol: str) -> str:
     """
-    Analyze social sentiment using Tweepy (X) or PRAW (Reddit) if configured.
+    Score recent X and Reddit text about the symbol's base asset and cache the result for the
+    Risk Guardian. Every call refreshes; the trade check reads the cached score.
     """
-    # Check cache first (optional, but good for speed)
-    # But usually this tool is called explicitly to Refresh.
-    # Let's refresh every time this tool is CALLED, but get_cached_sentiment_score uses what's there.
+    asset = base_asset(symbol)
+    if not asset:
+        return "Social Sentiment Unavailable: no symbol given."
 
-    score = 0.0
+    tweets, twitter_result, twitter_state = _recent_tweets(asset)
+    titles, reddit_result, reddit_state = _recent_reddit_titles(asset)
+    states = (twitter_state, reddit_state)
+    configured = any(state != "not_configured" for state in states)
+    reading = score_texts(tweets + titles)
 
-    # 1. Twitter / X Analysis
-    twitter_bearer = os.getenv("TWITTER_BEARER_TOKEN")
-    twitter_result = "Twitter: API Key missing."
+    if configured:
+        lines = [twitter_result, reddit_result]
+    else:
+        lines = [
+            f"Social Sentiment Unavailable for {asset}: No sentiment APIs configured.",
+            "To enable real-time sentiment analysis:",
+            "1. X (Twitter): Get a Bearer Token from https://developer.x.com/ and set TWITTER_BEARER_TOKEN",
+            "2. Reddit: Create an app at https://www.reddit.com/prefs/apps and set REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET",
+        ]
 
-    if twitter_bearer and tweepy:
-        try:
-            client = tweepy.Client(bearer_token=twitter_bearer)
-            # Simple search for recent tweets (read-only)
-            query = f"{symbol} -is:retweet lang:en"
-            tweets = client.search_recent_tweets(query=query, max_results=10)
-            if tweets.data:
-                texts = [t.text for t in tweets.data]
-                preview = " | ".join([t[:50] + "..." for t in texts[:2]])
-                twitter_result = f"Twitter (Real): Found {len(texts)} recent tweets. Preview: {preview}"
-                # Mock score calculation from real data
-                score += 0.2  # Arbitrary boost for finding volume
-            else:
-                twitter_result = "Twitter (Real): No recent tweets found."
-        except Exception as e:
-            twitter_result = f"Twitter Error: {str(e)}"
+    # A degraded refresh must never relax the gate. A bearish reading is replaced only by a clean
+    # measurement (no source failed) built on at least half as much text - or by expiry.
+    previous = _sentiment_cache.get(asset)
+    if previous and previous["reading"].score < 0:
+        held = previous["reading"]
+        degraded = "error" in states or not reading.sufficient or reading.texts * 2 < held.texts
+        if degraded:
+            age_min = _sentiment_cache.age_seconds(previous) // 60
+            lines.append(f"This refresh is degraded ({reading.texts} texts), so it does not replace the reading from {age_min} min ago.")
+            lines.append(f"Sentiment score in force: {_describe(held)}. It expires one hour after it was taken.")
+            return "\n".join(lines)
 
-    # 2. Reddit Analysis
-    reddit_id = os.getenv("REDDIT_CLIENT_ID")
-    reddit_secret = os.getenv("REDDIT_CLIENT_SECRET")
-    reddit_result = "Reddit: API Keys missing."
-
-    if reddit_id and reddit_secret and praw:
-        try:
-            reddit = praw.Reddit(client_id=reddit_id, client_secret=reddit_secret, user_agent="agent_zero_crypto_bot/1.0")
-            # Search r/cryptocurrency
-            subreddit = reddit.subreddit("cryptocurrency")
-            posts = subreddit.search(symbol, limit=5, time_filter="day")
-            titles = [p.title for p in posts]
-            if titles:
-                preview = " | ".join(titles[:2])
-                reddit_result = f"Reddit (Real): Found {len(titles)} posts in r/CC. Preview: {preview}"
-                score += 0.2
-            else:
-                reddit_result = "Reddit (Real): No recent posts found."
-        except Exception as e:
-            reddit_result = f"Reddit Error: {str(e)}"
-
-    # Combine results
-    final_output = f"{twitter_result}\n{reddit_result}"
-
-    if "API Key missing" in twitter_result and "API Key missing" in reddit_result:
-        # No sentiment APIs configured - return neutral score with clear guidance
-        score = 0.0  # Neutral score when no data available
-        final_output = (
-            f"Social Sentiment Unavailable for {symbol}: No sentiment APIs configured.\n"
-            "To enable real-time sentiment analysis:\n"
-            "1. X (Twitter): Get a Bearer Token from https://developer.x.com/ and set TWITTER_BEARER_TOKEN\n"
-            "2. Reddit: Create an app at https://www.reddit.com/prefs/apps and set REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET\n"
-            "NOTE: Sentiment score defaults to neutral (0.0) when no data sources are configured."
-        )
-
-    # Update Cache
-    _sentiment_cache.set(symbol, score, final_output)
-
-    return final_output
+    if configured:
+        lines.append(f"Sentiment score: {_describe(reading)}")
+    else:
+        lines.append("NOTE: Until a source is configured the Falling Knife check has no data and treats sentiment as neutral (0.0).")
+    _sentiment_cache.set(asset, reading, configured)
+    return "\n".join(lines)
 
 
 def fetch_financial_news(symbol: str) -> str:

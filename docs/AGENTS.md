@@ -15,6 +15,7 @@ ReadyTrader-Crypto documentation tree. Keep contracts accurate to code in `app/c
 - `LIVE_TESTING_PROTOCOL.md` — Phases 1–5; Phase 4 dust is optional/future
 - `UAT_BTC_PRODUCTION_MINUS_DUST.md` — evidence for production-minus-dust gate
 - `SECURITY_REVIEW.md` / `CUSTODY.md` / `RUNBOOK.md` — production ops
+- `SENTIMENT.md` — feed setup plus the Falling Knife score contract (scale, threshold, no-data semantics); keep in step with `intelligence/sentiment.py` and the `sentiment` block of `validate_trade_risk`
 - Root templates: `env.example`, `env.live.btc.example`
 
 ## Work Guidance

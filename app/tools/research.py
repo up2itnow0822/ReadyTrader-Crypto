@@ -29,7 +29,7 @@ def _rate_limit(tool_name: str) -> Optional[str]:
 def register_research_tools(mcp: FastMCP):
     @mcp.tool()
     def get_social_sentiment(symbol: str) -> str:
-        """Get simulated social media sentiment (X/Reddit)."""
+        """Score recent X/Reddit text for the symbol (-1 bearish .. +1 bullish) and cache it for the Risk Guardian."""
         return _json_ok({"symbol": symbol, "social_sentiment": analyze_social_sentiment(symbol)})
 
     @mcp.tool()
