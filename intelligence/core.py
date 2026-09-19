@@ -147,11 +147,13 @@ class SentimentCache:
     def set(self, symbol: str, reading: SentimentReading, configured: bool = True, sources: Collection[str] = ()):
         with self._lock:
             self.cache = {key: entry for key, entry in self.cache.items() if self._fresh(entry)}
+            current_sources = frozenset(sources)
             self.cache[base_asset(symbol)] = {
                 "time": time.monotonic(),
                 "reading": reading,
                 "configured": configured,
-                "sources": frozenset(sources),
+                "sources": current_sources,
+                "guard_sources": current_sources,
             }
 
     def set_preserving_bearish(
@@ -160,27 +162,37 @@ class SentimentCache:
         reading: SentimentReading,
         configured: bool,
         sources: Collection[str],
-        source_error: bool,
+        errored_sources: Collection[str],
     ) -> Optional[Dict[str, Any]]:
         """Atomically store a refresh, or return the bearish reading a degraded refresh must hold."""
         with self._lock:
             key = base_asset(symbol)
+            current_sources = frozenset(sources)
+            guard_sources = current_sources
             previous = self.cache.get(key)
             if previous and not self._fresh(previous):
                 self.cache.pop(key, None)
                 previous = None
             if previous and previous["reading"].score < 0:
                 held = previous["reading"]
-                lost_source = not previous.get("sources", frozenset()).issubset(sources)
-                degraded = source_error or lost_source or not reading.sufficient or reading.texts * 2 < held.texts
-                if degraded:
+                previous_guard_sources = previous.get("guard_sources", previous.get("sources", frozenset()))
+                lost_source = not previous_guard_sources.issubset(current_sources)
+                contributing_source_error = bool(previous_guard_sources.intersection(errored_sources))
+                degraded = contributing_source_error or lost_source or not reading.sufficient or reading.texts * 2 < held.texts
+                more_bearish = reading.sufficient and reading.score < held.score
+                if degraded and not more_bearish:
                     return previous
+                if degraded:
+                    # The new reading came only from current_sources. Keep earlier contributors
+                    # as recovery guards so another degraded refresh cannot immediately relax it.
+                    guard_sources = previous_guard_sources.union(current_sources)
             self.cache = {cached_key: entry for cached_key, entry in self.cache.items() if self._fresh(entry)}
             self.cache[key] = {
                 "time": time.monotonic(),
                 "reading": reading,
                 "configured": configured,
-                "sources": frozenset(sources),
+                "sources": current_sources,
+                "guard_sources": guard_sources,
             }
             return None
 
@@ -276,9 +288,10 @@ def analyze_social_sentiment(symbol: str) -> str:
             "2. Reddit: Create an app at https://www.reddit.com/prefs/apps and set REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET",
         ]
 
-    # A degraded refresh must never relax the gate. A bearish reading is replaced only by a clean
-    # measurement (no source failed) built on at least half as much text - or by expiry.
-    previous = _sentiment_cache.set_preserving_bearish(asset, reading, configured, sources=sources, source_error="error" in states)
+    # A degraded refresh must never relax the gate, but sufficient evidence that is more bearish
+    # may tighten it. Only failures from sources that contributed to the held reading count.
+    errored_sources = frozenset(name for name, state in zip(("twitter", "reddit"), states) if state == "error")
+    previous = _sentiment_cache.set_preserving_bearish(asset, reading, configured, sources=sources, errored_sources=errored_sources)
     if previous:
         held = previous["reading"]
         age_min = _sentiment_cache.age_seconds(previous) // 60

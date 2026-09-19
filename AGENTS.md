@@ -54,7 +54,7 @@ Update the closest owning AGENTS.md when a change affects purpose, scope, owners
 - Secrets stay in `.env` / operator vault — never commit
 - Quality gate: `make check` and `make security`
 - `requirements.txt` owns pinned runtime dependencies; regenerate `requirements.lock.txt` from a clean `requirements-dev.txt` environment after dependency changes and verify it with `pip check` and `pip-audit`
-- `sentiment_score` fed to the Risk Guardian is the bull-bear spread in [-1, 1] from `intelligence/sentiment.py` (scored locally and deterministically - no model or network call); missing, unconfigured or thin data is neutral `0.0` and `validate_trade_risk` must report it in `sentiment.status`; a fresh bearish reading stays in force when a contributing source is lost, errors, or yields a degraded sample, while an intentionally single-source clean refresh may replace it; change the vocabulary only with fresh feeds added to `tests/fixtures/sentiment_feeds.json`
+- `sentiment_score` fed to the Risk Guardian is the bull-bear spread in [-1, 1] from `intelligence/sentiment.py` (scored locally and deterministically - no model or network call); missing, unconfigured or thin data is neutral `0.0` and `validate_trade_risk` must report it in `sentiment.status`; only sources with usable nonblank text count as contributors, and a degraded refresh may tighten a fresh bearish reading but must not relax it; when tightening on degraded data, retain prior contributors as recovery guards until they return, while keeping actual current contributors separate; an intentionally single-source clean refresh may replace it; change the vocabulary only with fresh feeds added to `tests/fixtures/sentiment_feeds.json`
 
 ## Verification
 

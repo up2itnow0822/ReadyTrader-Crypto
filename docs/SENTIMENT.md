@@ -122,7 +122,7 @@ So the rule is precise and only moderately sensitive: about half of crashes are 
 
 Only `ok` is a measurement; in the other three cases the Falling Knife rule cannot fire, and a `hint` says why.
 
-A degraded refresh never relaxes the rule. A bearish reading is replaced only by a clean measurement (no source errored) built on at least half as much text, or by expiry one hour after it was taken. The reverse does not hold: a neutral or bullish reading is always replaced, so a stale upbeat score never passes as a live measurement.
+A degraded refresh never relaxes the rule. Only providers that supplied usable nonblank text count as contributors, and only loss or failure of those contributors degrades a later refresh. A degraded refresh may replace the held reading when it has a sufficient, more bearish score; the cache records its actual current contributors separately while retaining earlier contributors as recovery guards. Those guards keep later degraded refreshes from relaxing the tighter reading until the missing contributors recover. Otherwise replacement requires a clean measurement built on at least half as much text, or expiry one hour after the reading was taken. The reverse does not hold: a neutral or bullish reading is always replaced, so a stale upbeat score never passes as a live measurement.
 
 ### Limits worth knowing
 

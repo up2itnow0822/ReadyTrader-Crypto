@@ -411,18 +411,64 @@ def test_configured_source_that_never_contributed_does_not_look_lost(monkeypatch
     assert _risk_check("buy", "BTC/USDT")["result"]["allowed"] is True
 
 
+def test_error_from_source_that_never_contributed_does_not_hold_bearish(monkeypatch):
+    """A noncontributing Reddit feed may fail while the sole contributor cleanly refreshes."""
+    tweepy, praw = _feed(monkeypatch, PANIC[:10], [])
+    core.analyze_social_sentiment("BTC")
+    tweepy.Client.return_value.search_recent_tweets.return_value = types.SimpleNamespace(data=[types.SimpleNamespace(text=t) for t in JARGON[:10]])
+    praw.Reddit.return_value.subreddit.return_value.search.side_effect = RuntimeError("503")
+
+    out = core.analyze_social_sentiment("BTC")
+
+    assert "does not replace" not in out
+    assert _risk_check("buy", "BTC/USDT")["result"]["allowed"] is True
+
+
+def test_more_bearish_degraded_refresh_tightens_the_gate(monkeypatch):
+    """A degraded tightening retains the missing contributor as a recovery guard."""
+    core._sentiment_cache.set(
+        "BTC",
+        SentimentReading(score=-0.5, texts=10, bullish=2, bearish=6),
+        sources={"twitter", "reddit"},
+    )
+    tweepy, praw = _feed(monkeypatch, PANIC[:10], [])
+    praw.Reddit.return_value.subreddit.return_value.search.side_effect = RuntimeError("503")
+
+    out = core.analyze_social_sentiment("BTC")
+
+    assert "does not replace" not in out
+    assert core.get_cached_sentiment_score("BTC") < GATE
+    assert _risk_check("buy", "BTC/USDT")["result"]["allowed"] is False
+    entry = core._sentiment_cache.get("BTC")
+    assert entry["sources"] == {"twitter"}
+    assert entry["guard_sources"] == {"twitter", "reddit"}
+
+    tweepy.Client.return_value.search_recent_tweets.return_value = types.SimpleNamespace(data=[types.SimpleNamespace(text=t) for t in JARGON[:10]])
+    out = core.analyze_social_sentiment("BTC")
+
+    assert "does not replace" in out
+    assert _risk_check("buy", "BTC/USDT")["result"]["allowed"] is False
+
+    praw.Reddit.return_value.subreddit.return_value.search.side_effect = None
+    praw.Reddit.return_value.subreddit.return_value.search.return_value = [types.SimpleNamespace(title=t) for t in JARGON[10:]]
+    out = core.analyze_social_sentiment("BTC")
+
+    assert "does not replace" not in out
+    assert _risk_check("buy", "BTC/USDT")["result"]["allowed"] is True
+
+
 def test_concurrent_degraded_refresh_cannot_overwrite_new_bearish_reading():
     cache = core.SentimentCache()
     start = threading.Barrier(2)
     bearish = SentimentReading(score=-1.0, texts=12, bullish=0, bearish=12)
     degraded = SentimentReading(score=0.0, texts=3, bullish=0, bearish=0)
 
-    def update(reading, source_error):
+    def update(reading, errored_sources):
         start.wait()
-        cache.set_preserving_bearish("BTC", reading, configured=True, sources={"twitter"}, source_error=source_error)
+        cache.set_preserving_bearish("BTC", reading, configured=True, sources={"twitter"}, errored_sources=errored_sources)
 
     with ThreadPoolExecutor(max_workers=2) as pool:
-        futures = [pool.submit(update, bearish, False), pool.submit(update, degraded, True)]
+        futures = [pool.submit(update, bearish, set()), pool.submit(update, degraded, {"twitter"})]
         for future in futures:
             future.result()
 
