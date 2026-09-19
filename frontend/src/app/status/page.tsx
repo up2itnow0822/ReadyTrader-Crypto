@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
-import { HomeView } from "@/components/views/HomeView";
+import { StatusView } from "@/components/views/StatusView";
 
 export const metadata: Metadata = {
-  title: "Dashboard",
+  title: "Status",
 };
 
 export default function Page() {
-  return <HomeView />;
+  return <StatusView />;
 }
