@@ -18,6 +18,7 @@ Exit codes:
 
 from __future__ import annotations
 
+import asyncio
 import re
 import sys
 import tomllib
@@ -88,11 +89,8 @@ def check_tool_names_in_docs(docs_dir: Path) -> list[str]:
 
         from server import mcp
 
-        registered_tools = set()
-
-        # FastMCP stores tools in _tool_manager
-        if hasattr(mcp, "_tool_manager") and hasattr(mcp._tool_manager, "_tools"):
-            registered_tools = set(mcp._tool_manager._tools.keys())
+        # FastMCP 3.x exposes the enabled registry through its public async API.
+        registered_tools = {tool.name for tool in asyncio.run(mcp.list_tools())}
 
         if not registered_tools:
             # Try alternative access pattern

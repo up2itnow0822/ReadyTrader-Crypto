@@ -20,9 +20,9 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-   `make setup` installs into whatever `pip` is on your PATH; it does not create a venv.
-   Hermes spawns the MCP process itself, so point the config at an interpreter that has the
-   dependencies (`.venv/bin/python`, or `.venv\Scripts\python.exe` on Windows).
+`make setup` installs into whatever `pip` is on your PATH; it does not create a venv.
+Hermes spawns the MCP process itself, so point the config at an interpreter that has the
+dependencies (`.venv/bin/python`, or `.venv\Scripts\python.exe` on Windows).
 
 2. Paper-first flags. The Hermes `env:` block below supplies all of them; no `.env` and no
    exchange keys are required for the paper profile.
@@ -40,11 +40,11 @@ ALLOW_CEX_SYMBOLS=btc/usdt,btc/usd
 ALLOW_CEX_MARKET_TYPES=spot
 ```
 
-   `DEV_MODE=false` is safe for the stdio MCP paper path with these defaults
-   (`API_AUTH_REQUIRED` is false). `Settings._validate()` only raises when `DEV_MODE=false`
-   is combined with `API_AUTH_REQUIRED=true` and no `API_JWT_SECRET`, or with a live/non-paper
-   profile; `api_server.py` additionally refuses to start without auth. Set `DEV_MODE=true`
-   only for a local HTTP API without JWT.
+`DEV_MODE=false` is safe for the stdio MCP paper path with these defaults
+(`API_AUTH_REQUIRED` is false). `Settings._validate()` only raises when `DEV_MODE=false`
+is combined with `API_AUTH_REQUIRED=true` and no `API_JWT_SECRET`, or with a live/non-paper
+profile; `api_server.py` additionally refuses to start without auth. Set `DEV_MODE=true`
+only for a local HTTP API without JWT.
 
 3. Hermes installed with a writable `~/.hermes/config.yaml` (or active profile).
 
@@ -114,15 +114,15 @@ classes, and refuses live trading without explicit operator authorization.
 
 ReadyTrader registers 29 tools. Paper-safe without credentials:
 
-| Tool | Use |
-|------|-----|
-| `get_crypto_price`, `fetch_ohlcv` | BTC market data |
-| `get_sentiment`, `get_news`, `get_social_sentiment`, `get_financial_news`, `get_free_news` | Read-only context (provider keys optional) |
-| `get_market_regime`, `run_backtest_simulation`, `post_market_insight`, `get_latest_insights` | Analysis and shared insights |
-| `deposit_paper_funds` | Seed the paper wallet (response includes balance) |
-| `validate_trade_risk` | Risk Guardian check |
-| `place_cex_order` | Paper order when `PAPER_MODE=true` — pass `price` explicitly |
-| `get_cex_capabilities` | Public exchange metadata, no auth |
+| Tool                                                                                         | Use                                                          |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `get_crypto_price`, `fetch_ohlcv`                                                            | BTC market data                                              |
+| `get_sentiment`, `get_news`, `get_social_sentiment`, `get_financial_news`, `get_free_news`   | Read-only context (provider keys optional)                   |
+| `get_market_regime`, `run_backtest_simulation`, `post_market_insight`, `get_latest_insights` | Analysis and shared insights                                 |
+| `deposit_paper_funds`                                                                        | Seed the paper wallet (response includes balance)            |
+| `validate_trade_risk`                                                                        | Risk Guardian check                                          |
+| `place_cex_order`                                                                            | Paper order when `PAPER_MODE=true` — pass `price` explicitly |
+| `get_cex_capabilities`                                                                       | Public exchange metadata, no auth                            |
 
 Not usable in the paper profile — authenticated exchange calls even when `PAPER_MODE=true`:
 `get_cex_balance`, `get_cex_order`, `list_cex_open_orders`, `list_cex_orders`,
@@ -156,14 +156,14 @@ auth and non-wildcard CORS. The MCP paper path does not use the HTTP API and nee
 ## Smoke checklist
 
 1. A fresh Hermes session lists `mcp__readytrader_crypto__*` tools (29 of them).
-2. `get_crypto_price(symbol="BTC/USDT")` returns `ok: true` with a `result` string of the form
+1. `get_crypto_price(symbol="BTC/USDT")` returns `ok: true` with a `result` string of the form
    `The current price of BTC/USDT is <price> (Source: …)`; `fetch_ohlcv(symbol="BTC/USDT", timeframe="1m", limit=1)`
    returns one candle record whose `close` is the numeric price.
-3. `deposit_paper_funds(asset="USDT", amount=10000)` returns the updated balance.
-4. `validate_trade_risk(side="buy", symbol="BTC/USDT", amount_usd=100, portfolio_value=10000)` returns a verdict.
-5. `place_cex_order(symbol="BTC/USDT", side="buy", amount=0.001, order_type="market", price=<step 2 price>)`
+1. `deposit_paper_funds(asset="USDT", amount=10000)` returns the updated balance.
+1. `validate_trade_risk(side="buy", symbol="BTC/USDT", amount_usd=100, portfolio_value=10000)` returns a verdict.
+1. `place_cex_order(symbol="BTC/USDT", side="buy", amount=0.001, order_type="market", price=<step 2 price>)`
    returns `"mode": "paper"`.
-6. `~/.hermes/config.yaml` still shows `PAPER_MODE: "true"`, `LIVE_TRADING_ENABLED: "false"`,
+1. `~/.hermes/config.yaml` still shows `PAPER_MODE: "true"`, `LIVE_TRADING_ENABLED: "false"`,
    `TRADING_HALTED: "true"`.
 
 The kill switch cannot be exercised from the paper profile (paper orders bypass the live

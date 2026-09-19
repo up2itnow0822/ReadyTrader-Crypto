@@ -53,6 +53,7 @@ Update the closest owning AGENTS.md when a change affects purpose, scope, owners
 - BTC production profile: `EXECUTION_MODE=cex`, allowlist BTC pairs only, `EXECUTION_APPROVAL_MODE=approve_each`
 - Secrets stay in `.env` / operator vault — never commit
 - Quality gate: `make check` and `make security`
+- `requirements.txt` owns pinned runtime dependencies; regenerate `requirements.lock.txt` from a clean `requirements-dev.txt` environment after dependency changes and verify it with `pip check` and `pip-audit`
 - `sentiment_score` fed to the Risk Guardian is the bull-bear spread in [-1, 1] from `intelligence/sentiment.py` (scored locally and deterministically - no model or network call); missing, unconfigured or thin data is neutral `0.0` and `validate_trade_risk` must report it in `sentiment.status`; change the vocabulary only with fresh feeds added to `tests/fixtures/sentiment_feeds.json`
 
 ## Verification
