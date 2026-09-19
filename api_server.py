@@ -348,6 +348,7 @@ async def login(request: LoginRequest):
     In production mode:
     - Requires API_ADMIN_PASSWORD_HASH (bcrypt hash)
     - Set hash using: python -c "from passlib.hash import bcrypt; print(bcrypt.hash('your-password'))"
+
     In dev mode:
     - Falls back to plaintext API_ADMIN_PASSWORD if hash not set
     """
