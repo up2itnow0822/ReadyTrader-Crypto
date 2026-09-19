@@ -7,108 +7,47 @@ from typing import Any, Dict, List, Tuple
 
 import pandas as pd
 import ta
-from RestrictedPython import compile_restricted, safe_globals, utility_builtins
 
+from strategy_sandbox import run_strategy
 from synthetic_market import generate_synthetic_ohlcv
 
 
-def _compile_strategy(strategy_code: str):
-    """
-    Compile user strategy code in a RestrictedPython environment.
-
-    Contract:
-    - Must define: `on_candle(...) -> str` returning one of: buy/sell/hold
-    - May define: `PARAMS = {...}` (used for surfacing recommendations and reporting only)
-    """
-
-    def safe_getattr(obj, name):
-        if name.startswith("_"):
-            raise AttributeError(f"Access to private attribute '{name}' is forbidden")
-        return getattr(obj, name)
-
-    def safe_import(name, *args, **kwargs):
-        whitelist = ["math"]
-        if name in whitelist:
-            return __import__(name, *args, **kwargs)
-        raise ImportError(f"Importing '{name}' is forbidden.")
-
-    def safe_getitem(obj, key):
-        # Restrict access to "private" dict keys by convention.
-        if isinstance(key, str) and key.startswith("_"):
-            raise KeyError("Access to private keys is forbidden")
-        return obj[key]
-
-    def safe_setitem(obj, key, value):
-        if isinstance(key, str) and key.startswith("_"):
-            raise KeyError("Access to private keys is forbidden")
-        obj[key] = value
-        return value
-
-    global_scope = safe_globals.copy()
-    global_scope.update(utility_builtins)
-    global_scope["__builtins__"]["__import__"] = safe_import
-    global_scope["_getattr_"] = safe_getattr
-    global_scope["_getitem_"] = safe_getitem
-    global_scope["_setitem_"] = safe_setitem
-    global_scope["_getiter_"] = iter
-    global_scope["pd"] = pd
-    global_scope["ta"] = ta
-
-    byte_code = compile_restricted(strategy_code, "<strategy>", "exec")
-    # RestrictedPython sandbox: exec is required to evaluate user strategy code safely.
-    # Use the same dict for globals+locals so top-level definitions (e.g., PARAMS) are visible to on_candle().
-    exec(byte_code, global_scope, global_scope)  # nosec B102
-
-    on_candle = global_scope.get("on_candle")
-    if not on_candle:
-        raise ValueError("Strategy code must define on_candle(...)")
-
-    params = global_scope.get("PARAMS")
-    if params is not None and not isinstance(params, dict):
-        params = None
-
-    return on_candle, params or {}
+def _series_points(df: pd.DataFrame) -> List[Tuple[float, float | None]]:
+    """(close, rsi) per candle as plain floats; rsi is None during indicator warm-up."""
+    closes = [float(v) for v in df["close"].tolist()]
+    rsis = [None if pd.isna(v) else float(v) for v in df["rsi"].tolist()]
+    return list(zip(closes, rsis))
 
 
 def _compute_equity_curve(
     df: pd.DataFrame,
-    on_candle,
+    actions: List[str | None],
     *,
     initial_capital: float = 10_000.0,
 ) -> Tuple[List[float], List[Dict[str, Any]]]:
     """
     Simple 1-position backtest (all-in / all-out) like BacktestEngine, but on supplied df.
-    Returns (equity_curve, trades).
+    `actions` comes from strategy_sandbox.run_strategy and is aligned 1:1 with df rows
+    (None during indicator warm-up). Returns (equity_curve, trades).
     """
     capital = float(initial_capital)
     position = 0.0
     trades: List[Dict[str, Any]] = []
-    state: Dict[str, Any] = {}
-
     equity_curve: List[float] = []
 
-    for i, row in df.iterrows():
-        price = float(row["close"])
-        rsi = row.get("rsi")
-        if pd.isna(rsi):
-            equity = capital if capital > 0 else position * price
-            equity_curve.append(float(equity))
-            continue
+    closes = [float(v) for v in df["close"].tolist()]
+    timestamps = df["timestamp"].tolist()
 
-        try:
-            action = on_candle(price, float(rsi), state)
-        except Exception as e:
-            raise RuntimeError(f"Strategy runtime error at row {i}: {e}")
-
+    for pos, action in enumerate(actions):
+        price = closes[pos]
         if action == "buy" and capital > 0:
-            qty = capital / price
-            position = qty
+            position = capital / price
             capital = 0.0
-            trades.append({"type": "buy", "price": price, "idx": int(i), "ts": str(row["timestamp"])})
+            trades.append({"type": "buy", "price": price, "idx": int(pos), "ts": str(timestamps[pos])})
         elif action == "sell" and position > 0:
             capital = position * price
             position = 0.0
-            trades.append({"type": "sell", "price": price, "idx": int(i), "ts": str(row["timestamp"])})
+            trades.append({"type": "sell", "price": price, "idx": int(pos), "ts": str(timestamps[pos])})
 
         equity = capital if capital > 0 else position * price
         equity_curve.append(float(equity))
@@ -171,10 +110,9 @@ def run_synthetic_stress_test(
     # Deterministic per-scenario seeds
     seeds = [master_seed + i for i in range(scenarios)]
 
-    on_candle, strategy_params = _compile_strategy(strategy_code)
-
     results: List[ScenarioResult] = []
     worst_by_dd: List[ScenarioResult] = []
+    generated: List[Tuple[int, pd.DataFrame, Dict[str, Any]]] = []
 
     for s in seeds:
         gen = generate_synthetic_ohlcv(
@@ -193,11 +131,20 @@ def run_synthetic_stress_test(
         df["sma_20"] = ta.trend.sma_indicator(df["close"], window=20)
         df["sma_50"] = ta.trend.sma_indicator(df["close"], window=50)
 
-        equity, trades = _compute_equity_curve(df, on_candle, initial_capital=initial_capital)
+        generated.append((s, df, gen["meta"]))
+
+    # One isolated child process runs the strategy over every scenario (state resets per scenario).
+    # Raises strategy_sandbox.StrategyError if the code is rejected, fails, or exceeds its limits.
+    outcome = run_strategy(strategy_code, [_series_points(df) for _, df, _ in generated])
+    strategy_params = outcome.params
+    actions_by_seed: Dict[int, List[str | None]] = {}
+
+    for (s, df, meta), actions in zip(generated, outcome.actions):
+        actions_by_seed[s] = actions
+        equity, trades = _compute_equity_curve(df, actions, initial_capital=initial_capital)
         fr = _final_return(equity, initial_capital)
         dd = _max_drawdown(equity)
-        sr = ScenarioResult(seed=s, final_return=fr, max_drawdown=dd, trades=len(trades), meta=gen["meta"])
-        results.append(sr)
+        results.append(ScenarioResult(seed=s, final_return=fr, max_drawdown=dd, trades=len(trades), meta=meta))
 
     # aggregate metrics
     returns = [r.final_return for r in results]
@@ -276,7 +223,8 @@ def run_synthetic_stress_test(
         df["rsi"] = ta.momentum.rsi(df["close"], window=14)
         df["sma_20"] = ta.trend.sma_indicator(df["close"], window=20)
         df["sma_50"] = ta.trend.sma_indicator(df["close"], window=50)
-        equity, trades_log = _compute_equity_curve(df, on_candle, initial_capital=initial_capital)
+        # Scenarios are deterministic by seed, so the actions from the batch run above apply unchanged.
+        equity, trades_log = _compute_equity_curve(df, actions_by_seed[replay_seed], initial_capital=initial_capital)
         eq_df = pd.DataFrame(
             {
                 "timestamp": df["timestamp"],
