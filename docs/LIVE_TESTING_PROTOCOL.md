@@ -153,6 +153,7 @@ Test that the Risk Guardian correctly blocks dangerous trades:
 import json
 
 from app.tools.trading import validate_trade_risk
+from intelligence import analyze_social_sentiment
 from risk_manager import RiskGuardian
 
 # Position size limit (should be blocked): 6% > 5% limit
@@ -162,8 +163,11 @@ assert not check["result"]["allowed"]
 # Falling knife rule, with a hand-fed score
 assert not RiskGuardian().validate_trade("buy", "BTC/USDT", 100, 10000, sentiment_score=-0.6)["allowed"]
 
-# Falling knife data path: after get_social_sentiment("BTC") with X/Reddit keys configured,
-# status must be "ok". Any other status means the rule has nothing to act on.
+# Falling knife data path: refresh with X/Reddit keys configured, then recompute
+# the trade check. Status must be "ok"; otherwise the rule has no measurement.
+refresh = analyze_social_sentiment("BTC")
+check = json.loads(validate_trade_risk("buy", "BTC/USDT", 100, 10000))["data"]
+assert check["sentiment"]["status"] == "ok", refresh
 print(check["sentiment"])
 ```
 

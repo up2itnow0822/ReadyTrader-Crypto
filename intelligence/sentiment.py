@@ -201,6 +201,6 @@ def score_texts(texts: Iterable[str]) -> SentimentReading:
     bullish = sum(c >= POLARITY_THRESHOLD for c in compounds)
     bearish = sum(c <= -POLARITY_THRESHOLD for c in compounds)
     directional = bullish + bearish
-    consensus = directional >= max(MIN_DIRECTIONAL, len(compounds) * MIN_DIRECTIONAL_SHARE)
+    consensus = len(compounds) >= MIN_TEXTS and directional >= max(MIN_DIRECTIONAL, len(compounds) * MIN_DIRECTIONAL_SHARE)
     score = (bullish - bearish) / directional if consensus else 0.0
     return SentimentReading(score=round(score, 4), texts=len(compounds), bullish=bullish, bearish=bearish)

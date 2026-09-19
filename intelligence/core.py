@@ -1,6 +1,8 @@
 import os
 import re
+import threading
 import time
+from collections.abc import Collection
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
@@ -117,7 +119,7 @@ def base_asset(symbol: str) -> str:
     ('BTCUSD', 'ETHBTC') are ambiguous with real tickers ('CRVUSD', 'WBTC') and are left as given.
     """
     asset = re.split(r"[/\-_:\s]", str(symbol or "").strip().upper(), maxsplit=1)[0]
-    if len(asset) > 5 and asset.endswith(("USDT", "USDC")):
+    if len(asset) > 4 and asset.endswith(("USDT", "USDC")):
         asset = asset[:-4]
     return ASSET_ALIASES.get(asset, asset)
 
@@ -128,21 +130,59 @@ class SentimentCache:
     def __init__(self, ttl: int = 3600):
         self.cache = {}
         self.ttl = ttl
+        self._lock = threading.RLock()
 
     def _fresh(self, entry: Dict[str, Any]) -> bool:
         return time.monotonic() - entry["time"] < self.ttl
 
     def get(self, symbol: str) -> Optional[Dict[str, Any]]:
-        key = base_asset(symbol)
-        entry = self.cache.get(key)
-        if entry and self._fresh(entry):
-            return entry
-        self.cache.pop(key, None)
-        return None
+        with self._lock:
+            key = base_asset(symbol)
+            entry = self.cache.get(key)
+            if entry and self._fresh(entry):
+                return entry
+            self.cache.pop(key, None)
+            return None
 
-    def set(self, symbol: str, reading: SentimentReading, configured: bool = True):
-        self.cache = {key: entry for key, entry in self.cache.items() if self._fresh(entry)}
-        self.cache[base_asset(symbol)] = {"time": time.monotonic(), "reading": reading, "configured": configured}
+    def set(self, symbol: str, reading: SentimentReading, configured: bool = True, sources: Collection[str] = ()):
+        with self._lock:
+            self.cache = {key: entry for key, entry in self.cache.items() if self._fresh(entry)}
+            self.cache[base_asset(symbol)] = {
+                "time": time.monotonic(),
+                "reading": reading,
+                "configured": configured,
+                "sources": frozenset(sources),
+            }
+
+    def set_preserving_bearish(
+        self,
+        symbol: str,
+        reading: SentimentReading,
+        configured: bool,
+        sources: Collection[str],
+        source_error: bool,
+    ) -> Optional[Dict[str, Any]]:
+        """Atomically store a refresh, or return the bearish reading a degraded refresh must hold."""
+        with self._lock:
+            key = base_asset(symbol)
+            previous = self.cache.get(key)
+            if previous and not self._fresh(previous):
+                self.cache.pop(key, None)
+                previous = None
+            if previous and previous["reading"].score < 0:
+                held = previous["reading"]
+                lost_source = not previous.get("sources", frozenset()).issubset(sources)
+                degraded = source_error or lost_source or not reading.sufficient or reading.texts * 2 < held.texts
+                if degraded:
+                    return previous
+            self.cache = {cached_key: entry for cached_key, entry in self.cache.items() if self._fresh(entry)}
+            self.cache[key] = {
+                "time": time.monotonic(),
+                "reading": reading,
+                "configured": configured,
+                "sources": frozenset(sources),
+            }
+            return None
 
     def age_seconds(self, entry: Dict[str, Any]) -> int:
         return int(time.monotonic() - entry["time"])
@@ -222,6 +262,7 @@ def analyze_social_sentiment(symbol: str) -> str:
     tweets, twitter_result, twitter_state = _recent_tweets(asset)
     titles, reddit_result, reddit_state = _recent_reddit_titles(asset)
     states = (twitter_state, reddit_state)
+    sources = frozenset(name for name, state in zip(("twitter", "reddit"), states) if state == "ok")
     configured = any(state != "not_configured" for state in states)
     reading = score_texts(tweets + titles)
 
@@ -237,21 +278,18 @@ def analyze_social_sentiment(symbol: str) -> str:
 
     # A degraded refresh must never relax the gate. A bearish reading is replaced only by a clean
     # measurement (no source failed) built on at least half as much text - or by expiry.
-    previous = _sentiment_cache.get(asset)
-    if previous and previous["reading"].score < 0:
+    previous = _sentiment_cache.set_preserving_bearish(asset, reading, configured, sources=sources, source_error="error" in states)
+    if previous:
         held = previous["reading"]
-        degraded = "error" in states or not reading.sufficient or reading.texts * 2 < held.texts
-        if degraded:
-            age_min = _sentiment_cache.age_seconds(previous) // 60
-            lines.append(f"This refresh is degraded ({reading.texts} texts), so it does not replace the reading from {age_min} min ago.")
-            lines.append(f"Sentiment score in force: {_describe(held)}. It expires one hour after it was taken.")
-            return "\n".join(lines)
+        age_min = _sentiment_cache.age_seconds(previous) // 60
+        lines.append(f"This refresh is degraded ({reading.texts} texts), so it does not replace the reading from {age_min} min ago.")
+        lines.append(f"Sentiment score in force: {_describe(held)}. It expires one hour after it was taken.")
+        return "\n".join(lines)
 
     if configured:
         lines.append(f"Sentiment score: {_describe(reading)}")
     else:
         lines.append("NOTE: Until a source is configured the Falling Knife check has no data and treats sentiment as neutral (0.0).")
-    _sentiment_cache.set(asset, reading, configured)
     return "\n".join(lines)
 
 
