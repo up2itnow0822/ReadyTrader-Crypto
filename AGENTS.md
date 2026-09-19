@@ -53,6 +53,7 @@ Update the closest owning AGENTS.md when a change affects purpose, scope, owners
 - BTC production profile: `EXECUTION_MODE=cex`, allowlist BTC pairs only, `EXECUTION_APPROVAL_MODE=approve_each`
 - Secrets stay in `.env` / operator vault — never commit
 - Quality gate: `make check` and `make security`
+- `sentiment_score` fed to the Risk Guardian is the bull-bear spread in [-1, 1] from `intelligence/sentiment.py` (scored locally and deterministically - no model or network call); missing, unconfigured or thin data is neutral `0.0` and `validate_trade_risk` must report it in `sentiment.status`; change the vocabulary only with fresh feeds added to `tests/fixtures/sentiment_feeds.json`
 
 ## Verification
 
@@ -70,6 +71,7 @@ Update the closest owning AGENTS.md when a change affects purpose, scope, owners
 | [docs/AGENTS.md](docs/AGENTS.md) | Operator docs, Hermes integration, UAT/runbooks |
 | [app/](app/) | Core settings, container, MCP/API tool wiring (parent-owned until split) |
 | [execution/](execution/) | CEX/DEX executors (parent-owned) |
+| [intelligence/](intelligence/) | News/social fetchers and the sentiment scorer behind Falling Knife protection (parent-owned) |
 | [tests/](tests/) | Unit/integration tests (parent-owned) |
 
 ---
@@ -156,4 +158,4 @@ When the user requests a durable behavior change, record it here or in the relev
 
 ## Child DOX Index
 
-See the operational Child DOX Index in the first half of this file (`signing/`, `docs/`, parent-owned `app/` / `execution/` / `tests/`).
+See the operational Child DOX Index in the first half of this file (`signing/`, `docs/`, parent-owned `app/` / `execution/` / `intelligence/` / `tests/`).
