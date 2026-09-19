@@ -57,7 +57,13 @@ def deposit_paper_funds(asset: str, amount: float) -> str:
         return _json_err("invalid_asset", f"Asset must be a ticker like USDT, got {asset!r}")
     if not math.isfinite(value) or value <= 0 or value > MAX_MAGNITUDE:
         return _json_err("invalid_amount", f"Deposit must be a positive number no larger than {MAX_MAGNITUDE:g}, got {amount!r}")
-    return _json_ok({"result": global_container.paper_engine.deposit("agent_zero", asset, value), "asset": asset, "amount": value})
+    # Read the engine's structured result: a deposit refused at the accumulated-balance check is
+    # rolled back and credits nothing, and must not come back as ok:true with "Deposit refused"
+    # sitting in a prose field.
+    res = global_container.paper_engine.deposit_result("agent_zero", asset, value)
+    if not res["ok"]:
+        return _json_err(res["code"], res["message"], {"asset": asset, "amount": value})
+    return _json_ok({"result": res["message"], "asset": asset, "amount": value, "balance": res["balance"]})
 
 
 def validate_trade_risk(side: str, symbol: str, amount_usd: float, portfolio_value: float) -> str:
