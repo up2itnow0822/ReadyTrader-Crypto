@@ -147,8 +147,12 @@ services:
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:${API_PORT:-8000}
-      - NEXT_PUBLIC_WS_URL=ws://localhost:${API_PORT:-8000}/ws
+      # Runtime config (read per-request by src/app/layout.tsx via process.env, NOT
+      # baked in at build time -- see frontend/AGENTS.md). NEXT_PUBLIC_* vars would be
+      # inlined into the JS bundle at `npm run build` time inside the Dockerfile, before
+      # these values exist, so they are deliberately NOT used here.
+      - READYTRADER_API_URL=http://localhost:${API_PORT:-8000}
+      - READYTRADER_WS_URL=ws://localhost:${API_PORT:-8000}/ws
     depends_on:
       - api
     networks:
