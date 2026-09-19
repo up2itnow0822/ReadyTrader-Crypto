@@ -71,8 +71,7 @@ This project follows a lightweight changelog format. Major changes are summarize
   Quality Gates" table, which claimed a `mypy` gate that does not exist anywhere in this repo,
   and listed CodeQL/trivy/trufflehog as per-PR gates when they run on a schedule/dispatch
   (`security-audit.yml`) or on a tagged release (`release.yml`). `.github/workflows/ci.yml` now
-  runs the real Python gate on every push and PR (`make check`, `make security`, `pip-audit -r
-  requirements.lock.txt`, `npm ci`), so the separately staged Python CI workflow was dropped as
+  runs the real Python gate on every push and PR (`make check`, `make security`, `pip-audit -r requirements.lock.txt`, `npm ci`), so the separately staged Python CI workflow was dropped as
   redundant. `pyproject.toml` keeps `requires-python = ">=3.12"`: an earlier draft of this
   milestone relaxed it to `>=3.11` after a green full-suite run there, but the pinned lock now
   contains `numpy==2.5.3`, which requires >=3.12 — a 3.11 user could not install the locked
