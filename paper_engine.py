@@ -204,23 +204,30 @@ class PaperTradingEngine:
     def _set_balance_in(conn: sqlite3.Connection, user_id: str, asset: str, amount: float) -> None:
         conn.execute("INSERT OR REPLACE INTO balances (user_id, asset, amount) VALUES (?, ?, ?)", (user_id, asset, amount))
 
-    def deposit(self, user_id: str, asset: str, amount: float) -> str:
-        """Credit (or, internally, debit with a negative amount) a balance atomically."""
+    def deposit_result(self, user_id: str, asset: str, amount: float) -> Dict[str, Any]:
+        """
+        Credit (or, internally, debit with a negative amount) a balance atomically, and say in data
+        whether it happened: {"ok": True, "message", "balance"} or {"ok": False, "code", "message"}.
+        Codes: invalid_amount | balance_limit.
+        """
         import math
+
+        def refuse(code: str, message: str) -> Dict[str, Any]:
+            return {"ok": False, "code": code, "message": message}
 
         try:
             amount = float(amount)
         except (TypeError, ValueError):
-            return "Deposit refused: amount must be a number"
+            return refuse("invalid_amount", "Deposit refused: amount must be a number")
         if not math.isfinite(amount) or abs(amount) > MAX_MAGNITUDE:
-            return f"Deposit refused: amount must be a finite number no larger than {MAX_MAGNITUDE:g}"
+            return refuse("invalid_amount", f"Deposit refused: amount must be a finite number no larger than {MAX_MAGNITUDE:g}")
 
         conn = self._txn()
         try:
             new_balance = self._balance_in(conn, user_id, asset) + amount
             if abs(new_balance) > MAX_BALANCE:
                 conn.execute("ROLLBACK")
-                return f"Deposit refused: the {asset} balance may not exceed {MAX_BALANCE:g}"
+                return refuse("balance_limit", f"Deposit refused: the {asset} balance may not exceed {MAX_BALANCE:g}")
             self._set_balance_in(conn, user_id, asset, new_balance)
             conn.execute("COMMIT")
         except BaseException:
@@ -232,7 +239,11 @@ class PaperTradingEngine:
         finally:
             conn.close()
         self._snapshot_equity(user_id)
-        return f"Deposited {amount} {asset}. New Balance: {new_balance}"
+        return {"ok": True, "message": f"Deposited {amount} {asset}. New Balance: {new_balance}", "balance": float(new_balance)}
+
+    def deposit(self, user_id: str, asset: str, amount: float) -> str:
+        """String form of deposit_result (kept for existing callers). Prefer the structured method."""
+        return str(self.deposit_result(user_id, asset, amount)["message"])
 
     def reset_wallet(self, user_id: str) -> str:
         """Clear all balances and trade history for a user in paper mode."""
