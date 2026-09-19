@@ -12,7 +12,7 @@ ______________________________________________________________________
 | Category                    | Tools | Purpose                                            |
 | :-------------------------- | :---- | :------------------------------------------------- |
 | **Trading & Risk**          | 2     | Paper trading deposits and trade risk validation   |
-| **Execution (DEX/CEX)**     | 15    | Order placement, management, and WebSocket streams |
+| **Execution (DEX/CEX)**     | 16    | Order placement, management, and WebSocket streams |
 | **Market Data**             | 4     | Price feeds, historical data, sentiment, news      |
 | **Research & Intelligence** | 7     | Social sentiment, market regime, backtesting       |
 
@@ -48,6 +48,8 @@ Example:
 
 Error Codes:
 - paper_mode_required: Paper mode is not enabled
+- invalid_asset: Asset must be a ticker (e.g. "USDC"), at most 32 characters, no "/"
+- invalid_amount: Amount must be a positive number no larger than 1e12
 ```
 
 ### `validate_trade_risk`
@@ -70,7 +72,12 @@ Parameters:
 - portfolio_value: Total portfolio value in USD
 
 Returns:
-- JSON with { allowed: bool, reason: string }
+- `result`: { allowed: bool, reason: string }
+- `sentiment`: the data the Falling Knife rule used — { score, status, texts, bullish, bearish,
+  age_seconds, hint? }. `status` is `"ok"` for a measured score, or `"no_data"` /
+  `"not_configured"` / `"insufficient_data"` for a neutral `0.0` the rule cannot act on (in
+  which case `hint` explains why). This tool never fetches sentiment itself — call
+  `get_social_sentiment(symbol)` first to get a measured, non-neutral reading.
 
 Example:
   validate_trade_risk("buy", "BTC/USDT", 500, 10000)
@@ -617,7 +624,11 @@ Parameters:
 - exchange: Preferred exchange source (default: "binance")
 
 Returns:
-- JSON with current price and data source
+- JSON with:
+  - result: prose sentence, e.g. "The current price of BTC/USDT is 65000.0 (Source: binance)"
+  - price: the same price as a number (float, or null if unavailable)
+  - source: the provider id that served the price (e.g. "exchange_ws", "ingest", "ccxt_rest")
+  - timestamp: ISO 8601 UTC timestamp of the ticker (or null if unavailable)
 
 Data Priority (MarketDataBus):
 1. WebSocket store (real-time, highest priority)
@@ -644,10 +655,11 @@ Parameters:
 - limit: Number of candles to fetch (default: 24)
 
 Returns:
-- JSON with array of OHLCV records:
-  - timestamp: Unix timestamp (ms)
-  - open, high, low, close: Price values
-  - volume: Trading volume
+- JSON with array of OHLCV records, each with:
+  - timestamp: ISO 8601 UTC timestamp (string)
+  - timestamp_ms: the same instant as an integer Unix timestamp in milliseconds
+  - open, high, low, close: Price values (float)
+  - volume: Trading volume (float)
 
 Supported Timeframes:
 - Minutes: 1m, 3m, 5m, 15m, 30m

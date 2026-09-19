@@ -6,11 +6,12 @@ ______________________________________________________________________
 
 ### 1. Getting Started
 
-| Document          | Description                                            |
-| :---------------- | :----------------------------------------------------- |
-| `../README.md`    | Project overview, installation, and quick start        |
-| `ARCHITECTURE.md` | System architecture and component interactions         |
-| `TOOLS.md`        | Complete MCP tool catalog with signatures and examples |
+| Document              | Description                                                                                                    |
+| :-------------------- | :------------------------------------------------------------------------------------------------------------- |
+| `../README.md`        | Project overview, installation, and quick start                                                                |
+| `ARCHITECTURE.md`     | System architecture and component interactions (see `#approval-gate` for the current approval-flow limitation) |
+| `TOOLS.md`            | Complete MCP tool catalog with signatures and examples                                                         |
+| `STRATEGY_SANDBOX.md` | Strategy contract, isolation layers, and limits for `run_backtest_simulation`                                  |
 
 ### 2. Operations & Deployment
 

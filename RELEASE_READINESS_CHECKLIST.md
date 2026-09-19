@@ -56,8 +56,8 @@ This checklist is meant to be used before any public release or major announceme
 
 ### 7) Operator readiness (minimum)
 
-- [x] `get_health()` returns healthy state in paper mode
-- [x] `get_metrics_snapshot()` returns sane counters/timers after tool usage
+- [x] `GET /api/health` (HTTP, `api_server.py`) returns healthy state in paper mode
+- [x] `GET /api/metrics` (HTTP, `api_server.py`, JWT-protected) returns sane counters/timers after tool usage
 - [x] Websocket streams can be started/stopped without crashing the process
 - [x] Clear troubleshooting steps exist in `RUNBOOK.md`
 
@@ -102,7 +102,7 @@ Use this additional checklist when deploying to production with live trading ena
 ### Deployment
 
 - [ ] Deploy with `TRADING_HALTED=true` initially
-- [ ] Verify `get_health()` returns healthy
+- [ ] Verify `GET /api/health` returns healthy
 - [ ] Verify policy limits with small test trades (paper mode)
 - [ ] Enable trading (`TRADING_HALTED=false`) only after validation
 

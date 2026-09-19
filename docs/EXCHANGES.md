@@ -13,7 +13,10 @@ This is a **truthful capability matrix** intended to reduce surprises. “Suppor
 ReadyTrader-Crypto can fetch public data via:
 
 - **CCXT REST** (broad exchange coverage; configured via `MARKETDATA_EXCHANGES`)
-- **Public websocket tickers (opt-in)**: Binance / Coinbase / Kraken (see `start_marketdata_ws`)
+- **Public websocket tickers (opt-in)**: Binance / Coinbase / Kraken, wired as the `exchange_ws`
+  `MarketDataBus` provider (`marketdata/ws_streams.py`); there is no MCP tool to start/stop this
+  feed. Check what is actually feeding a symbol with `GET /api/marketdata/status` (HTTP,
+  `api_server.py`) or by inspecting `get_crypto_price`'s `source` field.
 
 ### Private account/order updates
 
