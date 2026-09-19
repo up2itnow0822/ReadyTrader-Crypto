@@ -279,3 +279,46 @@ def test_repeated_deposits_cannot_grow_a_balance_past_the_ledger_limit(tmp_path)
     results = [eng.deposit(USER, "USDT", MAX_MAGNITUDE) for _ in range(1_002)]
     assert eng.get_balance(USER, "USDT") <= MAX_BALANCE
     assert any("refused" in r.lower() for r in results[-2:])
+
+
+# --------------------------------------------------------------------------- Codex review, PR #13
+
+
+def test_a_refused_deposit_is_an_error_envelope_not_ok_true(engine, monkeypatch):
+    """
+    At the accumulated-balance cap the engine rolls the deposit back and credits nothing. The tool
+    used to return ok:true with the text "Deposit refused" buried in a prose field.
+    """
+    import app.tools.trading as trading
+    from paper_engine import MAX_BALANCE, MAX_MAGNITUDE
+
+    monkeypatch.setattr(trading, "settings", dataclasses.replace(trading.settings, PAPER_MODE=True))
+    monkeypatch.setattr(trading.global_container, "paper_engine", engine)
+
+    for _ in range(1_001):
+        engine.deposit(USER, "USDT", MAX_MAGNITUDE)
+    at_cap = engine.get_balance(USER, "USDT")
+    assert at_cap <= MAX_BALANCE
+
+    out = json.loads(trading.deposit_paper_funds("USDT", MAX_MAGNITUDE))
+    assert out["ok"] is False and out["error"]["code"] == "balance_limit", out
+    assert engine.get_balance(USER, "USDT") == at_cap, "a refused deposit must credit nothing"
+
+
+def test_a_successful_deposit_reports_the_new_balance(engine, monkeypatch):
+    import app.tools.trading as trading
+
+    monkeypatch.setattr(trading, "settings", dataclasses.replace(trading.settings, PAPER_MODE=True))
+    monkeypatch.setattr(trading.global_container, "paper_engine", engine)
+    out = json.loads(trading.deposit_paper_funds("USDT", 250.0))
+    assert out["ok"] is True and out["data"]["balance"] == pytest.approx(1_250.0)
+
+
+def test_deposit_result_is_structured_and_the_string_form_still_works(engine):
+    from paper_engine import MAX_MAGNITUDE
+
+    assert engine.deposit_result(USER, "USDT", 5.0)["ok"] is True
+    assert engine.deposit_result(USER, "USDT", float("nan"))["code"] == "invalid_amount"
+    assert engine.deposit_result(USER, "USDT", 1e20)["code"] == "invalid_amount"
+    assert engine.deposit(USER, "USDT", 1.0).startswith("Deposited 1.0 USDT")
+    assert "refused" in engine.deposit(USER, "USDT", MAX_MAGNITUDE * 2).lower()
