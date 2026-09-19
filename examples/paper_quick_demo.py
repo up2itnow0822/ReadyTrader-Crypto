@@ -35,8 +35,11 @@ def main() -> int:
 
         print("\n=== ReadyTrader-Crypto paper-mode quick demo ===")
 
+        # ETH/USDT trades against USDT, so we deposit the quote currency (USDT),
+        # not USDC — depositing the wrong stablecoin left every step below
+        # "insufficient funds" even though the script still exited 0.
         print("\n1) Deposit paper funds")
-        print(engine.deposit(user_id, "USDC", 10_000.0))
+        print(engine.deposit(user_id, "USDT", 10_000.0))
 
         print("\n2) Place a limit BUY for ETH/USDT")
         print(engine.place_limit_order(user_id, "buy", "ETH/USDT", amount=1.0, price=2000.0))
@@ -46,16 +49,39 @@ def main() -> int:
         print("\n".join(fill_msgs) if fill_msgs else "(no fills)")
 
         print("\n4) Check balances + portfolio value")
-        balances = {
-            "USDC": engine.get_balance(user_id, "USDC"),
+        balances_after_buy = {
+            "USDT": engine.get_balance(user_id, "USDT"),
             "ETH": engine.get_balance(user_id, "ETH"),
         }
-        print(json.dumps(balances, indent=2))
+        print(json.dumps(balances_after_buy, indent=2))
         print(f"Portfolio value (USD): {engine.get_portfolio_value_usd(user_id):.2f}")
+
+        # Verify the fill actually happened by reading balances back, rather than
+        # trusting fill_msgs' wording — a message string can look reassuring while
+        # the underlying balance never moved.
+        if balances_after_buy["ETH"] != 1.0:
+            print(f"DEMO FAILED: expected ETH balance == 1.0 after the buy fill, got {balances_after_buy['ETH']!r}")
+            return 1
 
         print("\n5) Execute a market SELL (paper) and re-check portfolio value")
         print(engine.execute_trade(user_id, "sell", "ETH/USDT", amount=1.0, price=2200.0, rationale="Demo exit"))
         print(f"Portfolio value (USD): {engine.get_portfolio_value_usd(user_id):.2f}")
+
+        balances_after_sell = {
+            "USDT": engine.get_balance(user_id, "USDT"),
+            "ETH": engine.get_balance(user_id, "ETH"),
+        }
+
+        if balances_after_sell["ETH"] != 0.0:
+            print(f"DEMO FAILED: expected ETH balance == 0 after the sell, got {balances_after_sell['ETH']!r}")
+            return 1
+        if not (balances_after_sell["USDT"] > balances_after_buy["USDT"]):
+            print(
+                "DEMO FAILED: expected USDT balance after the sell "
+                f"({balances_after_sell['USDT']!r}) to be greater than after the buy "
+                f"({balances_after_buy['USDT']!r})"
+            )
+            return 1
 
         try:
             metrics = engine.get_risk_metrics(user_id)
@@ -64,6 +90,7 @@ def main() -> int:
         print("\n6) Risk metrics snapshot")
         print(json.dumps(metrics, indent=2))
 
+    print("\nAll balance checks passed.")
     print("\nDone. Next: run `python examples/stress_test_demo.py` for the synthetic stress lab.")
     return 0
 
