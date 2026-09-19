@@ -1,22 +1,12 @@
-import json
 from typing import Any, Dict
 
 from fastmcp import FastMCP
 
 from app.core.config import settings
 from app.core.container import global_container
+from app.core.jsonio import json_err as _json_err
+from app.core.jsonio import json_ok as _json_ok
 from intelligence import get_cached_sentiment
-
-
-def _json_ok(data: Dict[str, Any] | None = None) -> str:
-    payload = {"ok": True, "data": data or {}}
-    return json.dumps(payload, indent=2, sort_keys=True)
-
-
-def _json_err(code: str, message: str, data: Dict[str, Any] | None = None) -> str:
-    payload = {"ok": False, "error": {"code": code, "message": message, "data": data or {}}}
-    return json.dumps(payload, indent=2, sort_keys=True)
-
 
 SENTIMENT_HINTS = {
     "no_data": "Call get_social_sentiment(symbol) to load data for the Falling Knife check.",
@@ -54,7 +44,26 @@ def deposit_paper_funds(asset: str, amount: float) -> str:
     """[PAPER MODE] Deposit fake funds into the paper trading wallet."""
     if not settings.PAPER_MODE:
         return _json_err("paper_mode_required", "Paper mode is NOT enabled.")
-    return _json_ok({"result": global_container.paper_engine.deposit("agent_zero", asset, amount)})
+    import math
+
+    from paper_engine import MAX_MAGNITUDE
+
+    asset = str(asset or "").strip()
+    try:
+        value = float(amount)
+    except (TypeError, ValueError):
+        value = float("nan")
+    if not asset or len(asset) > 32 or "/" in asset:
+        return _json_err("invalid_asset", f"Asset must be a ticker like USDT, got {asset!r}")
+    if not math.isfinite(value) or value <= 0 or value > MAX_MAGNITUDE:
+        return _json_err("invalid_amount", f"Deposit must be a positive number no larger than {MAX_MAGNITUDE:g}, got {amount!r}")
+    # Read the engine's structured result: a deposit refused at the accumulated-balance check is
+    # rolled back and credits nothing, and must not come back as ok:true with "Deposit refused"
+    # sitting in a prose field.
+    res = global_container.paper_engine.deposit_result("agent_zero", asset, value)
+    if not res["ok"]:
+        return _json_err(res["code"], res["message"], {"asset": asset, "amount": value})
+    return _json_ok({"result": res["message"], "asset": asset, "amount": value, "balance": res["balance"]})
 
 
 def validate_trade_risk(side: str, symbol: str, amount_usd: float, portfolio_value: float) -> str:

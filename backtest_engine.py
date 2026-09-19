@@ -2,9 +2,9 @@ from typing import Any, Dict
 
 import pandas as pd
 import ta
-from RestrictedPython import compile_restricted, safe_globals, utility_builtins
 
 from exchange_provider import ExchangeProvider
+from strategy_sandbox import StrategyError, run_strategy
 
 
 class BacktestEngine:
@@ -30,7 +30,8 @@ class BacktestEngine:
     ) -> Dict[str, Any]:
         """
         Run a backtest using provided strategy code.
-        Strategy code must define a function: `def on_candle(candle, indicators, state): -> str ('buy', 'sell', 'hold')`
+        Strategy code must define `def on_candle(price, rsi, state) -> str` returning 'buy', 'sell' or 'hold'.
+        It runs in an isolated child process with no access to pandas, ta, files, network or this process.
         """
         try:
             # 1. Fetch Data
@@ -41,95 +42,43 @@ class BacktestEngine:
             df["sma_20"] = ta.trend.sma_indicator(df["close"], window=20)
             df["sma_50"] = ta.trend.sma_indicator(df["close"], window=50)
 
-            # 3. Prepare Runtime Context
-
-            # Define safe access policy
-            def safe_getattr(obj, name):
-                """Allow access to attributes that don't start with underscore."""
-                if name.startswith("_"):
-                    raise AttributeError(f"Access to private attribute '{name}' is forbidden")
-                return getattr(obj, name)
-
-            def safe_import(name, *args, **kwargs):
-                """Restrict imports to a whitelist."""
-                whitelist = ["math"]
-                if name in whitelist:
-                    return __import__(name, *args, **kwargs)
-                raise ImportError(f"Importing '{name}' is forbidden.")
-
-            def safe_getitem(obj, key):
-                if isinstance(key, str) and key.startswith("_"):
-                    raise KeyError("Access to private keys is forbidden")
-                return obj[key]
-
-            def safe_setitem(obj, key, value):
-                if isinstance(key, str) and key.startswith("_"):
-                    raise KeyError("Access to private keys is forbidden")
-                obj[key] = value
-                return value
-
-            # Construct safe global execution environment
-            global_scope = safe_globals.copy()
-            global_scope.update(utility_builtins)
-            global_scope["__builtins__"]["__import__"] = safe_import
-            global_scope["_getattr_"] = safe_getattr
-            global_scope["_getitem_"] = safe_getitem
-            global_scope["_setitem_"] = safe_setitem
-            global_scope["_getiter_"] = iter
-
-            # Expose specific libraries safely (User must not use internal _methods)
-            global_scope["pd"] = pd
-            global_scope["ta"] = ta
-
-            # Execute the user's strategy definition securely
+            # 3. Run the strategy in the isolated sandbox (see strategy_sandbox.py).
+            # The strategy never sees pandas/ta or this process: it receives plain floats
+            # and returns one action per candle. All capital math stays here.
+            closes = [float(v) for v in df["close"].tolist()]
+            rsis = [None if pd.isna(v) else float(v) for v in df["rsi"].tolist()]
             try:
-                byte_code = compile_restricted(strategy_code, "<inline>", "exec")
-                # RestrictedPython sandbox: exec is required to evaluate user strategy code safely.
-                # Use the same dict for globals+locals so top-level vars are visible inside on_candle().
-                exec(byte_code, global_scope, global_scope)  # nosec B102
-            except Exception as e:
-                return {"error": f"Strategy Compilation Error: {str(e)}"}
-
-            if "on_candle" not in global_scope:
-                return {"error": "Strategy code must define 'def on_candle(close, rsi, state):' or similar"}
-
-            on_candle = global_scope["on_candle"]
+                outcome = run_strategy(strategy_code, [list(zip(closes, rsis))])
+            except StrategyError as e:
+                if e.kind == "runtime":
+                    return {"error": f"Runtime error in strategy at row {e.row_idx}: {e.message}"}
+                return {"error": e.message, "error_kind": e.kind}
+            actions = outcome.actions[0]
 
             # 4. Simulation Loop
             capital = initial_capital
             position = 0.0  # Amount of asset
             trades = []
-            state = {}  # Persistent state for the strategy
+            timestamps = df["timestamp"].tolist()
 
-            for i, row in df.iterrows():
-                # Provide simple inputs for Phase 4 proof
-                current_price = row["close"]
-                rsi = row["rsi"]
-
-                # Handling NaN for first few rows
-                if pd.isna(rsi):
+            for pos, action in enumerate(actions):
+                # Warm-up rows (RSI not yet defined) carry no action
+                if action is None:
                     continue
+                current_price = closes[pos]
 
-                # Call Strategy
-                try:
-                    # Signature: on_candle(price, rsi, state) -> action
-                    action = on_candle(current_price, rsi, state)
-                except Exception as e:
-                    return {"error": f"Runtime error in strategy at row {i}: {str(e)}"}
-
-                # Execute Logic (Simple)
                 if action == "buy" and capital > 0:
                     # Buy All
                     amount = capital / current_price
                     position = amount
                     capital = 0
-                    trades.append({"type": "buy", "price": current_price, "time": str(row["timestamp"])})
+                    trades.append({"type": "buy", "price": current_price, "time": str(timestamps[pos])})
 
                 elif action == "sell" and position > 0:
                     # Sell All
                     capital = position * current_price
                     position = 0
-                    trades.append({"type": "sell", "price": current_price, "time": str(row["timestamp"])})
+                    trades.append({"type": "sell", "price": current_price, "time": str(timestamps[pos])})
 
             # Final Value
             final_value = capital if capital > 0 else position * df.iloc[-1]["close"]

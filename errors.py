@@ -355,6 +355,32 @@ class IdempotencyConflictError(ExecutionError):
         )
 
 
+class ProposalStateError(ExecutionError):
+    """An approval proposal cannot be confirmed in its current state."""
+
+    # reason -> (code, HTTP status, suggestion). Reasons come from execution_store.ProposalError.
+    REASONS = {
+        "executed": ("EXEC_308", 409, "This proposal was already executed; nothing further will happen."),
+        "unknown": ("EXEC_309", 404, "The proposal does not exist in this server process; ask the agent to propose again."),
+        "expired": ("EXEC_310", 410, "Proposals expire quickly by design; ask the agent to propose again."),
+        "cancelled": ("EXEC_311", 409, "This proposal was rejected earlier and cannot be revived."),
+        "already_confirmed": ("EXEC_311", 409, "This proposal was already approved; approvals are single-use."),
+        "malformed": ("EXEC_312", 422, "The proposal payload is incomplete; ask the agent to propose again."),
+    }
+
+    def __init__(self, reason: str, request_id: str, message: str | None = None):
+        code, status, suggestion = self.REASONS.get(reason, ("EXEC_311", 409, None))
+        super().__init__(
+            code=code,
+            message=message or f"Proposal {request_id} cannot be approved ({reason})",
+            severity=ErrorSeverity.LOW,
+            data={"request_id": request_id, "reason": reason},
+            suggestion=suggestion,
+            doc_ref="docs/ARCHITECTURE.md#approval-gate",
+        )
+        self.http_status = status
+
+
 # =============================================================================
 # Market Data Errors (4xx)
 # =============================================================================
@@ -514,6 +540,20 @@ class PermissionDeniedError(AuthenticationError):
             data={"exchange": exchange, "operation": operation},
             suggestion="Check API key permissions and IP whitelist",
             doc_ref="docs/CUSTODY.md#api-keys",
+        )
+
+
+class ApprovalDeniedError(AuthenticationError):
+    """The caller may not approve this trade proposal."""
+
+    def __init__(self, request_id: str, reason: str):
+        super().__init__(
+            code="AUTH_604",
+            message=f"Not allowed to approve proposal {request_id}: {reason}",
+            severity=ErrorSeverity.HIGH,
+            data={"request_id": request_id, "reason": reason},
+            suggestion="Sign in to the dashboard as an admin, or supply the proposal's confirm_token",
+            doc_ref="docs/ARCHITECTURE.md#approval-gate",
         )
 
 

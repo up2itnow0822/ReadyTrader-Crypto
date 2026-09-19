@@ -16,6 +16,7 @@ Safety rules:
 from __future__ import annotations
 
 import json
+import math
 import os
 import secrets
 import sqlite3
@@ -29,6 +30,51 @@ try:
     from observability.webhooks import WebhookManager
 except ImportError:
     WebhookManager = None
+
+
+class ProposalError(ValueError):
+    """
+    A proposal could not be confirmed. Subclasses ValueError so existing callers keep working.
+
+    `reason` is stable API: unknown | expired | cancelled | executed | already_confirmed | invalid_token.
+    """
+
+    def __init__(self, reason: str, message: str):
+        super().__init__(message)
+        self.reason = reason
+
+
+# Fields a human approver may see, per proposal kind. A whitelist on purpose: anything a future
+# producer adds to a payload stays hidden until it is reviewed and listed here. The confirm_token is
+# never part of a summary.
+_SUMMARY_FIELDS: Dict[str, tuple] = {
+    "place_cex_order": ("symbol", "side", "amount", "order_type", "price", "exchange", "market_type"),
+    "swap_tokens": ("from_token", "to_token", "amount", "chain", "rationale"),
+    "transfer_eth": ("to_address", "amount", "chain"),
+}
+_SUMMARY_TEXT_LIMIT = 280
+
+
+def summarize_payload(kind: str, payload: Dict[str, Any] | None) -> Dict[str, Any]:
+    """
+    Display-safe subset of a proposal payload (JSON scalars only, long text truncated).
+
+    Non-finite numbers become None. A proposal is stored before policy validation runs, so a
+    NaN or inf amount can reach this function; Starlette serializes responses with
+    `allow_nan=False`, and one such value would make /api/pending-approvals return 500 for every
+    operator - hiding every other valid approval - until that proposal expired.
+    """
+    out: Dict[str, Any] = {}
+    for name in _SUMMARY_FIELDS.get(str(kind), ()):
+        value = (payload or {}).get(name)
+        if value is None or isinstance(value, bool):
+            out[name] = value
+        elif isinstance(value, (int, float)):
+            number = float(value)
+            out[name] = number if math.isfinite(number) else None
+        else:
+            out[name] = str(value)[:_SUMMARY_TEXT_LIMIT]
+    return out
 
 
 @dataclass
@@ -263,10 +309,14 @@ class ExecutionStore:
 
             # Phase 2: Notification callback
             if WebhookManager:
-                # Attempt to extract symbol and amount for a prettier message
-                amount = float(payload.get("amount") or 0.0)
-                symbol = str(payload.get("symbol") or payload.get("from_token", "Unknown"))
-                WebhookManager.notify_approval_required(kind=kind, amount=amount, symbol=symbol, request_id=request_id)
+                # Best effort only: the proposal is already stored, so a notification problem (or an
+                # odd payload) must not surface as "proposal failed" while a live proposal stays pending.
+                try:
+                    amount = float(payload.get("amount") or 0.0)
+                    symbol = str(payload.get("symbol") or payload.get("from_token", "Unknown"))
+                    WebhookManager.notify_approval_required(kind=kind, amount=amount, symbol=symbol, request_id=request_id)
+                except Exception:
+                    pass
 
             return prop
 
@@ -295,6 +345,7 @@ class ExecutionStore:
                         "kind": p.kind,
                         "created_at": p.created_at,
                         "expires_at": p.expires_at,
+                        "summary": summarize_payload(p.kind, p.payload),
                     }
                 )
             # Optionally merge persisted proposals (same-session only) that aren't loaded yet.
@@ -302,25 +353,38 @@ class ExecutionStore:
             if conn is not None:
                 rows = conn.execute(
                     """
-                    SELECT request_id, kind, created_at, expires_at
+                    SELECT request_id, kind, created_at, expires_at, payload_json
                     FROM execution_proposals
                     WHERE session_id = ? AND confirmed_at IS NULL AND cancelled_at IS NULL AND expires_at > ?
                     """,
                     (self._session_id, float(now)),
                 ).fetchall()
                 seen = {p["request_id"] for p in pending}
-                for rid, kind, created_at, expires_at in rows:
+                for rid, kind, created_at, expires_at, payload_json in rows:
                     if str(rid) in seen:
                         continue
+                    try:
+                        payload = json.loads(payload_json) if payload_json else {}
+                    except Exception:
+                        payload = {}
                     pending.append(
                         {
                             "request_id": str(rid),
                             "kind": str(kind),
                             "created_at": float(created_at),
                             "expires_at": float(expires_at),
+                            "summary": summarize_payload(str(kind), payload if isinstance(payload, dict) else {}),
                         }
                     )
             return {"pending": pending}
+
+    def token_matches(self, request_id: str, confirm_token: str) -> bool:
+        """Constant-time check of a proposal's confirm token. False for unknown proposals. Changes nothing."""
+        with self._lock:
+            p = self._items.get(request_id) or self._load(request_id)
+            if not p or not isinstance(confirm_token, str):
+                return False
+            return secrets.compare_digest(p.confirm_token, confirm_token)
 
     def cancel(self, request_id: str) -> bool:
         with self._lock:
@@ -336,26 +400,47 @@ class ExecutionStore:
             self._persist(p)
             return True
 
+    def _confirmable(self, request_id: str) -> ExecutionProposal:
+        """State checks shared by both confirm paths. Caller holds the lock."""
+        p = self._items.get(request_id) or self._load(request_id)
+        if not p:
+            raise ProposalError("unknown", "Unknown request_id")
+        if p.expires_at <= time.time():
+            raise ProposalError("expired", "Proposal expired")
+        if p.cancelled_at is not None:
+            raise ProposalError("cancelled", "Proposal cancelled")
+        if p.executed_at is not None:
+            raise ProposalError("executed", "Proposal already executed")
+        if p.confirmed_at is not None:
+            raise ProposalError("already_confirmed", "Proposal already confirmed")
+        return p
+
+    def _mark_confirmed(self, p: ExecutionProposal) -> ExecutionProposal:
+        p.confirmed_at = time.time()
+        self._items[p.request_id] = p
+        self._persist(p)
+        return p
+
     def confirm(self, request_id: str, confirm_token: str) -> ExecutionProposal:
+        """Single-use confirmation by the token issued with the proposal."""
         with self._lock:
-            p = self._items.get(request_id) or self._load(request_id)
-            if not p:
-                raise ValueError("Unknown request_id")
-            now = time.time()
-            if p.expires_at <= now:
-                raise ValueError("Proposal expired")
-            if p.cancelled_at is not None:
-                raise ValueError("Proposal cancelled")
-            if p.executed_at is not None:
-                raise ValueError("Proposal already executed")
-            if p.confirmed_at is not None:
-                raise ValueError("Proposal already confirmed")
-            if secrets.compare_digest(p.confirm_token, confirm_token) is False:
-                raise ValueError("Invalid confirm_token")
-            p.confirmed_at = now
-            self._items[request_id] = p
-            self._persist(p)
-            return p
+            p = self._confirmable(request_id)
+            if not isinstance(confirm_token, str) or not secrets.compare_digest(p.confirm_token, confirm_token):
+                raise ProposalError("invalid_token", "Invalid confirm_token")
+            return self._mark_confirmed(p)
+
+    def confirm_as_operator(self, request_id: str, *, operator: str) -> ExecutionProposal:
+        """
+        Single-use confirmation WITHOUT the confirm token.
+
+        The caller is responsible for having authenticated `operator` as a human approver (the HTTP
+        API does this with an admin JWT). Never expose this path to MCP tools: the agent that created a
+        proposal must not be able to confirm it. Same state checks and single-use guarantee as confirm().
+        """
+        if not isinstance(operator, str) or not operator.strip():
+            raise ValueError("operator is required")
+        with self._lock:
+            return self._mark_confirmed(self._confirmable(request_id))
 
     def mark_executed(self, request_id: str, result: Optional[Dict[str, Any]] = None) -> bool:
         """
