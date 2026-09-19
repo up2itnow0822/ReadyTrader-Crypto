@@ -118,6 +118,7 @@ applicable items are verified.**
   - [ ] All secrets in environment variables or secrets manager
   - [ ] No secrets in source code, config files, or logs
   - [x] `.env` / `.env.live` / `.env.*.local` gitignored (templates `env*.example` stay tracked)
+
 - [ ] **Container Security**
 
   - [ ] Running as non-root user

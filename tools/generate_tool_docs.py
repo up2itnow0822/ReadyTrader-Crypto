@@ -110,9 +110,8 @@ async def _load_tools() -> Dict[str, Any]:
     # Importing `server` must be safe in a clean environment (paper mode defaults).
     from server import mcp
 
-    tools = await mcp.get_tools()
-    # FastMCP returns a dict[str, FunctionTool]
-    return dict(tools)
+    tools = await mcp.list_tools()
+    return {tool.name: tool for tool in tools}
 
 
 def _first_line(doc: str) -> str:

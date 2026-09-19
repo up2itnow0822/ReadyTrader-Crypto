@@ -14,17 +14,17 @@ ______________________________________________________________________
 
 ### 2. Operations & Deployment
 
-| Document                   | Description                                     |
-| :------------------------- | :---------------------------------------------- |
-| `../RUNBOOK.md`            | Operator runbook + incident scenarios           |
-| `ERRORS.md`                | Error codes + troubleshooting guide             |
-| `HERMES_INTEGRATION.md`    | Hermes stdio MCP + skill wiring                 |
-| `OPS_BTC_PRODUCTION.md`    | BTC live-halted ops pack (keys, monitoring)     |
-| `UAT_BTC_PRODUCTION_MINUS_DUST.md` | Production-minus-dust UAT evidence     |
-| `LIVE_TESTING_PROTOCOL.md` | **NEW** Formal live trading validation protocol |
-| `THREAT_MODEL.md`          | Security threat model for live trading          |
-| `CUSTODY.md`               | Key custody + rotation guidance                 |
-| `SECURITY_REVIEW.md`       | **NEW** Pre-production security checklist       |
+| Document                           | Description                                     |
+| :--------------------------------- | :---------------------------------------------- |
+| `../RUNBOOK.md`                    | Operator runbook + incident scenarios           |
+| `ERRORS.md`                        | Error codes + troubleshooting guide             |
+| `HERMES_INTEGRATION.md`            | Hermes stdio MCP + skill wiring                 |
+| `OPS_BTC_PRODUCTION.md`            | BTC live-halted ops pack (keys, monitoring)     |
+| `UAT_BTC_PRODUCTION_MINUS_DUST.md` | Production-minus-dust UAT evidence              |
+| `LIVE_TESTING_PROTOCOL.md`         | **NEW** Formal live trading validation protocol |
+| `THREAT_MODEL.md`                  | Security threat model for live trading          |
+| `CUSTODY.md`                       | Key custody + rotation guidance                 |
+| `SECURITY_REVIEW.md`               | **NEW** Pre-production security checklist       |
 
 ### 3. Performance & Quality
 
