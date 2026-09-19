@@ -1,16 +1,21 @@
 from __future__ import annotations
 
+import contextvars
 import json
 import logging
 import os
 import time
-from typing import Any, Dict, Optional
+from contextlib import contextmanager
+from typing import Any, Dict, Iterator, Optional
 
 from fastmcp import FastMCP
 from web3 import Web3
 
 from app.core.config import settings
 from app.core.container import global_container
+from app.core.jsonio import json_dumps as _json_dumps
+from app.core.jsonio import json_err as _json_err
+from app.core.jsonio import json_ok as _json_ok
 from execution.cex_executor import CexExecutor
 from execution.evm import (
     chain_id_for,
@@ -48,16 +53,6 @@ def _parse_int(v: Any, default: int = 0) -> int:
     return int(v)
 
 
-def _json_ok(data: Dict[str, Any] | None = None) -> str:
-    payload = {"ok": True, "data": data or {}}
-    return json.dumps(payload, indent=2, sort_keys=True)
-
-
-def _json_err(code: str, message: str, data: Dict[str, Any] | None = None) -> str:
-    payload = {"ok": False, "error": {"code": code, "message": message, "data": data or {}}}
-    return json.dumps(payload, indent=2, sort_keys=True)
-
-
 def _json_internal_error(
     code: str,
     public_message: str,
@@ -79,11 +74,35 @@ def _require_live_allowed(*, venue: str) -> None:
         raise ValueError(f"Execution blocked by EXECUTION_MODE={settings.EXECUTION_MODE.value} for venue={venue}")
 
 
+# True only inside approved_execution(), and only for the thread/task that entered it.
+_APPROVED_EXECUTION: contextvars.ContextVar[bool] = contextvars.ContextVar("readytrader_approved_execution", default=False)
+
+
+@contextmanager
+def approved_execution() -> Iterator[None]:
+    """
+    Run the enclosed tool call as the execution of an ALREADY human-approved proposal.
+
+    Only the HTTP approval endpoint may use this, after ExecutionStore.confirm*(). It replaces the old
+    approach of flipping the process-wide EXECUTION_APPROVAL_MODE to "auto" for the duration of the
+    exchange round-trip, which switched the approval gate off for every other caller in the process.
+    A ContextVar is visible to the current thread/task only. All other gates (live flags, halt,
+    execution mode, policy engine) still run for the approved call.
+    """
+    token = _APPROVED_EXECUTION.set(True)
+    try:
+        yield
+    finally:
+        _APPROVED_EXECUTION.reset(token)
+
+
 def _maybe_propose(kind: str, payload: Dict[str, Any]) -> Optional[str]:
     """
     If approve-each is enabled, create an execution proposal and return its JSON response string.
     """
     if settings.PAPER_MODE:
+        return None
+    if _APPROVED_EXECUTION.get():
         return None
     if settings.EXECUTION_APPROVAL_MODE != "approve_each":
         return None
@@ -144,15 +163,18 @@ def swap_tokens(
     if settings.PAPER_MODE:
         if not global_container.paper_engine:
             return _json_err("paper_engine_missing", "Paper engine not initialized.")
-        res = global_container.paper_engine.execute_trade(
+        res = global_container.paper_engine.execute_trade_result(
             user_id="agent_zero",
             side="sell",
             symbol=symbol,
             amount=amount,
             price=1.0,
             rationale=rationale or "swap_tokens_paper",
+            update_price_cache=False,  # 1.0 is a placeholder, not a market price
         )
-        return _json_ok({"venue": "dex", "mode": "paper", "result": res})
+        if not res["ok"]:
+            return _json_err(res["code"], res["message"], {"venue": "dex", "mode": "paper", "symbol": symbol})
+        return _json_ok({"venue": "dex", "mode": "paper", "result": res["message"], "fill": res["fill"]})
 
     try:
         _require_live_allowed(venue="dex")
@@ -367,13 +389,21 @@ def place_cex_order(
     if settings.PAPER_MODE:
         if not global_container.paper_engine:
             return _json_err("paper_engine_missing", "Paper engine not initialized.")
-        fill_price = float(price) if price and float(price) > 0 else _paper_reference_price(symbol)
+        # None or 0 means "no price given" (market order). Anything else must be a real price: a negative or
+        # non-numeric price used to be silently replaced by the live market price.
+        try:
+            explicit = float(price) if price not in (None, 0, 0.0) else None
+        except (TypeError, ValueError):
+            return _json_err("invalid_price", f"Price must be a positive number, got {price!r}", {"symbol": symbol})
+        if explicit is not None and not explicit > 0:
+            return _json_err("invalid_price", f"Price must be a positive number, got {price!r}", {"symbol": symbol})
+        fill_price = explicit if explicit is not None else _paper_reference_price(symbol)
         if fill_price is None:
             return _json_err(
                 "paper_price_required",
                 f"No price provided and no market-data bus price is available for {symbol}; pass an explicit price for the paper fill.",
             )
-        res = global_container.paper_engine.execute_trade(
+        res = global_container.paper_engine.execute_trade_result(
             user_id="agent_zero",
             side=side,
             symbol=symbol,
@@ -381,7 +411,9 @@ def place_cex_order(
             price=fill_price,
             rationale="cex_order_paper",
         )
-        return _json_ok({"venue": "cex", "mode": "paper", "result": res})
+        if not res["ok"]:
+            return _json_err(res["code"], res["message"], {"venue": "cex", "mode": "paper", "symbol": symbol})
+        return _json_ok({"venue": "cex", "mode": "paper", "result": res["message"], "fill": res["fill"]})
 
     try:
         _require_live_allowed(venue="cex")
@@ -664,7 +696,7 @@ def wait_for_cex_order(
         while True:
             res = json.loads(get_cex_order(order_id, symbol=symbol, exchange=exchange, market_type=market_type))
             if not res.get("ok"):
-                return json.dumps(res, indent=2, sort_keys=True)
+                return _json_dumps(res)
             order = (res.get("data") or {}).get("order") or {}
             status = str(order.get("status") or "").lower()
             if status in {"closed", "canceled", "cancelled", "rejected", "expired"}:
