@@ -130,7 +130,7 @@ applicable items are verified.**
 - [ ] **Dependency Audit**
 
   - [ ] `pip-audit` shows no known vulnerabilities
-  - [ ] `npm audit` shows no critical vulnerabilities (frontend)
+  - [ ] `npm audit` shows 0 vulnerabilities, including `devDependencies` (frontend; PR CI / `make security`)
   - [ ] Dependencies pinned to specific versions (`requirements.lock.txt`)
 
 - [ ] **Static Analysis**

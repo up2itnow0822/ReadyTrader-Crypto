@@ -29,6 +29,8 @@ jobs:
           node-version: "20"
       - name: Install frontend dependencies
         run: npm ci --prefix frontend
+      - name: Audit frontend dependencies
+        run: npm audit --prefix frontend
       - name: Run quality and security gates
         run: |
           PATH="$PWD/.venv/bin:$PATH" make check

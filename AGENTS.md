@@ -99,7 +99,7 @@ Default section order:
 ## Verification
 
 - `make check` (ruff + pytest)
-- `make security` (bandit + pip-audit)
+- `make security` (bandit + pip-audit + `npm audit --prefix frontend`)
 - Paper BTC harness: `python examples/paper_btc_uat.py`
 - UAT evidence: `docs/UAT_BTC_PRODUCTION_MINUS_DUST.md`
 - Hermes skill (public MIT package): https://github.com/up2itnow0822/readytrader-crypto-hermes →

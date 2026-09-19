@@ -550,7 +550,7 @@ only locally; the remaining scans run on a schedule or on release:
 | **Tests**            | `pytest`                                | Unit + integration suite                                         | CI on every push/PR + local (`make check`)                             |
 | **Docs truth**       | `pytest tests/test_docs_tool_roster.py` | No phantom tool references; `docs/TOOLS.md` matches the registry | CI on every push/PR + local (`make check`)                             |
 | **Security Scan**    | `bandit`                                | Python security vulnerabilities                                  | CI on every push/PR (`make security`) + daily (`security-audit.yml`)   |
-| **Dependency Audit** | `pip-audit`                             | Known CVEs in dependencies                                       | CI on every push/PR (both requirements files) + daily                  |
+| **Dependency Audit** | `pip-audit` + `npm audit`               | Known CVEs in Python and frontend (including `devDependencies`)  | CI on every push/PR (`make security`) + daily (`security-audit.yml`)   |
 | **Secret Scan**      | `trufflehog`                            | Prevent credential leaks                                         | CI daily/manual (`security-audit.yml`)                                 |
 | **Container Scan**   | `trivy`                                 | Docker image vulnerabilities                                     | CI daily/manual (`security-audit.yml`); CI on tag push (`release.yml`) |
 | **CodeQL**           | GitHub                                  | SAST for Python & JavaScript                                     | CI daily/manual (`security-audit.yml`)                                 |
@@ -579,7 +579,7 @@ These safety mechanisms are continuously verified:
 
 | Workflow            | File                                    | Trigger          | Purpose                                                     |
 | :------------------ | :-------------------------------------- | :--------------- | :---------------------------------------------------------- |
-| **CI**              | `.github/workflows/ci.yml`              | Push/PR          | Locked-deps check, `make check`, `make security`, pip-audit |
+| **CI**              | `.github/workflows/ci.yml`              | Push/PR          | Locked-deps check, `make check`, `make security` (bandit, pip-audit, `npm audit`) |
 | **Live-Path Tests** | `.github/workflows/live-path-tests.yml` | Manual dispatch  | Exchange sandbox testing                                    |
 | **Security Audit**  | `.github/workflows/security-audit.yml`  | Daily + manual   | pip-audit, bandit, trufflehog, trivy, CodeQL, SBOM          |
 | **Release**         | `.github/workflows/release.yml`         | Tag push, manual | Version validation, trivy container scan on release         |

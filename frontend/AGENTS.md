@@ -96,8 +96,9 @@ file and the tests that enforce them.
 - Every formatter in `src/lib/format.ts` must be null-safe and return `"—"`
   (`MISSING_VALUE`) rather than throwing or producing `NaN`/`undefined` text — the API
   can and does omit/partially-fill fields.
-- New dependencies: keep `npm audit` at zero high/critical findings. Check before
-  adding, not after.
+- New dependencies: keep `npm audit` at zero findings, including
+  `devDependencies`. Check before adding, not after. `npm audit --omit=dev` is
+  not the gate — it hides eslint/tsc toolchain advisories.
 - Ports for local dev/e2e must come from the 3100-3199 (Next) / 8100-8199 (API)
   ranges used by this repo's other worktrees, to avoid colliding with a sibling
   worktree's servers.
@@ -114,6 +115,8 @@ Run from `frontend/`:
 - `npm run lint` — ESLint (`eslint-config-next`), must be clean (no errors, no
   warnings suppressed).
 - `npm run typecheck` — `tsc --noEmit`, must be clean.
+- `npm audit` — must report 0 vulnerabilities, including `devDependencies`.
+  Enforced on every PR by `make security` / `.github/workflows/ci.yml`.
 - `npm test` — Vitest unit/integration tests (formatters, `apiFetch`, `AuthProvider`,
   `HealthProvider`, `ApprovalCard`, `useApprovals`, `useWebSocket`).
 - `npm run build` — production Next.js build (also required before `npm run e2e`,

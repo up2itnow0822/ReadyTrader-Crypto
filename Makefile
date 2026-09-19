@@ -112,6 +112,7 @@ check: lint test-cov
 security:
 	bandit -r . -c bandit.yaml
 	pip-audit -r requirements.txt
+	npm audit --prefix frontend
 	@echo "For full secret scan, use: trufflehog git file://. --only-verified"
 
 # =============================================================================
