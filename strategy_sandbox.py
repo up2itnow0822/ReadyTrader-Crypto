@@ -144,9 +144,17 @@ def validate_source(source: str) -> None:
                     raise StrategyError("forbidden", f"Use of private name '{value}' is forbidden")
 
 
-# The child program. Kept as a constant so the sandbox has no on-disk script to tamper with,
-# and small enough to audit in one screen.
-_CHILD_SOURCE = r"""
+# The first part of the child program: everything that must happen before any untrusted input is
+# acted on. Kept separate so the sandbox's own probes run under exactly these conditions too.
+#
+# The limits are applied HERE, by the child itself, after exec. They used to be applied in a
+# `preexec_fn`, i.e. in the forked child before exec - which runs Python (and an `import resource`)
+# in an interval where only async-signal-safe work is allowed. In a multithreaded host such as the
+# FastAPI server, a lock held by another thread at fork time can deadlock the child there; because
+# `Popen()` does not return until the child execs, the parent's wall-clock timeout would never start
+# and the calling worker would hang indefinitely. Session isolation now comes from
+# `start_new_session=True`, which the standard library performs safely.
+_CHILD_PREAMBLE = r"""
 import json, math, os, sys
 
 def _reply(obj):
@@ -158,6 +166,36 @@ def _fail(kind, message, series_idx=None, row_idx=None):
     _reply({"ok": False, "kind": kind, "message": str(message)[:MAX_MESSAGE],
             "series_idx": series_idx, "row_idx": row_idx})
 
+req = json.loads(sys.stdin.read())
+MAX_MESSAGE, MAX_PARAMS = int(req["max_message"]), int(req["max_params"])
+
+# Apply, then INDEPENDENTLY verify. Applying and trusting would make a silently-failed setrlimit an
+# unprotected run; the verification pass is what makes this fail closed.
+_apply = req.get("apply_limits") or {}
+_expect = req.get("expect_limits") or {}
+if _apply or _expect:
+    try:
+        import resource
+        for lim_name, want in _apply.items():
+            which = getattr(resource, lim_name)
+            try:
+                _soft, hard = resource.getrlimit(which)
+                value = want if hard == resource.RLIM_INFINITY else min(want, hard)
+                resource.setrlimit(which, (value, value))
+            except (ValueError, OSError):
+                pass  # the verification pass below decides whether this was fatal
+        for lim_name, want in _expect.items():
+            soft, _hard = resource.getrlimit(getattr(resource, lim_name))
+            if soft == resource.RLIM_INFINITY or soft > want:
+                _fail("resource", "sandbox limit %s was not applied (soft=%s, expected<=%s); refusing to run" % (lim_name, soft, want))
+    except SystemExit:
+        raise
+    except Exception as e:
+        _fail("resource", "sandbox limits could not be verified: %s" % (e,))
+"""
+
+# The rest of the child program: only reached once the limits above are in force.
+_CHILD_BODY = r"""
 try:
     from RestrictedPython import compile_restricted, safe_builtins
     from RestrictedPython.Eval import default_guarded_getitem, default_guarded_getiter
@@ -166,22 +204,7 @@ try:
 except Exception as e:  # pragma: no cover - environment problem, not strategy problem
     _fail("resource", "sandbox runtime unavailable: %s" % (e,))
 
-req = json.loads(sys.stdin.read())
 source, series = req["source"], req["series"]
-MAX_MESSAGE, MAX_PARAMS = int(req["max_message"]), int(req["max_params"])
-
-expect = req.get("expect_limits") or {}
-if expect:
-    try:
-        import resource
-        for lim_name, want in expect.items():
-            soft, _hard = resource.getrlimit(getattr(resource, lim_name))
-            if soft == resource.RLIM_INFINITY or soft > want:
-                _fail("resource", "sandbox limit %s was not applied (soft=%s, expected<=%s); refusing to run" % (lim_name, soft, want))
-    except SystemExit:
-        raise
-    except Exception as e:
-        _fail("resource", "sandbox limits could not be verified: %s" % (e,))
 
 def _import(name, *args, **kwargs):
     if name == "math":
@@ -267,28 +290,24 @@ for s_idx, points in enumerate(series):
 _reply({"ok": True, "actions": out, "params": params})
 """
 
+_CHILD_SOURCE = _CHILD_PREAMBLE + _CHILD_BODY
 
-def _limit_resources(cpu_seconds: int):  # pragma: no cover - runs in the child before exec
-    def apply() -> None:
-        import resource
 
-        def cap(which: int, value: int) -> None:
-            try:
-                _, hard = resource.getrlimit(which)
-                if hard != resource.RLIM_INFINITY:
-                    value = min(value, hard)
-                resource.setrlimit(which, (value, value))
-            except (ValueError, OSError):
-                pass
+def _child_limits(cpu_seconds: int) -> Tuple[Dict[str, int], Dict[str, int]]:
+    """
+    (limits the child applies to itself, limits it must observe before running strategy code).
 
-        cap(resource.RLIMIT_CPU, cpu_seconds)
-        cap(resource.RLIMIT_AS, ADDRESS_SPACE_BYTES)
-        cap(resource.RLIMIT_NOFILE, MAX_OPEN_FILES)
-        cap(resource.RLIMIT_FSIZE, 0)
-        cap(resource.RLIMIT_CORE, 0)
-        os.setsid()
-
-    return apply
+    Identical in production. They are separate so a test can hand the child an empty `apply` with a
+    full `expect` and prove it refuses to run rather than running unprotected.
+    """
+    spec = {
+        "RLIMIT_CPU": int(cpu_seconds),
+        "RLIMIT_AS": ADDRESS_SPACE_BYTES,
+        "RLIMIT_NOFILE": MAX_OPEN_FILES,
+        "RLIMIT_FSIZE": 0,
+        "RLIMIT_CORE": 0,
+    }
+    return dict(spec), dict(spec)
 
 
 def _child_env() -> Dict[str, str]:
@@ -402,7 +421,7 @@ def _run_child(data: bytes, workdir: str, timeout_s: float, reply_cap: int, kwar
 def _kill(proc: "subprocess.Popen[bytes]") -> None:
     try:
         if os.name == "posix":
-            os.killpg(proc.pid, signal.SIGKILL)  # the child called setsid(): its group is its own
+            os.killpg(proc.pid, signal.SIGKILL)  # start_new_session=True: the child leads its own group
         else:  # pragma: no cover
             proc.kill()
     except (ProcessLookupError, PermissionError, OSError):
@@ -436,14 +455,9 @@ def run_strategy(
     kwargs: Dict[str, Any] = {}
     if os.name == "posix":
         cpu_seconds = int(timeout_s) + 1
-        kwargs["preexec_fn"] = _limit_resources(cpu_seconds)
-        request["expect_limits"] = {
-            "RLIMIT_CPU": cpu_seconds,
-            "RLIMIT_AS": ADDRESS_SPACE_BYTES,
-            "RLIMIT_NOFILE": MAX_OPEN_FILES,
-            "RLIMIT_FSIZE": 0,
-            "RLIMIT_CORE": 0,
-        }
+        # No preexec_fn: nothing of ours runs between fork and exec (see _CHILD_PREAMBLE).
+        kwargs["start_new_session"] = True
+        request["apply_limits"], request["expect_limits"] = _child_limits(cpu_seconds)
     total_points = sum(len(points) for points in payload_series)
     reply_cap = REPLY_OVERHEAD_BYTES + MAX_PARAMS_CHARS * 6 + REPLY_BYTES_PER_POINT * total_points
 
