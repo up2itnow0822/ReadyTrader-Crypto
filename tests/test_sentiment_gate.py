@@ -7,7 +7,9 @@ trade check under the symbol the trade uses.
 """
 
 import json
+import threading
 import types
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -175,6 +177,8 @@ def test_consensus_needs_a_share_of_the_sample_not_just_a_count():
 def test_too_few_texts_is_not_a_measurement():
     reading = score_texts(PANIC[:3])
     assert (reading.score, reading.sufficient) == (0.0, False)
+    four_directional = score_texts(PANIC[:4])
+    assert (four_directional.score, four_directional.sufficient) == (0.0, False)
     assert score_texts([]).score == 0.0
 
 
@@ -210,7 +214,18 @@ def test_symbol_variants_share_one_base_asset(symbol):
 
 @pytest.mark.parametrize(
     ("symbol", "expected"),
-    [("WBTC", "WBTC"), ("STETH", "STETH"), ("ETHBTC", "ETHBTC"), ("CRVUSD", "CRVUSD"), ("USDT", "USDT"), ("OPUSDT", "OP"), ("", ""), (None, "")],
+    [
+        ("WBTC", "WBTC"),
+        ("STETH", "STETH"),
+        ("ETHBTC", "ETHBTC"),
+        ("CRVUSD", "CRVUSD"),
+        ("USDT", "USDT"),
+        ("OPUSDT", "OP"),
+        ("SUSDT", "S"),
+        ("TUSDC", "T"),
+        ("", ""),
+        (None, ""),
+    ],
 )
 def test_base_asset_does_not_guess_ambiguous_tickers(symbol, expected):
     assert core.base_asset(symbol) == expected
@@ -363,6 +378,145 @@ def test_one_source_down_cannot_reopen_the_gate(monkeypatch):
     core.analyze_social_sentiment("BTC")
 
     assert _risk_check("buy", "BTC/USDT")["result"]["allowed"] is False
+
+
+@pytest.mark.parametrize(
+    "reddit_posts",
+    [[], [types.SimpleNamespace(title=""), types.SimpleNamespace(title="   ")]],
+    ids=["empty", "blank-only"],
+)
+def test_source_returning_no_usable_text_cannot_reopen_the_gate(monkeypatch, reddit_posts):
+    """A successful response without scored text still loses a previously contributing feed."""
+    tweepy, praw = _feed(monkeypatch, PANIC[:10], PANIC[10:])
+    core.analyze_social_sentiment("BTC")
+    tweepy.Client.return_value.search_recent_tweets.return_value = types.SimpleNamespace(data=[types.SimpleNamespace(text=t) for t in JARGON[:10]])
+    praw.Reddit.return_value.subreddit.return_value.search.return_value = reddit_posts
+
+    out = core.analyze_social_sentiment("BTC")
+
+    assert "does not replace" in out
+    assert _risk_check("buy", "BTC/USDT")["result"]["allowed"] is False
+
+
+def test_configured_source_that_never_contributed_does_not_look_lost(monkeypatch):
+    """A configured provider with no text in either refresh must not degrade the usable feed."""
+    tweepy, praw = _feed(monkeypatch, PANIC[:10], [])
+    core.analyze_social_sentiment("BTC")
+    tweepy.Client.return_value.search_recent_tweets.return_value = types.SimpleNamespace(data=[types.SimpleNamespace(text=t) for t in JARGON[:10]])
+    praw.Reddit.return_value.subreddit.return_value.search.return_value = []
+
+    out = core.analyze_social_sentiment("BTC")
+
+    assert "does not replace" not in out
+    assert _risk_check("buy", "BTC/USDT")["result"]["allowed"] is True
+
+
+def test_error_from_source_that_never_contributed_does_not_hold_bearish(monkeypatch):
+    """A noncontributing Reddit feed may fail while the sole contributor cleanly refreshes."""
+    tweepy, praw = _feed(monkeypatch, PANIC[:10], [])
+    core.analyze_social_sentiment("BTC")
+    tweepy.Client.return_value.search_recent_tweets.return_value = types.SimpleNamespace(data=[types.SimpleNamespace(text=t) for t in JARGON[:10]])
+    praw.Reddit.return_value.subreddit.return_value.search.side_effect = RuntimeError("503")
+
+    out = core.analyze_social_sentiment("BTC")
+
+    assert "does not replace" not in out
+    assert _risk_check("buy", "BTC/USDT")["result"]["allowed"] is True
+
+
+def test_more_bearish_degraded_refresh_tightens_the_gate(monkeypatch):
+    """A degraded tightening retains the missing contributor as a recovery guard."""
+    core._sentiment_cache.set(
+        "BTC",
+        SentimentReading(score=-0.5, texts=10, bullish=2, bearish=6),
+        sources={"twitter", "reddit"},
+    )
+    tweepy, praw = _feed(monkeypatch, PANIC[:10], [])
+    praw.Reddit.return_value.subreddit.return_value.search.side_effect = RuntimeError("503")
+
+    out = core.analyze_social_sentiment("BTC")
+
+    assert "does not replace" not in out
+    assert core.get_cached_sentiment_score("BTC") < GATE
+    assert _risk_check("buy", "BTC/USDT")["result"]["allowed"] is False
+    entry = core._sentiment_cache.get("BTC")
+    assert entry["sources"] == {"twitter"}
+    assert entry["guard_sources"] == {"twitter", "reddit"}
+
+    tweepy.Client.return_value.search_recent_tweets.return_value = types.SimpleNamespace(data=[types.SimpleNamespace(text=t) for t in JARGON[:10]])
+    out = core.analyze_social_sentiment("BTC")
+
+    assert "does not replace" in out
+    assert _risk_check("buy", "BTC/USDT")["result"]["allowed"] is False
+
+    praw.Reddit.return_value.subreddit.return_value.search.side_effect = None
+    praw.Reddit.return_value.subreddit.return_value.search.return_value = [types.SimpleNamespace(title=t) for t in JARGON[10:]]
+    out = core.analyze_social_sentiment("BTC")
+
+    assert "does not replace" not in out
+    assert _risk_check("buy", "BTC/USDT")["result"]["allowed"] is True
+
+
+def test_concurrent_degraded_refresh_cannot_overwrite_new_bearish_reading():
+    cache = core.SentimentCache()
+    start = threading.Barrier(2)
+    bearish = SentimentReading(score=-1.0, texts=12, bullish=0, bearish=12)
+    degraded = SentimentReading(score=0.0, texts=3, bullish=0, bearish=0)
+
+    def update(reading, errored_sources):
+        start.wait()
+        cache.set_preserving_bearish("BTC", reading, configured=True, sources={"twitter"}, errored_sources=errored_sources)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(update, bearish, set()), pool.submit(update, degraded, {"twitter"})]
+        for future in futures:
+            future.result()
+
+    assert cache.get("BTC")["reading"] == bearish
+
+
+def test_concurrent_asset_writes_do_not_drop_either_reading():
+    cache = core.SentimentCache()
+    start = threading.Barrier(2)
+
+    def update(symbol):
+        start.wait()
+        cache.set(symbol, SentimentReading(score=0.0, texts=5, bullish=0, bearish=0))
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(update, "BTC"), pool.submit(update, "ETH")]
+        for future in futures:
+            future.result()
+
+    assert set(cache.cache) == {"BTC", "ETH"}
+
+
+def test_source_becoming_unconfigured_cannot_reopen_the_gate(monkeypatch):
+    _, praw = _feed(monkeypatch, PANIC[:10], PANIC[10:])
+    core.analyze_social_sentiment("BTC")
+    monkeypatch.delenv("TWITTER_BEARER_TOKEN")
+    praw.Reddit.return_value.subreddit.return_value.search.return_value = [types.SimpleNamespace(title=t) for t in JARGON[:5]]
+
+    out = core.analyze_social_sentiment("BTC")
+
+    assert "does not replace" in out
+    assert _risk_check("buy", "BTC/USDT")["result"]["allowed"] is False
+
+
+def test_clean_single_source_refresh_can_replace_a_bearish_reading(monkeypatch):
+    """An intentionally unconfigured provider must not make the configured provider look degraded."""
+    monkeypatch.setenv("REDDIT_CLIENT_ID", "test-id")
+    monkeypatch.setenv("REDDIT_CLIENT_SECRET", "test-secret")
+    praw = MagicMock()
+    praw.Reddit.return_value.subreddit.return_value.search.return_value = [types.SimpleNamespace(title=t) for t in PANIC[:5]]
+    monkeypatch.setattr(core, "praw", praw)
+    core.analyze_social_sentiment("BTC")
+    praw.Reddit.return_value.subreddit.return_value.search.return_value = [types.SimpleNamespace(title=t) for t in JARGON[:5]]
+
+    out = core.analyze_social_sentiment("BTC")
+
+    assert "does not replace" not in out
+    assert _risk_check("buy", "BTC/USDT")["result"]["allowed"] is True
 
 
 def test_full_refresh_replaces_a_bearish_reading(monkeypatch):
