@@ -1,6 +1,8 @@
 ## ReadyTrader-Crypto Market Data (Phase 3)
 
-ReadyTrader-Crypto routes market data via `MarketDataBus` and exposes it through MCP tools like `get_ticker()` and `fetch_ohlcv()`.
+ReadyTrader-Crypto routes market data via `MarketDataBus` and exposes it to agents through the
+MCP tools `get_crypto_price()` and `fetch_ohlcv()`. `MarketDataBus.fetch_ticker()` is the
+internal Python method those tools call; it is not itself an MCP tool.
 
 ### Goals
 
@@ -16,7 +18,7 @@ ______________________________________________________________________
 ReadyTrader-Crypto typically wires providers in this order:
 
 - `exchange_ws` (public websocket tickers; opt-in)
-- `ingest` (user-provided snapshots via `ingest_ticker` / `ingest_ohlcv`)
+- `ingest` (user-provided snapshots via the internal `ingest_ticker` / `ingest_ohlcv` store APIs — not MCP tools)
 - `ccxt_rest` (CCXT REST fallback)
 
 Plugins (Phase 3C) can add additional providers.
@@ -31,7 +33,7 @@ The router scores sources using:
 - **freshness** (ticker age in ms)
 - **sanity checks** (non-negative, bid/ask ordering, etc.)
 
-`get_ticker()` returns:
+`MarketDataBus.fetch_ticker()` (the internal method `get_crypto_price` calls) returns:
 
 - `source`: chosen provider id
 - `ticker`: normalized ticker payload

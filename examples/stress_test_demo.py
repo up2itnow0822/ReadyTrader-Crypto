@@ -91,7 +91,11 @@ def main() -> int:
         print(f"\nWorst-drawdown replay seed: {wd_seed}")
         print("You can re-run with master_seed=that seed and scenarios=1 to replay deterministically.")
 
-    print("\nDone. Next: connect your agent and run `run_synthetic_stress_test` via MCP.")
+    print(
+        "\nDone. `run_synthetic_stress_test` is a Python function (stress_test_engine.run_synthetic_stress_test),"
+        " not an MCP tool -- run this script again with a different strategy, or ask your agent to call the"
+        " `run_backtest_simulation` MCP tool for a single-path backtest of the same contract."
+    )
     return 0
 
 

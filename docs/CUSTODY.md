@@ -156,7 +156,7 @@ curl -s http://localhost:8000/api/health | jq '.trading_halted'
 1. Test new key with read-only operation
 1. Update environment/secrets manager
 1. Restart service with new credentials
-1. Verify connectivity: `get_health()`
+1. Verify connectivity: `GET /api/health` (HTTP, `api_server.py`; there is no health MCP tool)
 1. Revoke old API key in exchange dashboard
 
 **For Keystore:**
