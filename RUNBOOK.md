@@ -22,13 +22,13 @@
 #### BTC CEX production path (spot)
 
 1. Copy `env.live.btc.example` → `.env.live`; fill JWT, CEX trade-only keys (no withdraw), remote signer URL.
-2. Validate compose (do not unhalt):  
+1. Validate compose (do not unhalt):\
    `docker-compose -f docker-compose.live.yml --env-file .env.live config`
-3. Start halted: `docker-compose -f docker-compose.live.yml --env-file .env.live up -d`
-4. Verify `GET /api/health` with JWT; confirm `trading_halted: true`.
-5. Paper/MCP first via Hermes — see `docs/HERMES_INTEGRATION.md`.
-6. Full ops pack (monitoring, keys, compose): `docs/OPS_BTC_PRODUCTION.md`.
-7. Do **not** place live orders until Phase 4 dust UAT is explicitly authorized.
+1. Start halted: `docker-compose -f docker-compose.live.yml --env-file .env.live up -d`
+1. Verify `GET /api/health` with JWT; confirm `trading_halted: true`.
+1. Paper/MCP first via Hermes — see `docs/HERMES_INTEGRATION.md`.
+1. Full ops pack (monitoring, keys, compose): `docs/OPS_BTC_PRODUCTION.md`.
+1. Do **not** place live orders until Phase 4 dust UAT is explicitly authorized.
 
 #### Rotate secrets
 

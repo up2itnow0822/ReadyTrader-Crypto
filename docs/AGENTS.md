@@ -27,6 +27,7 @@ ReadyTrader-Crypto documentation tree. Keep contracts accurate to code in `app/c
 ## Verification
 
 - Docs reviewed as part of UAT closeout; links resolve from repo root
+- `python tools/generate_tool_docs.py` and `python tools/verify_docs.py` read the registered tools through FastMCP's public async `mcp.list_tools()` API
 
 ## Child DOX Index
 
