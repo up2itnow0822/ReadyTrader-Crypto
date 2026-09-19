@@ -380,6 +380,32 @@ def test_one_source_down_cannot_reopen_the_gate(monkeypatch):
     assert _risk_check("buy", "BTC/USDT")["result"]["allowed"] is False
 
 
+def test_source_returning_no_text_cannot_reopen_the_gate(monkeypatch):
+    """An empty successful response still loses a feed that contributed to the bearish reading."""
+    tweepy, praw = _feed(monkeypatch, PANIC[:10], PANIC[10:])
+    core.analyze_social_sentiment("BTC")
+    tweepy.Client.return_value.search_recent_tweets.return_value = types.SimpleNamespace(data=[types.SimpleNamespace(text=t) for t in JARGON[:10]])
+    praw.Reddit.return_value.subreddit.return_value.search.return_value = []
+
+    out = core.analyze_social_sentiment("BTC")
+
+    assert "does not replace" in out
+    assert _risk_check("buy", "BTC/USDT")["result"]["allowed"] is False
+
+
+def test_configured_source_that_never_contributed_does_not_look_lost(monkeypatch):
+    """A configured provider with no text in either refresh must not degrade the usable feed."""
+    tweepy, praw = _feed(monkeypatch, PANIC[:10], [])
+    core.analyze_social_sentiment("BTC")
+    tweepy.Client.return_value.search_recent_tweets.return_value = types.SimpleNamespace(data=[types.SimpleNamespace(text=t) for t in JARGON[:10]])
+    praw.Reddit.return_value.subreddit.return_value.search.return_value = []
+
+    out = core.analyze_social_sentiment("BTC")
+
+    assert "does not replace" not in out
+    assert _risk_check("buy", "BTC/USDT")["result"]["allowed"] is True
+
+
 def test_concurrent_degraded_refresh_cannot_overwrite_new_bearish_reading():
     cache = core.SentimentCache()
     start = threading.Barrier(2)
