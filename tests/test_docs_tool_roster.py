@@ -82,6 +82,9 @@ ALLOWLIST: dict[str, str] = {
     # FastMCP's own Python API for listing a server's registered tools, used by
     # tools/generate_tool_docs.py and tools/verify_docs.py and documented in docs/AGENTS.md.
     "mcp.list_tools": "FastMCP Python API used by the doc generators, not an MCP tool",
+    # subprocess.Popen: CPython stdlib. CHANGELOG.md explains why the sandbox no longer
+    # applies rlimits from a preexec_fn (Popen() does not return until exec).
+    "Popen": "subprocess.Popen, CPython stdlib API referenced in CHANGELOG.md, not an MCP tool",
     "list_tools": "FastMCP Python API used by the doc generators, not an MCP tool",
     # strategy_sandbox.run_strategy is the isolation entrypoint BacktestEngine/stress_test_engine
     # call internally. Only run_backtest_simulation (the MCP tool) is agent-facing.
