@@ -1,7 +1,53 @@
 import os
 import sqlite3
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
+
+# Largest amount, price or deposit the paper ledger accepts. float64 keeps cents exact far beyond this,
+# and it keeps amount x price finite.
+MAX_MAGNITUDE = 1e12
+# Largest balance the ledger will hold. Deposits are capped per call by MAX_MAGNITUDE; this caps what
+# repeated deposits or fills can accumulate, keeping every balance well inside float64's exact range.
+MAX_BALANCE = 1e15
+
+
+def _validate_order(symbol: Any, side: Any, amount: Any, price: Any) -> Dict[str, Any]:
+    """
+    Normalise and validate an order. Returns {"ok": True, base, quote, symbol, side, amount, price,
+    total_value} or {"ok": False, "code", "message"}. Shared by market fills and limit orders so the two
+    paths cannot drift apart.
+    """
+    import math
+
+    def refuse(code: str, message: str) -> Dict[str, Any]:
+        return {"ok": False, "code": code, "message": message}
+
+    parts = str(symbol or "").split("/")
+    if len(parts) != 2 or not all(part.strip() for part in parts):
+        return refuse("invalid_symbol", f"Symbol must look like BASE/QUOTE (e.g. BTC/USDT), got {symbol!r}")
+    base, quote = parts[0].strip(), parts[1].strip()
+    if base == quote or len(base) > 32 or len(quote) > 32:
+        return refuse("invalid_symbol", f"Symbol must name two different assets of at most 32 characters, got {symbol!r}")
+
+    side = str(side or "").strip().lower()
+    if side not in ("buy", "sell"):
+        return refuse("invalid_side", f"Side must be 'buy' or 'sell', got {side!r}")
+
+    try:
+        amount, price = float(amount), float(price)
+    except (TypeError, ValueError):
+        return refuse("invalid_amount", "Amount and price must be numbers")
+    if not math.isfinite(amount) or amount <= 0 or amount > MAX_MAGNITUDE:
+        return refuse("invalid_amount", f"Amount must be a positive number no larger than {MAX_MAGNITUDE:g}, got {amount}")
+    if not math.isfinite(price) or price <= 0 or price > MAX_MAGNITUDE:
+        return refuse("invalid_price", f"Price must be a positive number no larger than {MAX_MAGNITUDE:g}, got {price}")
+
+    total_value = amount * price
+    if not math.isfinite(total_value) or total_value <= 0 or total_value > MAX_BALANCE:
+        return refuse("invalid_amount", "Order value (amount x price) is out of range")
+
+    # symbol is rebuilt so the order log always agrees with the balance keys
+    return {"ok": True, "base": base, "quote": quote, "symbol": f"{base}/{quote}", "side": side, "amount": amount, "price": price, "total_value": total_value}
 
 
 class PaperTradingEngine:
@@ -143,15 +189,48 @@ class PaperTradingEngine:
         conn.close()
         return {asset: float(amount) for asset, amount in rows if amount}
 
-    def deposit(self, user_id: str, asset: str, amount: float) -> str:
-        current = self.get_balance(user_id, asset)
-        new_balance = current + amount
+    def _txn(self) -> sqlite3.Connection:
+        """A connection holding the write lock, so a balance check and the writes that follow are one step."""
+        conn = sqlite3.connect(self.db_path, timeout=30, isolation_level=None)
+        conn.execute("BEGIN IMMEDIATE")
+        return conn
 
-        conn = sqlite3.connect(self.db_path)
-        c = conn.cursor()
-        c.execute("INSERT OR REPLACE INTO balances (user_id, asset, amount) VALUES (?, ?, ?)", (user_id, asset, new_balance))
-        conn.commit()
-        conn.close()
+    @staticmethod
+    def _balance_in(conn: sqlite3.Connection, user_id: str, asset: str) -> float:
+        row = conn.execute("SELECT amount FROM balances WHERE user_id=? AND asset=?", (user_id, asset)).fetchone()
+        return float(row[0]) if row and row[0] is not None else 0.0
+
+    @staticmethod
+    def _set_balance_in(conn: sqlite3.Connection, user_id: str, asset: str, amount: float) -> None:
+        conn.execute("INSERT OR REPLACE INTO balances (user_id, asset, amount) VALUES (?, ?, ?)", (user_id, asset, amount))
+
+    def deposit(self, user_id: str, asset: str, amount: float) -> str:
+        """Credit (or, internally, debit with a negative amount) a balance atomically."""
+        import math
+
+        try:
+            amount = float(amount)
+        except (TypeError, ValueError):
+            return "Deposit refused: amount must be a number"
+        if not math.isfinite(amount) or abs(amount) > MAX_MAGNITUDE:
+            return f"Deposit refused: amount must be a finite number no larger than {MAX_MAGNITUDE:g}"
+
+        conn = self._txn()
+        try:
+            new_balance = self._balance_in(conn, user_id, asset) + amount
+            if abs(new_balance) > MAX_BALANCE:
+                conn.execute("ROLLBACK")
+                return f"Deposit refused: the {asset} balance may not exceed {MAX_BALANCE:g}"
+            self._set_balance_in(conn, user_id, asset, new_balance)
+            conn.execute("COMMIT")
+        except BaseException:
+            try:
+                conn.execute("ROLLBACK")
+            except sqlite3.Error:
+                pass
+            raise
+        finally:
+            conn.close()
         self._snapshot_equity(user_id)
         return f"Deposited {amount} {asset}. New Balance: {new_balance}"
 
@@ -168,86 +247,171 @@ class PaperTradingEngine:
 
     def place_limit_order(self, user_id: str, side: str, symbol: str, amount: float, price: float) -> str:
         """
-        Place a limit order. Reserve funds immediately.
+        Place a limit order. Funds are reserved in the same transaction that records the order, so an
+        order can never exist without its reservation (and two concurrent orders cannot both reserve the
+        same funds).
         """
-        base, quote = symbol.split("/")
-        total_value = amount * price
+        order = _validate_order(symbol, side, amount, price)
+        if not order["ok"]:
+            return f"Order refused: {order['message']}"
+        side, symbol, amount, price, total_value = order["side"], order["symbol"], order["amount"], order["price"], order["total_value"]
+        reserve_asset, reserve = (order["quote"], total_value) if side == "buy" else (order["base"], amount)
 
-        # Check simulated balance and reserve
-        if side == "buy":
-            balance = self.get_balance(user_id, quote)
-            if balance < total_value:
-                return f"Insufficient fund. Have {balance} {quote}, need {total_value}"
-            # Lock funds (deduct now)
-            self.deposit(user_id, quote, -total_value)
-
-        elif side == "sell":
-            balance = self.get_balance(user_id, base)
-            if balance < amount:
-                return f"Insufficient fund. Have {balance} {base}, need {amount}"
-            # Lock funds
-            self.deposit(user_id, base, -amount)
-
-        conn = sqlite3.connect(self.db_path)
-        c = conn.cursor()
-        c.execute(
-            "INSERT INTO orders (user_id, side, symbol, amount, price, total_value, type, status) VALUES (?, ?, ?, ?, ?, ?, 'limit', 'open')",
-            (user_id, side, symbol, amount, price, total_value),
-        )
-        order_id = c.lastrowid
-        conn.commit()
-        conn.close()
+        conn = self._txn()
+        try:
+            have = self._balance_in(conn, user_id, reserve_asset)
+            if have < reserve:
+                conn.execute("ROLLBACK")
+                return f"Insufficient fund. Have {have} {reserve_asset}, need {reserve}"
+            if have - reserve == have:
+                conn.execute("ROLLBACK")
+                return "Order refused: order is too small relative to the balance to be recorded accurately"
+            self._set_balance_in(conn, user_id, reserve_asset, have - reserve)
+            cur = conn.execute(
+                "INSERT INTO orders (user_id, side, symbol, amount, price, total_value, type, status) VALUES (?, ?, ?, ?, ?, ?, 'limit', 'open')",
+                (user_id, side, symbol, amount, price, total_value),
+            )
+            order_id = cur.lastrowid
+            conn.execute("COMMIT")
+        except BaseException:
+            try:
+                conn.execute("ROLLBACK")
+            except sqlite3.Error:
+                pass
+            raise
+        finally:
+            conn.close()
+        self._snapshot_equity(user_id)
         return f"Order Placed: {side.upper()} {amount} {symbol} @ {price}. ID: {order_id}"
 
     def check_open_orders(self, symbol: str, current_price: float) -> List[str]:
         """
-        Check and fill open orders based on current price.
+        Fill open limit orders that `current_price` crosses. Marking an order filled and crediting the
+        account happen in ONE transaction: an order is never 'filled' without its credit, or credited twice.
         Returns a list of messages for filled orders.
         """
-        # First pass: identify orders to fill and update their status
-        conn = sqlite3.connect(self.db_path)
-        c = conn.cursor()
-        c.execute(
-            "SELECT id, user_id, side, amount, price, total_value FROM orders WHERE symbol=? AND status='open'",
-            (symbol,),
-        )
-        orders = c.fetchall()
+        import math
 
-        to_fill = []  # Collect orders that need filling
-        for order in orders:
-            oid, uid, side, amt, price, val = order
-            if side == "buy" and current_price <= price:
-                to_fill.append(("buy", oid, uid, amt, price, val))
-            elif side == "sell" and current_price >= price:
-                to_fill.append(("sell", oid, uid, amt, price, val))
+        parts = str(symbol or "").split("/")
+        try:
+            current_price = float(current_price)
+        except (TypeError, ValueError):
+            return []
+        if len(parts) != 2 or not math.isfinite(current_price) or current_price <= 0:
+            return []
+        base, quote = parts[0].strip(), parts[1].strip()
+        symbol = f"{base}/{quote}"
 
-        # Mark orders as filled
-        for fill_side, oid, uid, amt, price, val in to_fill:
-            c.execute("UPDATE orders SET status='filled' WHERE id=?", (oid,))
+        filled: List[tuple] = []
+        conn = self._txn()
+        try:
+            rows = conn.execute("SELECT id, user_id, side, amount, price, total_value FROM orders WHERE symbol=? AND status='open'", (symbol,)).fetchall()
+            for oid, uid, side, amt, price, val in rows:
+                crosses = (side == "buy" and current_price <= price) or (side == "sell" and current_price >= price)
+                if not crosses:
+                    continue
+                credit_asset, credit = (base, amt) if side == "buy" else (quote, val)
+                held = self._balance_in(conn, uid, credit_asset)
+                if credit is None or not math.isfinite(float(credit)) or held + float(credit) > MAX_BALANCE:
+                    continue  # leave it open rather than poison the ledger
+                conn.execute("UPDATE orders SET status='filled' WHERE id=? AND status='open'", (oid,))
+                self._set_balance_in(conn, uid, credit_asset, held + float(credit))
+                filled.append((side, oid, uid, amt, price))
+            conn.execute("COMMIT")
+        except BaseException:
+            try:
+                conn.execute("ROLLBACK")
+            except sqlite3.Error:
+                pass
+            raise
+        finally:
+            conn.close()
 
-        conn.commit()
-        conn.close()
-
-        # Second pass: process fills (outside of DB transaction to avoid locks)
         filled_msgs = []
-        for fill_side, oid, uid, amt, price, val in to_fill:
-            if fill_side == "buy":
-                base = symbol.split("/")[0]
-                self.deposit(uid, base, amt)
-            else:  # sell
-                quote = symbol.split("/")[1]
-                self.deposit(uid, quote, val)
-
-            filled_msgs.append(f"Order #{oid} FILLED: {fill_side.upper()} {amt} {symbol} @ {price}")
-
-            # Update derived price cache
-            base, quote = symbol.split("/")
-            self._set_asset_price_usd(quote, 1.0 if quote.upper() in {"USDT", "USDC", "DAI", "USD"} else 1.0)
+        for side, oid, uid, amt, price in filled:
+            filled_msgs.append(f"Order #{oid} FILLED: {side.upper()} {amt} {symbol} @ {price}")
             if quote.upper() in {"USDT", "USDC", "DAI", "USD"}:
+                self._set_asset_price_usd(quote, 1.0)
                 self._set_asset_price_usd(base, float(price))
             self._snapshot_equity(uid)
-
         return filled_msgs
+
+    def execute_trade_result(
+        self,
+        user_id: str,
+        side: str,
+        symbol: str,
+        amount: float,
+        price: float,
+        rationale: str = "",
+        *,
+        update_price_cache: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Execute a paper trade and say, in data, whether it happened.
+
+        Returns {"ok": True, "message", "fill": {...}} or {"ok": False, "code", "message"}.
+        Nothing is written to the ledger unless the trade is valid and funded. Codes:
+        invalid_symbol | invalid_side | invalid_amount | invalid_price | insufficient_funds.
+        """
+
+        def refuse(code: str, message: str) -> Dict[str, Any]:
+            return {"ok": False, "code": code, "message": message}
+
+        order = _validate_order(symbol, side, amount, price)
+        if not order["ok"]:
+            return order
+        base, quote, symbol, side = order["base"], order["quote"], order["symbol"], order["side"]
+        amount, price, total_value = order["amount"], order["price"], order["total_value"]
+
+        # Check and move funds as ONE step. Separate read and write connections let two concurrent orders
+        # both pass the balance check and overdraw, and lost each other's updates.
+        spend_asset, spend = (quote, total_value) if side == "buy" else (base, amount)
+        gain_asset, gain = (base, amount) if side == "buy" else (quote, total_value)
+        conn = self._txn()
+        try:
+            have = self._balance_in(conn, user_id, spend_asset)
+            if have < spend:
+                conn.execute("ROLLBACK")
+                return refuse("insufficient_funds", f"Insufficient fund. Have {have} {spend_asset}, need {spend}")
+            held = self._balance_in(conn, user_id, gain_asset)
+            if held + gain > MAX_BALANCE:
+                conn.execute("ROLLBACK")
+                return refuse("invalid_amount", f"Order would take the {gain_asset} balance past the ledger limit of {MAX_BALANCE:g}")
+            if have - spend == have or held + gain == held:
+                # float64 cannot represent this change at this balance: it would move one side of the
+                # ledger and not the other (an asset bought for nothing).
+                conn.execute("ROLLBACK")
+                return refuse("invalid_amount", "Order is too small relative to the balance to be recorded accurately")
+            self._set_balance_in(conn, user_id, spend_asset, have - spend)
+            self._set_balance_in(conn, user_id, gain_asset, held + gain)
+            conn.execute(
+                "INSERT INTO orders (user_id, side, symbol, amount, price, total_value, rationale) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (user_id, side, symbol, amount, price, total_value, rationale),
+            )
+            conn.execute("COMMIT")
+        except BaseException:
+            try:
+                conn.execute("ROLLBACK")
+            except sqlite3.Error:
+                pass
+            raise
+        finally:
+            conn.close()
+
+        # Update derived price cache (if quote looks like USD stable). Callers that fill at a synthetic
+        # price (paper swap_tokens uses 1.0) pass update_price_cache=False so they cannot rewrite
+        # mark-to-market and with it drawdown and PnL.
+        if update_price_cache and quote.upper() in {"USDT", "USDC", "DAI", "USD"}:
+            self._set_asset_price_usd(base, float(price))
+            self._set_asset_price_usd(quote, 1.0)
+        self._snapshot_equity(user_id)
+
+        return {
+            "ok": True,
+            "message": f"Paper Trade Executed: {side.upper()} {amount} {symbol} @ {price}. Value: {total_value} {quote}. Rationale: {rationale}",
+            "fill": {"side": side, "symbol": symbol, "amount": amount, "price": price, "total_value": total_value, "quote": quote},
+        }
 
     def execute_trade(
         self,
@@ -258,56 +422,8 @@ class PaperTradingEngine:
         price: float,
         rationale: str = "",
     ) -> str:
-        """
-        Execute a paper trade.
-        side: 'buy' or 'sell'
-        symbol: e.g. 'BTC/USDT'
-        amount: amount of base asset (BTC)
-        price: price in quote asset (USDT)
-        rationale: reason for the trade
-        """
-        base, quote = symbol.split("/")
-        total_value = amount * price
-
-        # Check simulated balance
-        if side == "buy":
-            # Need quote asset (USDT)
-            balance = self.get_balance(user_id, quote)
-            if balance < total_value:
-                return f"Insufficient fund. Have {balance} {quote}, need {total_value}"
-
-            # Update balances
-            self.deposit(user_id, quote, -total_value)
-            self.deposit(user_id, base, amount)
-
-        elif side == "sell":
-            # Need base asset (BTC)
-            balance = self.get_balance(user_id, base)
-            if balance < amount:
-                return f"Insufficient fund. Have {balance} {base}, need {amount}"
-
-            # Update balances
-            self.deposit(user_id, base, -amount)
-            self.deposit(user_id, quote, total_value)
-
-        # Log order
-        conn = sqlite3.connect(self.db_path)
-        c = conn.cursor()
-        c.execute(
-            "INSERT INTO orders (user_id, side, symbol, amount, price, total_value, rationale) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (user_id, side, symbol, amount, price, total_value, rationale),
-        )
-        conn.commit()
-        conn.close()
-
-        # Update derived price cache (if quote looks like USD stable)
-        base, quote = symbol.split("/")
-        if quote.upper() in {"USDT", "USDC", "DAI", "USD"}:
-            self._set_asset_price_usd(base, float(price))
-            self._set_asset_price_usd(quote, 1.0)
-        self._snapshot_equity(user_id)
-
-        return f"Paper Trade Executed: {side.upper()} {amount} {symbol} @ {price}. Value: {total_value} {quote}. Rationale: {rationale}"
+        """String form of execute_trade_result (kept for existing callers). Prefer the structured method."""
+        return str(self.execute_trade_result(user_id, side, symbol, amount, price, rationale)["message"])
 
     def get_risk_metrics(self, user_id: str) -> Dict[str, float]:
         """
