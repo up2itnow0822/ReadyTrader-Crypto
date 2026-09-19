@@ -13,6 +13,8 @@ newsapi-python==0.2.7
 RestrictedPython==8.1
 websockets==15.0.1
 feedparser==6.0.11
+# Deterministic local sentiment scoring for the Falling Knife gate (intelligence/sentiment.py)
+vaderSentiment==3.3.2
 fastapi==0.128.0
 # fastmcp 3.x requires a modern uvicorn runtime
 uvicorn==0.40.0
