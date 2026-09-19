@@ -1,91 +1,48 @@
 {
-  "name": "ReadyTrader Mobile Guard",
+  "name": "ReadyTrader-Crypto Operator Dashboard",
   "short_name": "ReadyTrader",
-  "description": "Mobile trade approval and monitoring for ReadyTrader-Crypto",
+  "description": "Operator dashboard for reviewing and approving ReadyTrader-Crypto trade proposals",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0f",
-  "theme_color": "#00f2ff",
+  "background_color": "#0b1120",
+  "theme_color": "#0b1120",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icons/icon-72x72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-96x96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-128x128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-144x144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-152x152.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-192x192.png",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "maskable any"
+      "purpose": "any"
     },
     {
-      "src": "/icons/icon-384x384.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-512x512.png",
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "maskable any"
+      "purpose": "any"
     }
   ],
   "categories": ["finance", "business"],
-  "screenshots": [
-    {
-      "src": "/screenshots/dashboard.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide"
-    },
-    {
-      "src": "/screenshots/mobile-approvals.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow"
-    }
-  ],
   "shortcuts": [
     {
-      "name": "Pending Approvals",
-      "short_name": "Approvals",
-      "description": "View trades awaiting approval",
-      "url": "/approvals",
-      "icons": [{ "src": "/icons/approval-icon.png", "sizes": "96x96" }]
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Pending approvals and portfolio",
+      "url": "/",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Portfolio",
-      "short_name": "Portfolio",
-      "description": "View portfolio status",
-      "url": "/portfolio",
-      "icons": [{ "src": "/icons/portfolio-icon.png", "sizes": "96x96" }]
+      "name": "Trade history",
+      "short_name": "History",
+      "description": "Executed trade history",
+      "url": "/history",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Status",
+      "short_name": "Status",
+      "description": "API health and metrics",
+      "url": "/status",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ],
   "related_applications": [],

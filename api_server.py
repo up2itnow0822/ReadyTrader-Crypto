@@ -323,6 +323,7 @@ async def health_check():
         "version": settings.VERSION,
         "trading_halted": settings.TRADING_HALTED,
         "live_enabled": settings.LIVE_TRADING_ENABLED,
+        "auth_required": settings.API_AUTH_REQUIRED,
     }
 
 
