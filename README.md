@@ -577,12 +577,12 @@ These safety mechanisms are continuously verified:
 
 ### GitHub Actions Workflows
 
-| Workflow            | File                                    | Trigger          | Purpose                                                     |
-| :------------------ | :-------------------------------------- | :--------------- | :---------------------------------------------------------- |
+| Workflow            | File                                    | Trigger          | Purpose                                                                           |
+| :------------------ | :-------------------------------------- | :--------------- | :-------------------------------------------------------------------------------- |
 | **CI**              | `.github/workflows/ci.yml`              | Push/PR          | Locked-deps check, `make check`, `make security` (bandit, pip-audit, `npm audit`) |
-| **Live-Path Tests** | `.github/workflows/live-path-tests.yml` | Manual dispatch  | Exchange sandbox testing                                    |
-| **Security Audit**  | `.github/workflows/security-audit.yml`  | Daily + manual   | pip-audit, bandit, trufflehog, trivy, CodeQL, SBOM          |
-| **Release**         | `.github/workflows/release.yml`         | Tag push, manual | Version validation, trivy container scan on release         |
+| **Live-Path Tests** | `.github/workflows/live-path-tests.yml` | Manual dispatch  | Exchange sandbox testing                                                          |
+| **Security Audit**  | `.github/workflows/security-audit.yml`  | Daily + manual   | pip-audit, bandit, trufflehog, trivy, CodeQL, SBOM                                |
+| **Release**         | `.github/workflows/release.yml`         | Tag push, manual | Version validation, trivy container scan on release                               |
 
 ### Running Tests Locally
 
