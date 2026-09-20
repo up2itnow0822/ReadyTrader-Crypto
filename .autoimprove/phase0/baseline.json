@@ -1,0 +1,104 @@
+{
+  "phase": 0,
+  "date_utc": "2026-09-20",
+  "repo": "up2itnow0822/ReadyTrader-Crypto",
+  "git_sha": "ac8d0d0",
+  "branch_at_measure": "autoimprove/rt-phase0-20260920",
+  "base": "main",
+  "environment": {
+    "python": "3.12.14",
+    "conda_env": "ReadyTrader-Crypto",
+    "deps": "requirements-dev.txt",
+    "exchange_keys": false,
+    "authenticated_exchange_calls": false,
+    "flags": {
+      "PAPER_MODE": true,
+      "LIVE_TRADING_ENABLED": false,
+      "TRADING_HALTED": true,
+      "DEV_MODE": true,
+      "SIGNER_TYPE": "null"
+    }
+  },
+  "pytest_pack": {
+    "name": "paper_safety_scoped",
+    "files": [
+      "tests/test_paper_engine.py",
+      "tests/test_paper_order_integrity.py",
+      "tests/test_paper_execution_path.py",
+      "tests/test_live_safety_gates.py",
+      "tests/test_policy_engine.py",
+      "tests/test_risk.py",
+      "tests/test_sentiment_gate.py",
+      "tests/test_approval_api.py",
+      "tests/test_docs_tool_roster.py",
+      "tests/test_tool_docs.py",
+      "tests/test_settings_validation.py",
+      "tests/test_tool_json_contract.py"
+    ],
+    "collected": 278,
+    "passed": 278,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "duration_sec": 9.739,
+    "per_file": {
+      "tests/test_paper_engine.py": 18,
+      "tests/test_paper_order_integrity.py": 46,
+      "tests/test_paper_execution_path.py": 7,
+      "tests/test_live_safety_gates.py": 10,
+      "tests/test_policy_engine.py": 26,
+      "tests/test_risk.py": 5,
+      "tests/test_sentiment_gate.py": 86,
+      "tests/test_approval_api.py": 31,
+      "tests/test_docs_tool_roster.py": 4,
+      "tests/test_tool_docs.py": 1,
+      "tests/test_settings_validation.py": 23,
+      "tests/test_tool_json_contract.py": 21
+    }
+  },
+  "paper_btc_uat": {
+    "command": "python examples/paper_btc_uat.py",
+    "exit_code": 0,
+    "duration_sec": 0.096,
+    "trades_ok": 20,
+    "risk_blocks": 1,
+    "live_execution_allowed_default": false,
+    "halt_gate_ok": true,
+    "pass": true,
+    "notes": "Uses PaperTradingEngine.execute_trade (prose wrapper). Float residue visible in printed totals (e.g. 600.3000000000001)."
+  },
+  "trust_model_defaults": {
+    "settings.py": {
+      "PAPER_MODE": true,
+      "LIVE_TRADING_ENABLED": false,
+      "TRADING_HALTED": true,
+      "DEV_MODE": false,
+      "EXECUTION_MODE": "auto",
+      "EXECUTION_APPROVAL_MODE": "auto"
+    },
+    "env.example": {
+      "PAPER_MODE": true,
+      "LIVE_TRADING_ENABLED": false,
+      "TRADING_HALTED": true,
+      "EXECUTION_MODE": "hybrid",
+      "EXECUTION_APPROVAL_MODE": "auto"
+    },
+    "env.live.btc.example": {
+      "PAPER_MODE": false,
+      "LIVE_TRADING_ENABLED": true,
+      "TRADING_HALTED": true,
+      "EXECUTION_MODE": "cex",
+      "EXECUTION_APPROVAL_MODE": "approve_each"
+    },
+    "readme_table_drift": {
+      "TRADING_HALTED_default_listed": false,
+      "TRADING_HALTED_actual_default": true
+    }
+  },
+  "out_of_scope": [
+    "PR #9 EXECUTION_MODE=auto live routing (https://github.com/up2itnow0822/ReadyTrader-Crypto/pull/9)",
+    "issue #8 venue_allowed auto denial",
+    "live dust trades / Phase 4 UAT",
+    "authenticated CEX/DEX calls"
+  ]
+}

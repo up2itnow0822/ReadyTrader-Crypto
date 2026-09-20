@@ -133,3 +133,4 @@ Default section order:
 | [execution/](execution/)                 | CEX/DEX executors (parent-owned)                                                             |
 | [intelligence/](intelligence/)           | News/social fetchers and the sentiment scorer behind Falling Knife protection (parent-owned) |
 | [tests/](tests/)                         | Unit/integration tests (parent-owned)                                                        |
+| [.autoimprove/AGENTS.md](.autoimprove/AGENTS.md) | Paper/CI auto-improve loop plans and Phase 0 baseline (not a runtime surface) |
