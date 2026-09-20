@@ -70,11 +70,7 @@ def summarize(feeds: dict[str, dict]) -> dict:
     extra = [score_feed(feed) for feed_id, feed in feeds.items() if feed_id not in TRAIN_IDS + HELD_OUT_IDS]
     held_crash_recall = _hits(held, CRASH_HELD_OUT) / len(CRASH_HELD_OUT)
     train_crash_blocks = _hits(train, CRASH_TRAIN)
-    held_fp = [
-        row["id"]
-        for row in held
-        if row["blocks"] and row["scenario"] in {"calm", "red_day", "green_day", "contested"}
-    ]
+    held_fp = [row["id"] for row in held if row["blocks"] and row["scenario"] in {"calm", "red_day", "green_day", "contested"}]
     alarming_fp = [row["id"] for row in held if row["blocks"] and row["scenario"] == "alarming_but_fine" and not row["known_limit"]]
     return {
         "train": train,
