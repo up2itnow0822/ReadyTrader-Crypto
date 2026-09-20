@@ -1,5 +1,5 @@
 {
- "about": "Simulated results of a 'BTC' search (10 tweets + 5 r/cryptocurrency titles per feed), written by models that had not seen intelligence/sentiment.py. A 17-feed sample of the 86 feeds the scorer was evaluated on (docs/SENTIMENT.md). `blocks_buy` pins today's verdict; `known_limit` marks verdicts that are wrong for the scenario and are documented limits, not targets.",
+ "about": "Simulated results of a 'BTC' search (10 tweets + 5 r/cryptocurrency titles per feed), written by models that had not seen intelligence/sentiment.py. A 17-feed sample of the 86 feeds the scorer was evaluated on (docs/SENTIMENT.md), plus Phase 1 held-out additions (`crash-pct-only`, `red_day-six-pct`, `calm-promo-pct`). `blocks_buy` pins today's verdict; `known_limit` marks verdicts that are wrong for the scenario and are documented limits, not targets. New feeds start held-out and do not change the frozen Phase 1 primary-metric ids.",
  "feeds": [
   {
    "id": "crash-01",
@@ -376,6 +376,72 @@
     "Another altcoin implodes while BTC just sits flat, thoughts on the divergence",
     "Team behind the collapsing token has gone dark, does this look like an exit scam to anyone else",
     "This is a good reminder that 'crypto' isn't one monolithic risk, alts and BTC behave very differently"
+   ]
+  },
+  {
+   "id": "crash-pct-only",
+   "scenario": "crash",
+   "blocks_buy": false,
+   "texts": [
+    "BTC just ate 10% in half an hour, $92,400 and still going",
+    "$BTC/USD 91,880 (-10.4% 24h)",
+    "macro day from hell, everything risk-off, bitcoin down 10% and I turned off the app",
+    "not a single bid under 93k, this is a gift if you have dry powder but damn",
+    "watching the tape print -10% and people still saying 'healthy pullback'",
+    "I sold the open and I'm not sorry, down 10% before lunch is not a dip it's a statement",
+    "risk assets getting smoked across the board, $BTC 91.9k",
+    "if you bought yesterday congratulations you are now down double digits in 18 hours",
+    "genuine question: do we hold through a 10% day or is that when you cut size",
+    "my alerts are just a wall of red, -10.4% and the volume is enormous",
+    "BTC down 10% on the session — what are you doing with your size",
+    "Daily Discussion - September 20, 2026",
+    "Hot print, risk-off, bitcoin -10%. Discuss.",
+    "Is a 10% day the start of something or just a violent flush",
+    "Turned off price alerts after the third -10% ping"
+   ]
+  },
+  {
+   "id": "red_day-six-pct",
+   "scenario": "red_day",
+   "blocks_buy": false,
+   "texts": [
+    "$BTC/USD 101,200 (-5.8% 24h)",
+    "ugly red day, down almost 6%, still not the end of the world",
+    "took a little off, -5.8% is annoying not scary",
+    "every time we get a 6% red candle this sub loses its mind",
+    "buying a sliver, nothing about a 6% day changes the thesis",
+    "funding still fine, this looks like a garden variety flush",
+    "new here, is 6% down a lot? my stock account does this",
+    "red across the majors, BTC leading a bit, -5.8%",
+    "muted the group chat, I'll look tomorrow",
+    "if we hold 100k I'm not touching anything",
+    "Daily Discussion - September 20, 2026",
+    "BTC down 5.8% today, normal volatility or something more",
+    "Why do 6% days feel huge after a quiet month",
+    "Beginner: should I sell after a 6% drop",
+    "Healthy-ish pullback after the grind up, down 6% is not a regime change"
+   ]
+  },
+  {
+   "id": "calm-promo-pct",
+   "scenario": "calm",
+   "blocks_buy": false,
+   "texts": [
+    "$BTC/USD 108,100 (+0.3% 24h)",
+    "🚀 VIP SIGNALS - 92% WIN RATE - LINK IN BIO 🚀",
+    "claimed a 12% month in the newsletter, cool story",
+    "price is flat, down 0.4% if you squint",
+    "rt for a chance to win, 100% free entry",
+    "someone posted a 2% scalp like it was news",
+    "funding +0.01%, nothing happening",
+    "my dca is up 4% this quarter and I still check too much",
+    "bot: BTC 108,112 (+0.28% 24h)",
+    "going for a walk, call me if it moves 3%",
+    "Daily Discussion - September 20, 2026",
+    "Why is everyone posting win-rate screenshots on a flat day",
+    "Weekly: +1.2%, basically noise",
+    "Is 0.3% the most boring print this month",
+    "Reminder: a 92% win-rate ad is an ad"
    ]
   }
  ]
