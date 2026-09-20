@@ -57,6 +57,8 @@ Baseline: train crash blocks 3/4 (`crash-05` is `known_limit`); held-out crash b
 Accept only if held-out recall rises by a meaningful step (at least +1 crash block on
 held-out, or a clear recall increase) **and** every guard below holds.
 
+Round 1 **ACCEPT**: train 4/4, held-out 3/3. See `REPORT.md`.
+
 ## Guard metrics (any fail = REJECT / STOP)
 
 - 0 blocks on held-out `calm` / `red_day` / `green_day` / `contested`

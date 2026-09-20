@@ -27,7 +27,8 @@ Agent Economy, LLC / Bill Wilson. Parent: `.autoimprove/AGENTS.md`.
 
 - `python .autoimprove/phase1/score_harness.py`
 - Paper/safety pack and `examples/paper_btc_uat.py` as listed in `harness.md`
-- Per-round notes in `rounds/rN.md`; summary in `REPORT.md`
+- Per-round notes in `rounds/rN.md`; summary in `REPORT.md` and `scorecard.json`
+- Round 1 accepted: held-out crash-block recall 3/3; pack 284/284; UAT `pass: true`
 
 ## Child DOX Index
 

@@ -1,0 +1,90 @@
+{
+  "phase": 1,
+  "date_utc": "2026-09-20",
+  "repo": "up2itnow0822/ReadyTrader-Crypto",
+  "branch": "autoimprove/rt-phase1-falling-knife-20260920",
+  "base_sha": "ac8d0d0",
+  "result_sha": "05945a470099bd86accdc2d230e549217ca2539b",
+  "pr": "https://github.com/up2itnow0822/ReadyTrader-Crypto/pull/17",
+  "flags": {
+    "PAPER_MODE": true,
+    "LIVE_TRADING_ENABLED": false,
+    "TRADING_HALTED": true,
+    "DEV_MODE": true,
+    "SIGNER_TYPE": "null"
+  },
+  "authenticated_exchange_calls": false,
+  "primary_metric": {
+    "name": "held_out_crash_block_recall",
+    "held_out_crash_ids": [
+      "crash-03",
+      "crash-12",
+      "crash-02"
+    ],
+    "baseline_blocks": "2/3",
+    "baseline_recall": 0.6667,
+    "best_blocks": "3/3",
+    "best_recall": 1.0,
+    "delta_blocks": 1,
+    "delta_recall": 0.3333
+  },
+  "train": {
+    "crash_ids": [
+      "crash-01",
+      "crash-07",
+      "crash-exchange-hack",
+      "crash-05"
+    ],
+    "baseline_blocks": "3/4",
+    "best_blocks": "4/4"
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "hypothesis": "printed 8%+ drop is bearish; 3 directional texts suffice when such a print is present",
+      "train_crash_blocks": "4/4",
+      "held_out_crash_blocks": "3/3",
+      "held_out_recall": 1.0,
+      "guards": "pass",
+      "verdict": "ACCEPT"
+    }
+  ],
+  "accepts": 1,
+  "rejects": 0,
+  "stop_reason": "Round 1 accepted; frozen held-out crash recall is 3/3. No further primary-metric room without changing the frozen split.",
+  "guards": {
+    "held_out_noncrash_blocks": [],
+    "held_out_new_alarming_fp": [],
+    "alarming-altcoin-implodes": "known_limit retained",
+    "paper_safety_pack": {
+      "files": "same 12 files as Phase 0",
+      "baseline_collected": 278,
+      "collected": 284,
+      "passed": 284,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "duration_sec": 24.592,
+      "note": "Collected rose by 6: 3 new held-out feeds parametrized + 3 new rule tests. Same file set, 0 failed."
+    },
+    "degraded_refresh_tighten_only": true,
+    "sentiment_status_contract": true,
+    "test_risk_falling_knife_strings_unchanged": true,
+    "live_safety_gates": true,
+    "paper_order_integrity": true,
+    "paper_btc_uat": {
+      "pass": true,
+      "trades_ok": 20,
+      "risk_blocks": 1,
+      "live_execution_allowed_default": false,
+      "halt_gate_ok": true
+    }
+  },
+  "continue": false,
+  "out_of_scope_untouched": [
+    "execution/router.py",
+    "PR #9 EXECUTION_MODE=auto",
+    "MCP operator confirm",
+    "second paper-fill path"
+  ]
+}
