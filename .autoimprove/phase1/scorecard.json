@@ -4,7 +4,7 @@
   "repo": "up2itnow0822/ReadyTrader-Crypto",
   "branch": "autoimprove/rt-phase1-falling-knife-20260920",
   "base_sha": "ac8d0d0",
-  "result_sha": "05945a470099bd86accdc2d230e549217ca2539b",
+  "result_sha": "89c7976a45454535a5e406756d8b5751324b8136",
   "pr": "https://github.com/up2itnow0822/ReadyTrader-Crypto/pull/17",
   "flags": {
     "PAPER_MODE": true,

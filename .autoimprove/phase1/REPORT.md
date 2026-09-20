@@ -1,6 +1,6 @@
 # ReadyTrader-Crypto Phase 1 — Falling Knife accept rounds
 
-Date: 2026-09-20. Branch: `autoimprove/rt-phase1-falling-knife-20260920`. Base: `main` @ `ac8d0d0`. Result: `05945a470099bd86accdc2d230e549217ca2539b`. PR: https://github.com/up2itnow0822/ReadyTrader-Crypto/pull/17
+Date: 2026-09-20. Branch: `autoimprove/rt-phase1-falling-knife-20260920`. Base: `main` @ `ac8d0d0`. Accepted product: `89c7976`. PR: https://github.com/up2itnow0822/ReadyTrader-Crypto/pull/17``
 
 Paper/CI only. Money fence fail-closed. **No merge to main.**
 
