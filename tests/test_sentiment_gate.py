@@ -18,7 +18,7 @@ import pytest
 import intelligence.core as core
 from app.core.container import global_container
 from app.tools.trading import validate_trade_risk
-from intelligence.sentiment import MIN_DIRECTIONAL, SentimentReading, score_texts
+from intelligence.sentiment import LARGE_DROP_PCT, MIN_DIRECTIONAL, SentimentReading, large_drop_pct, score_texts
 
 FEEDS = json.loads((Path(__file__).parent / "fixtures" / "sentiment_feeds.json").read_text(encoding="utf-8"))["feeds"]
 GATE = -0.5  # risk_manager.RiskGuardian blocks a BUY below this
@@ -166,6 +166,60 @@ def test_a_few_bearish_texts_are_not_a_consensus():
     assert reading.bearish == MIN_DIRECTIONAL - 1
     assert reading.score == 0.0
     assert reading.sufficient is True
+
+
+def test_large_printed_drop_is_bearish_without_panic_words():
+    texts = [
+        "BTC down 10% in two hours and I turned the app off",
+        "$BTC/USD 91,880 (-10.4% 24h)",
+        "watching the tape print -10% and people still saying pullback",
+        "I sold the open, down 10% before lunch is a statement",
+        "alerts are a wall of red, -10.4% on huge volume",
+        "Daily Discussion",
+        "price bot 91,900",
+        "turned off alerts after the third ping",
+        "is this a flush or the start",
+        "muted the chat",
+    ]
+    reading = score_texts(texts)
+    assert reading.bearish >= 3
+    assert reading.score < GATE
+
+
+def test_ordinary_red_day_percent_is_not_a_crash():
+    texts = [
+        "$BTC/USD 101,200 (-5.8% 24h)",
+        "ugly red day, down almost 6%, still not the end of the world",
+        "took a little off, -5.8% is annoying not scary",
+        "BTC down 5.8% today, normal volatility or something more",
+        "buying a sliver on a 6% day",
+        "funding still fine",
+        "muted the group chat",
+        "Daily Discussion",
+        "garden variety flush",
+        "if we hold 100k I am not touching anything",
+    ]
+    reading = score_texts(texts)
+    assert reading.score == 0.0
+    assert reading.score >= GATE
+
+
+def test_promo_win_rate_hyphen_is_not_a_drop():
+    assert large_drop_pct("🚀 VIP SIGNALS - 92% WIN RATE - LINK IN BIO 🚀") is None
+    texts = [
+        "🚀 VIP SIGNALS - 92% WIN RATE - LINK IN BIO 🚀",
+        "claimed a 12% month in the newsletter, cool story",
+        "price is flat, down 0.4% if you squint",
+        "rt for a chance to win, 100% free entry",
+        "bot: BTC 108,112 (+0.28% 24h)",
+        "Weekly: +1.2%, basically noise",
+        "Reminder: a 92% win-rate ad is an ad",
+        "Daily Discussion",
+        "funding +0.01%, nothing happening",
+        "going for a walk, call me if it moves 3%",
+    ]
+    assert score_texts(texts).bearish == 0
+    assert large_drop_pct("$BTC -10%") >= LARGE_DROP_PCT
 
 
 def test_consensus_needs_a_share_of_the_sample_not_just_a_count():

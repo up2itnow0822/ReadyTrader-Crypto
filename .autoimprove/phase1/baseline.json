@@ -1,0 +1,42 @@
+{
+  "phase": 1,
+  "date_utc": "2026-09-20",
+  "repo": "up2itnow0822/ReadyTrader-Crypto",
+  "base_sha": "ac8d0d0",
+  "branch": "autoimprove/rt-phase1-falling-knife-20260920",
+  "harness": "frozen ids in harness.md",
+  "primary_metric": {
+    "name": "held_out_crash_block_recall",
+    "formula": "(# frozen held-out crash feeds with score < -0.5 and not known_limit) / (# frozen held-out crash feeds)",
+    "held_out_crash_ids": ["crash-03", "crash-12", "crash-02"],
+    "baseline_blocks": "2/3",
+    "baseline_recall": 0.6667,
+    "notes": "Phase 0 prose said ~2/4 because crash-02 is known_limit and train crash-05 is the other published miss. Frozen held-out crash ids are three."
+  },
+  "train": {
+    "crash_ids": ["crash-01", "crash-07", "crash-exchange-hack", "crash-05"],
+    "crash_blocks": "3/4",
+    "crash-05": {"score": 0.0, "bearish": 3, "bullish": 0, "known_limit": true}
+  },
+  "held_out": {
+    "crash-03": {"score": -1.0, "bearish": 5, "blocks": true},
+    "crash-12": {"score": -1.0, "bearish": 6, "blocks": true},
+    "crash-02": {"score": 0.0, "bearish": 1, "blocks": false, "known_limit": true}
+  },
+  "guards_at_baseline": {
+    "held_out_noncrash_blocks": [],
+    "held_out_new_alarming_fp": [],
+    "alarming-altcoin-implodes": "known_limit stays blocked"
+  },
+  "diagnosis": {
+    "crash-05": "3 bearish texts (dumped, dumping, bleeding); MIN_DIRECTIONAL=4 so score 0.0. Remaining lines use torched/smoked/risk-off/crush and large % drops.",
+    "crash-02": "1 bearish text (BTC dumping). Hack/puking language is outside the market-only lexicon. Held-out: do not retune to this id in the same round."
+  },
+  "flags": {
+    "PAPER_MODE": true,
+    "LIVE_TRADING_ENABLED": false,
+    "TRADING_HALTED": true,
+    "DEV_MODE": true,
+    "SIGNER_TYPE": "null"
+  }
+}

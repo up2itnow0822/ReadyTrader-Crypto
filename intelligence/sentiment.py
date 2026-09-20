@@ -21,9 +21,14 @@ mask it.
 Local and deterministic on purpose: the same texts always give the same score, no API key or
 network call is involved, and the behaviour is pinned by tests/fixtures/sentiment_feeds.json.
 
+A printed drop of 8% or more is also directional bearish (the minus must sit on the number,
+so promo copy like " - 92% WIN RATE" does not count). When at least one such print is present,
+three directional texts are enough consensus.
+
 Known limits: precision is bought with recall. A crash described in other words ("risk off",
-"withdrawals frozen", "sell everything") goes unseen, negation more than a few words from its
-target is missed, and an altcoin imploding while the searched asset sits flat still counts.
+"withdrawals frozen", "sell everything") without a large printed drop still goes unseen,
+negation more than a few words from its target is missed, and an altcoin imploding while the
+searched asset sits flat still counts.
 On 86 simulated feeds written blind to this vocabulary the rule caught about half of the
 crashes and fired on none of the calm, red, green or contested days (docs/SENTIMENT.md). It
 is a circuit breaker for broad, plain-spoken panic, not a forecast.
@@ -59,6 +64,23 @@ IGNORED_PHRASES = re.compile(r"pump\W*(?:and|&|n)\W*dump", re.IGNORECASE)
 
 # Talk about past crashes is not present panic; such texts are scored neutral.
 RETROSPECTIVE = re.compile(r"anniversar|documentar|years? ago|remember when|throwback|hindsight|footage", re.IGNORECASE)
+
+# A printed drop of this size is directional bearish even without a lexicon panic word.
+# 8% sits above ordinary red-day prints in the fixture (~3–6%) and at/under train crash-05 (9–10%).
+# The minus must sit on the number (`-10%`, not ` - 92% WIN RATE`).
+LARGE_DROP_PCT = 8.0
+LARGE_DROP = re.compile(
+    r"(?:"
+    r"(?:down|dropped|drops|dumped|dumping|fell|falling|slid|slide|crashed|crashing)"
+    r"\s+(?:another\s+)?(\d+(?:\.\d+)?)\s*%"
+    r"|"
+    r"[-−–—](\d+(?:\.\d+)?)\s*%"
+    r")",
+    re.IGNORECASE,
+)
+# When a feed contains at least one large printed drop, 3 directional texts are enough
+# consensus (the 15-text share floor would still demand 4).
+LARGE_DROP_MIN_DIRECTIONAL = 3
 
 # Valences use VADER's -4..+4 scale. Deliberately absent: words that name a topic without a
 # direction (liquidation, delisting, lawsuit, exploit, hack, scam, fraud, ponzi, bankruptcy, fear,
@@ -187,10 +209,27 @@ def _analyzer() -> SentimentIntensityAnalyzer:
     return analyzer
 
 
+def large_drop_pct(text: str) -> float | None:
+    """Largest 8%+ drop mentioned in `text`, or None. Retrospective / scheme phrases are ignored."""
+    if RETROSPECTIVE.search(text):
+        return None
+    cleaned = IGNORED_PHRASES.sub(" ", text)
+    best: float | None = None
+    for match in LARGE_DROP.finditer(cleaned):
+        pct = float(next(group for group in match.groups() if group is not None))
+        if pct >= LARGE_DROP_PCT:
+            best = pct if best is None else max(best, pct)
+    return best
+
+
 def _compound(text: str) -> float:
     if RETROSPECTIVE.search(text):
         return 0.0
-    return _analyzer().polarity_scores(IGNORED_PHRASES.sub(" ", text))["compound"]
+    cleaned = IGNORED_PHRASES.sub(" ", text)
+    score = _analyzer().polarity_scores(cleaned)["compound"]
+    if large_drop_pct(text) is not None:
+        return min(score, -0.4)
+    return score
 
 
 def score_texts(texts: Iterable[str]) -> SentimentReading:
@@ -201,6 +240,11 @@ def score_texts(texts: Iterable[str]) -> SentimentReading:
     bullish = sum(c >= POLARITY_THRESHOLD for c in compounds)
     bearish = sum(c <= -POLARITY_THRESHOLD for c in compounds)
     directional = bullish + bearish
-    consensus = len(compounds) >= MIN_TEXTS and directional >= max(MIN_DIRECTIONAL, len(compounds) * MIN_DIRECTIONAL_SHARE)
+    large_drop_n = sum(large_drop_pct(t) is not None for t in distinct.values())
+    if large_drop_n:
+        floor = LARGE_DROP_MIN_DIRECTIONAL
+    else:
+        floor = max(MIN_DIRECTIONAL, len(compounds) * MIN_DIRECTIONAL_SHARE)
+    consensus = len(compounds) >= MIN_TEXTS and directional >= floor
     score = (bullish - bearish) / directional if consensus else 0.0
     return SentimentReading(score=round(score, 4), texts=len(compounds), bullish=bullish, bearish=bearish)

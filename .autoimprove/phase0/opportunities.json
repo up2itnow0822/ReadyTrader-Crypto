@@ -1,0 +1,174 @@
+{
+  "ranked": [
+    {
+      "rank": 1,
+      "id": "sentiment-wfa-recall",
+      "title": "Falling Knife crash-recall WFA on frozen fixtures",
+      "hypothesis": "A declared train/held-out split of sentiment_feeds.json, plus new feeds added before any lexicon edit, can raise crash-block recall without relaxing false positives or the degraded-refresh tighten-only rule.",
+      "primary_metric": "Held-out crash-block recall (score < -0.5 when scenario=crash and not known_limit)",
+      "guard_metrics": [
+        "0 false positives on calm/red/green/contested held-out feeds",
+        "known_limit set may shrink, never grow",
+        "degraded refresh never relaxes a bearish reading (existing test_sentiment_gate cases)",
+        "validate_trade_risk sentiment.status contract unchanged",
+        "paper/safety pack 278/278"
+      ],
+      "risk": "paper-safe",
+      "difficulty": "medium",
+      "recommended_phase1": true
+    },
+    {
+      "rank": 2,
+      "id": "defaults-docs-truth",
+      "title": "Pin operator-docs defaults to Settings",
+      "hypothesis": "README lists TRADING_HALTED default false while Settings/env.example/AGENTS.md default true; env.example EXECUTION_MODE=hybrid while Settings default is auto. A docs+example truth test will catch this class of drift before an operator copies the wrong table.",
+      "primary_metric": "Number of default-table mismatches vs app/core/settings.py (target 0)",
+      "guard_metrics": [
+        "Do not implement EXECUTION_MODE=auto routing (PR #9)",
+        "Do not change live fail-closed defaults",
+        "test_settings_validation defaults stay green"
+      ],
+      "risk": "paper-safe",
+      "difficulty": "easy"
+    },
+    {
+      "rank": 3,
+      "id": "paper-uat-structured",
+      "title": "Paper BTC UAT on execute_trade_result + CI job",
+      "hypothesis": "examples/paper_btc_uat.py still grades prose strings and prints float residue. Moving it onto execute_trade_result and adding it as a CI job gives the loop a stable paper PnL/integrity metric.",
+      "primary_metric": "UAT structured pass (trades_ok>=20, risk_blocks>=1, halt_gate_ok, all fills finite)",
+      "guard_metrics": [
+        "test_paper_order_integrity.py stays 46/46",
+        "no second paper-fill path",
+        "no live flags"
+      ],
+      "risk": "paper-safe",
+      "difficulty": "easy"
+    },
+    {
+      "rank": 4,
+      "id": "paper-policy-fidelity",
+      "title": "Apply CEX policy allowlists on the paper order path",
+      "hypothesis": "place_cex_order paper-mode skips PolicyEngine (env.example documents this). Rehearsing ALLOW_CEX_SYMBOLS / MAX_CEX_ORDER_AMOUNT in paper would catch BTC-profile mistakes before live-but-halted.",
+      "primary_metric": "Paper CEX orders refused by the same policy codes as live (symbol/exchange/amount)",
+      "guard_metrics": [
+        "Existing unrestricted paper fills still pass when allowlists unset",
+        "Live path policy tests unchanged",
+        "No venue_allowed(auto) change"
+      ],
+      "risk": "paper-safe (behavior change on paper only)",
+      "difficulty": "medium"
+    },
+    {
+      "rank": 5,
+      "id": "ci-paper-safety-job",
+      "title": "Dedicated CI job for the frozen paper/safety pack",
+      "hypothesis": "ci.yml runs the whole make check. A named paper/safety job with this 278-test pack makes accept-round regressions obvious and cheaper to bisect.",
+      "primary_metric": "CI job duration + fail isolation (pack stays 278/278, wall < 30s)",
+      "guard_metrics": [
+        "Full make check still required on PRs",
+        "live-path-tests.yml remains manual dispatch only"
+      ],
+      "risk": "paper-safe",
+      "difficulty": "easy"
+    },
+    {
+      "rank": 6,
+      "id": "conftest-cex-default",
+      "title": "Stop pinning EXECUTION_MODE=dex in session conftest",
+      "hypothesis": "tests/conftest.py sets EXECUTION_MODE=dex for every test. CEX paper regressions are hidden unless a test overrides. Default the session to cex or unset, and set dex only where needed.",
+      "primary_metric": "Count of paper CEX tool tests that pass without per-test EXECUTION_MODE patches",
+      "guard_metrics": [
+        "DEX-only tests still pass",
+        "venue_allowed(auto) still not implemented here"
+      ],
+      "risk": "paper-safe",
+      "difficulty": "easy"
+    },
+    {
+      "rank": 7,
+      "id": "paper-risk-on-tool-path",
+      "title": "Optional paper-mode Risk Guardian check on place_cex_order",
+      "hypothesis": "Paper fills never call RiskGuardian. An opt-in paper risk check (size / daily loss / falling knife) would make agent loops fail closed in rehearsal.",
+      "primary_metric": "Paper BUY >5% equity or score<-0.5 is refused with the same reason strings as validate_trade_risk",
+      "guard_metrics": [
+        "Existing paper integrity fills (small size) still pass",
+        "Sells still allowed under falling-knife / drawdown",
+        "Live path unchanged"
+      ],
+      "risk": "paper-safe (behavior change on paper only)",
+      "difficulty": "medium"
+    },
+    {
+      "rank": 8,
+      "id": "paper-float-ledger",
+      "title": "Finite, rounded paper totals",
+      "hypothesis": "UAT printed 600.3000000000001. Rounding totals to a fixed decimal (or Decimal) in execute_trade_result would keep the ledger honest without a second fill path.",
+      "primary_metric": "No non-finite or long-tail binary residue in fill.total_value across integrity + UAT",
+      "guard_metrics": [
+        "Concurrent overdraw test still exactly 1 fill",
+        "Balance conservation within 1e-8",
+        "jsonio still rejects inf/nan"
+      ],
+      "risk": "paper-safe",
+      "difficulty": "medium"
+    },
+    {
+      "rank": 9,
+      "id": "approval-jwt-hygiene",
+      "title": "Fix 31-byte JWT test secret warning",
+      "hypothesis": "test_approval_api uses a 31-byte HMAC secret and emits InsecureKeyLengthWarning. Aligning fixtures to >=32 bytes hardens the approval pack without touching live confirm semantics.",
+      "primary_metric": "0 InsecureKeyLengthWarning on the approval pack",
+      "guard_metrics": [
+        "AUTH_604 / EXEC_308-312 cases still pass",
+        "No MCP tool gains confirm_as_operator",
+        "Token-less confirm remains HTTP-admin-only"
+      ],
+      "risk": "paper-safe",
+      "difficulty": "easy"
+    },
+    {
+      "rank": 10,
+      "id": "live-path-workflow-dedupe",
+      "title": "Replace inline live-path safeguard python with pytest files",
+      "hypothesis": ".github/workflows/live-path-tests.yml re-implements RiskGuardian/PolicyEngine checks as python -c. Pointing those steps at tests/test_risk.py and tests/test_policy_engine.py removes a second source of truth.",
+      "primary_metric": "Workflow steps invoke existing test files; 0 duplicated assert strings in YAML",
+      "guard_metrics": [
+        "workflow_dispatch only",
+        "PAPER_MODE=true in those jobs",
+        "No credentials required for safeguard job"
+      ],
+      "risk": "paper-safe",
+      "difficulty": "easy"
+    },
+    {
+      "rank": 11,
+      "id": "risk-profile-wiring",
+      "title": "Wire RISK_PROFILE into RiskGuardian thresholds (paper first)",
+      "hypothesis": "Settings has RISK_PROFILE=conservative but RiskGuardian hard-codes 5%/5%/10%/-0.5. A paper-only profile table would make conservative vs moderate measurable.",
+      "primary_metric": "Profile table tests: conservative blocks 6% size; a documented moderate profile allows it",
+      "guard_metrics": [
+        "Default remains conservative",
+        "test_risk.py reasons unchanged on default profile",
+        "No live threshold loosening without Bill GO"
+      ],
+      "risk": "paper-safe if default unchanged; funds-adjacent if live defaults loosen",
+      "difficulty": "medium"
+    },
+    {
+      "rank": 12,
+      "id": "execution-mode-auto",
+      "title": "PR #9 EXECUTION_MODE=auto routing",
+      "hypothesis": "Settings default EXECUTION_MODE=auto is denied by venue_allowed() on main. PR #9 implements auto like hybrid.",
+      "primary_metric": "n/a — out of scope for this loop",
+      "guard_metrics": [
+        "Do not merge or rebase this work into accept rounds",
+        "Requires a separate Bill GO"
+      ],
+      "risk": "funds-adjacent (live venue routing)",
+      "difficulty": "easy",
+      "out_of_scope": true,
+      "pr": "https://github.com/up2itnow0822/ReadyTrader-Crypto/pull/9"
+    }
+  ]
+}
