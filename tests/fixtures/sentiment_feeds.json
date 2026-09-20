@@ -114,8 +114,7 @@
   {
    "id": "crash-02",
    "scenario": "crash",
-   "blocks_buy": false,
-   "known_limit": true,
+   "blocks_buy": true,
    "texts": [
     "BREAKING: Heliex confirms $340M hot wallet hack, BTC down 11% in the last 3 hours",
     "$BTC/USD 79,450 (-12.4%) — bot",
@@ -137,8 +136,7 @@
   {
    "id": "crash-05",
    "scenario": "crash",
-   "blocks_buy": false,
-   "known_limit": true,
+   "blocks_buy": true,
    "texts": [
     "CPI came in way hotter than expected and BTC just dumped 9% in twenty minutes",
     "Fed basically confirmed no cuts this year and risk assets are getting torched, $BTC -10%",
@@ -381,7 +379,7 @@
   {
    "id": "crash-pct-only",
    "scenario": "crash",
-   "blocks_buy": false,
+   "blocks_buy": true,
    "texts": [
     "BTC just ate 10% in half an hour, $92,400 and still going",
     "$BTC/USD 91,880 (-10.4% 24h)",

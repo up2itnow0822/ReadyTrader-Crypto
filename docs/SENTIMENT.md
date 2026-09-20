@@ -89,10 +89,10 @@ ______________________________________________________________________
 
 1. Up to 10 recent tweets and 5 `/r/cryptocurrency` post titles are fetched for the symbol's base asset (`BTC/USDT`, `btc-usd`, `BTCUSDT`, `XBT/USD` and `BTC` all mean `BTC`).
 1. Each distinct text is classified bullish, bearish or neutral locally (`intelligence/sentiment.py`). No model, API key or network call is involved in scoring, so the same texts always give the same score.
-1. The score is the bull-bear spread over the texts that take a direction: `(bullish - bearish) / (bullish + bearish)`, from `-1.0` to `+1.0`. With fewer than 4 directional texts (or less than a quarter of the sample) there is no consensus and the score is `0.0`.
+1. The score is the bull-bear spread over the texts that take a direction: `(bullish - bearish) / (bullish + bearish)`, from `-1.0` to `+1.0`. With fewer than 4 directional texts (or less than a quarter of the sample) there is no consensus and the score is `0.0`, except when at least one text prints an 8%+ drop (`-10%`, `down 11%`): that text is bearish even without a lexicon panic word, and three directional texts are then enough. Promo copy such as ` - 92% WIN RATE` does not count (the minus must sit on the number). Ordinary red-day prints (~3–6%) stay below the line.
 1. The reading is cached per base asset for one hour. `validate_trade_risk` reads the cache; it never fetches.
 
-`validate_trade_risk` blocks a **BUY** when the score is below `-0.5`: at least 4 texts take a direction and bearish ones outnumber bullish ones by more than three to one. Sells are never blocked by sentiment.
+`validate_trade_risk` blocks a **BUY** when the score is below `-0.5`: enough texts take a direction (4, or 3 when an 8%+ drop is present) and bearish ones outnumber bullish ones by more than three to one. Sells are never blocked by sentiment.
 
 ### Why a market-only vocabulary
 
@@ -107,7 +107,7 @@ Measured on 86 simulated `BTC` searches (15 texts each) written by models that h
 - The last 40 feeds were scored once, with the configuration frozen beforehand: **6 of 12 crashes blocked; 2 of 28 other feeds blocked**, both written to be alarming without a crash (a crash anniversary, an altcoin imploding while BTC sat flat).
 - Across all 86 feeds with the code as merged: **12 of 22 crashes blocked, 0 of 50 calm, red, green or contested days blocked**, and 1 of 14 alarming-but-fine feeds (the altcoin one).
 
-So the rule is precise and only moderately sensitive: about half of crashes are described in words it does not know ("risk off", "withdrawals frozen", "sell everything"). `tests/fixtures/sentiment_feeds.json` pins a 17-feed sample, including the misses, which are marked `known_limit`.
+So the rule is precise and only moderately sensitive: about half of crashes are described in words it does not know ("risk off", "withdrawals frozen", "sell everything") unless they also print an 8%+ drop. `tests/fixtures/sentiment_feeds.json` pins the in-repo sample. After the Phase 1 large-drop cue, the frozen train/held-out crash misses (`crash-05`, `crash-02`) block; the altcoin implosion while BTC sits flat remains a `known_limit`.
 
 ### When there is no measurement
 
@@ -129,5 +129,5 @@ A degraded refresh never relaxes the rule. Only providers that supplied usable n
 - The Risk Guardian is advisory: the rule only acts when the agent calls `get_social_sentiment(symbol)` and then `validate_trade_risk(...)` before trading.
 - Fifteen texts is a small sample, and anyone can post. Treat the rule as a circuit breaker for broad, plain-spoken panic, not a forecast. Repeated identical texts count once.
 - Negation more than a few words from its target is missed, and bad news about another asset counts if it uses this vocabulary.
-- `MIN_DIRECTIONAL` is the sensitivity knob and lives with the vocabulary in one file. Every `validate_trade_risk` response carries the score and counts it used, so paper-trading logs can calibrate it. Add fresh feeds to the fixture before tuning against it.
+- `MIN_DIRECTIONAL` and `LARGE_DROP_PCT` are the sensitivity knobs and live with the vocabulary in one file. Every `validate_trade_risk` response carries the score and counts it used, so paper-trading logs can calibrate it. Add fresh feeds to the fixture before tuning against it.
 - Tweet and post previews returned to the agent are untrusted text.

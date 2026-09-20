@@ -4,6 +4,11 @@ This project follows a lightweight changelog format. Major changes are summarize
 
 ### Unreleased
 
+- **Falling Knife (paper/CI):** `intelligence/sentiment.py` now treats a printed 8%+ drop
+  (`-10%`, `down 11%`) as bearish even without a lexicon panic word, and three directional
+  texts are enough consensus when such a print is present. Promo ` - 92% WIN RATE` does not
+  count. In-repo fixture crashes `crash-05` and `crash-02` now block; the altcoin-implosion
+  `known_limit` remains.
 - **Breaking (strategy sandbox):** agent-supplied strategy code (`run_backtest_simulation`, the
   stress lab) now runs in an isolated child process (`strategy_sandbox.py`) instead of
   in-process. Strategies can no longer import or reference `pandas`, `ta`, `string`, or
