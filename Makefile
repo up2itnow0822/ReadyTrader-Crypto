@@ -80,7 +80,7 @@ dev-all:
 # Testing
 # =============================================================================
 test:
-	PAPER_MODE=true SIGNER_TYPE=null DEV_MODE=true pytest -q
+	PAPER_MODE=true SIGNER_TYPE=null DEV_MODE=true pytest
 
 test-cov:
 	PAPER_MODE=true SIGNER_TYPE=null DEV_MODE=true pytest --cov=. --cov-report=term-missing --cov-report=html
@@ -112,6 +112,7 @@ check: lint test-cov
 security:
 	bandit -r . -c bandit.yaml
 	pip-audit -r requirements.txt
+	npm audit --prefix frontend
 	@echo "For full secret scan, use: trufflehog git file://. --only-verified"
 
 # =============================================================================

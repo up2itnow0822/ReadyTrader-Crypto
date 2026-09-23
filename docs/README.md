@@ -6,25 +6,26 @@ ______________________________________________________________________
 
 ### 1. Getting Started
 
-| Document          | Description                                            |
-| :---------------- | :----------------------------------------------------- |
-| `../README.md`    | Project overview, installation, and quick start        |
-| `ARCHITECTURE.md` | System architecture and component interactions         |
-| `TOOLS.md`        | Complete MCP tool catalog with signatures and examples |
+| Document              | Description                                                                                                    |
+| :-------------------- | :------------------------------------------------------------------------------------------------------------- |
+| `../README.md`        | Project overview, installation, and quick start                                                                |
+| `ARCHITECTURE.md`     | System architecture and component interactions (see `#approval-gate` for the current approval-flow limitation) |
+| `TOOLS.md`            | Complete MCP tool catalog with signatures and examples                                                         |
+| `STRATEGY_SANDBOX.md` | Strategy contract, isolation layers, and limits for `run_backtest_simulation`                                  |
 
 ### 2. Operations & Deployment
 
-| Document                   | Description                                     |
-| :------------------------- | :---------------------------------------------- |
-| `../RUNBOOK.md`            | Operator runbook + incident scenarios           |
-| `ERRORS.md`                | Error codes + troubleshooting guide             |
-| `HERMES_INTEGRATION.md`    | Hermes stdio MCP + skill wiring                 |
-| `OPS_BTC_PRODUCTION.md`    | BTC live-halted ops pack (keys, monitoring)     |
-| `UAT_BTC_PRODUCTION_MINUS_DUST.md` | Production-minus-dust UAT evidence     |
-| `LIVE_TESTING_PROTOCOL.md` | **NEW** Formal live trading validation protocol |
-| `THREAT_MODEL.md`          | Security threat model for live trading          |
-| `CUSTODY.md`               | Key custody + rotation guidance                 |
-| `SECURITY_REVIEW.md`       | **NEW** Pre-production security checklist       |
+| Document                           | Description                                     |
+| :--------------------------------- | :---------------------------------------------- |
+| `../RUNBOOK.md`                    | Operator runbook + incident scenarios           |
+| `ERRORS.md`                        | Error codes + troubleshooting guide             |
+| `HERMES_INTEGRATION.md`            | Hermes stdio MCP + skill wiring                 |
+| `OPS_BTC_PRODUCTION.md`            | BTC live-halted ops pack (keys, monitoring)     |
+| `UAT_BTC_PRODUCTION_MINUS_DUST.md` | Production-minus-dust UAT evidence              |
+| `LIVE_TESTING_PROTOCOL.md`         | **NEW** Formal live trading validation protocol |
+| `THREAT_MODEL.md`                  | Security threat model for live trading          |
+| `CUSTODY.md`                       | Key custody + rotation guidance                 |
+| `SECURITY_REVIEW.md`               | **NEW** Pre-production security checklist       |
 
 ### 3. Performance & Quality
 

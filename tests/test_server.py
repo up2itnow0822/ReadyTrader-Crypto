@@ -78,7 +78,12 @@ def test_place_cex_order_paper_mode():
     with patch.object(settings, "PAPER_MODE", True):
         with patch.object(settings, "EXECUTION_MODE", "auto"):
             with patch.object(global_container, "paper_engine") as mock_engine:
-                mock_engine.execute_trade.return_value = "Paper Trade Executed"
+                # The tool reads the engine's structured result (execute_trade_result), not the prose string.
+                mock_engine.execute_trade_result.return_value = {
+                    "ok": True,
+                    "message": "Paper Trade Executed",
+                    "fill": {"side": "buy", "symbol": "BTC/USDT", "amount": 0.01, "price": 50_000.0, "total_value": 500.0, "quote": "USDT"},
+                }
 
                 # Explicit price: paper price resolution has its own tests and
                 # must not make this routing test depend on the market-data bus.

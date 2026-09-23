@@ -14,11 +14,13 @@ from starlette.responses import JSONResponse
 
 # Import core components from the main server
 from app.core.container import global_container
-from app.core.settings import set_execution_approval_mode, settings
-from app.tools.execution import place_cex_order, swap_tokens, transfer_eth
-from errors import InternalError, ReadyTraderError, json_error_response
+from app.core.jsonio import _sanitize as _sanitize_json
+from app.core.settings import settings
+from app.tools.execution import approved_execution, place_cex_order, swap_tokens, transfer_eth
+from errors import ApprovalDeniedError, InternalError, ProposalStateError, ReadyTraderError, json_error_response
 from execution.cex_executor import CexExecutor
 from execution.evm import get_web3
+from execution_store import ProposalError
 from marketdata.store import TickerSnapshot
 from observability import build_log_context, log_event
 from rate_limiter import RateLimitError
@@ -65,6 +67,8 @@ else:
         raise RuntimeError("API_JWT_SECRET must be set when API_AUTH_REQUIRED=true in production mode. Set DEV_MODE=true for development.")
 
 JWT_ALGORITHM = "HS256"
+# A token without an expiry would be a permanent credential (login always mints role=admin).
+JWT_DECODE_OPTIONS = {"require": ["exp", "sub"]}
 JWT_EXPIRATION_HOURS = settings.API_JWT_EXPIRATION_HOURS
 
 # CORS configuration - strict by default in production
@@ -122,7 +126,7 @@ async def rate_limit_middleware(request: Request, call_next):
     if auth_header.startswith("Bearer ") and JWT_AVAILABLE and JWT_SECRET:
         try:
             token = auth_header[7:]
-            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM], options=JWT_DECODE_OPTIONS)
             rate_key = f"api:user:{payload.get('sub', client_ip)}"
         except Exception:
             pass
@@ -196,7 +200,7 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) 
         return None
 
     try:
-        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM], options=JWT_DECODE_OPTIONS)
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired")
@@ -275,7 +279,7 @@ def _decode_access_token(token: str) -> dict | None:
     if not JWT_AVAILABLE or not JWT_SECRET or not token:
         return None
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM], options=JWT_DECODE_OPTIONS)
         return payload if isinstance(payload, dict) else None
     except Exception:
         return None
@@ -319,6 +323,7 @@ async def health_check():
         "version": settings.VERSION,
         "trading_halted": settings.TRADING_HALTED,
         "live_enabled": settings.LIVE_TRADING_ENABLED,
+        "auth_required": settings.API_AUTH_REQUIRED,
     }
 
 
@@ -403,8 +408,23 @@ async def get_pending_approvals(user: dict = Depends(require_auth)):
 
 class ApprovalRequest(BaseModel):
     request_id: str
-    confirm_token: str
+    # Optional: an authenticated admin (the dashboard) approves with their JWT instead. The token is
+    # issued to the agent with the proposal, so it never was proof that a human approved.
+    confirm_token: Optional[str] = None
     approve: bool
+
+
+def _operator_may_confirm_without_token(user: dict) -> bool:
+    """
+    Token-less approval is a human-only path.
+
+    - Auth on: the caller must hold an admin JWT.
+    - Auth off: only in paper mode (settings validation already refuses live trading without auth;
+      this is the second lock on the same door).
+    """
+    if settings.API_AUTH_REQUIRED:
+        return user.get("role") == "admin"
+    return bool(settings.PAPER_MODE)
 
 
 _approval_lock = asyncio.Lock()
@@ -424,68 +444,106 @@ async def approve_trade(req: ApprovalRequest, user: dict = Depends(require_auth)
             "user": user.get("sub"),
             "request_id": req.request_id,
             "approve": req.approve,
+            "approved_via": "confirm_token" if (req.confirm_token or "").strip() else "operator",
         },
     )
     try:
         if req.approve:
-            prop = global_container.execution_store.confirm(req.request_id, req.confirm_token)
+            store = global_container.execution_store
+            token = (req.confirm_token or "").strip()
+            try:
+                if token:
+                    prop = store.confirm(req.request_id, token)
+                elif _operator_may_confirm_without_token(user):
+                    prop = store.confirm_as_operator(req.request_id, operator=str(user.get("sub") or "anonymous"))
+                else:
+                    denied = ApprovalDeniedError(req.request_id, "admin sign-in or the proposal's confirm_token is required")
+                    return JSONResponse(status_code=403, content=json_error_response(denied))
+            except ProposalError as pe:
+                if pe.reason == "invalid_token":
+                    log_event("trade_approval_denied", ctx=API_CTX, data={"user": user.get("sub"), "request_id": req.request_id, "reason": pe.reason})
+                    denied = ApprovalDeniedError(req.request_id, "invalid confirm_token")
+                    return JSONResponse(status_code=403, content=json_error_response(denied))
+                state_error = ProposalStateError(pe.reason, req.request_id)
+                return JSONResponse(status_code=state_error.http_status, content=json_error_response(state_error))
 
-            # Check if already executed (atomic execution guarantee)
-            if hasattr(prop, "executed") and prop.executed:
-                return JSONResponse(
-                    status_code=409,
-                    content=json_error_response(
-                        ReadyTraderError(code="EXEC_308", message=f"Proposal {req.request_id} has already been executed", data={"request_id": req.request_id})
-                    ),
+            # Build the call BEFORE touching anything: a proposal whose payload cannot be turned into a
+            # call is a 422, not a 500.
+            try:
+                payload = dict(prop.payload or {})
+                idem = str(payload.get("idempotency_key") or "").strip() or prop.request_id
+                if prop.kind == "swap_tokens":
+                    call, kwargs = (
+                        swap_tokens,
+                        {
+                            "from_token": str(payload["from_token"]),
+                            "to_token": str(payload["to_token"]),
+                            "amount": float(payload["amount"]),
+                            "chain": str(payload.get("chain") or "ethereum"),
+                            "rationale": str(payload.get("rationale") or ""),
+                            "idempotency_key": idem,
+                        },
+                    )
+                elif prop.kind == "transfer_eth":
+                    call, kwargs = (
+                        transfer_eth,
+                        {
+                            "to_address": str(payload["to_address"]),
+                            "amount": float(payload["amount"]),
+                            "chain": str(payload.get("chain") or "ethereum"),
+                            "idempotency_key": idem,
+                        },
+                    )
+                elif prop.kind == "place_cex_order":
+                    call, kwargs = (
+                        place_cex_order,
+                        {
+                            "symbol": str(payload["symbol"]),
+                            "side": str(payload["side"]),
+                            "amount": float(payload["amount"]),
+                            "order_type": str(payload.get("order_type") or "market"),
+                            "price": float(payload["price"]) if payload.get("price") is not None else None,
+                            "exchange": str(payload.get("exchange") or "binance"),
+                            "market_type": str(payload.get("market_type") or "spot"),
+                            "idempotency_key": idem,
+                        },
+                    )
+                else:
+                    raise ValueError(f"unknown proposal kind {prop.kind!r}")
+            except (KeyError, TypeError, ValueError) as bad:
+                malformed = ProposalStateError(
+                    "malformed", req.request_id, f"Proposal {req.request_id} cannot be executed: {type(bad).__name__} in its payload"
                 )
+                return JSONResponse(status_code=422, content=json_error_response(malformed))
 
-            # Avoid re-proposing while executing an already-approved action.
+            # One approved execution at a time. approved_execution() tells the tool "this call was approved
+            # by a human" for THIS task only; the process-wide approval mode is never changed, so any other
+            # caller in this process still gets a proposal while the exchange round-trip is in flight.
             async with _approval_lock:
-                old_mode = settings.EXECUTION_APPROVAL_MODE
-                try:
-                    set_execution_approval_mode("auto")
-                    payload = dict(prop.payload or {})
-                    idem = (payload.get("idempotency_key") or "").strip() or prop.request_id
+                with approved_execution():
+                    res = call(**kwargs)
 
-                    if prop.kind == "swap_tokens":
-                        res = swap_tokens(
-                            from_token=str(payload["from_token"]),
-                            to_token=str(payload["to_token"]),
-                            amount=float(payload["amount"]),
-                            chain=str(payload.get("chain") or "ethereum"),
-                            rationale=str(payload.get("rationale") or ""),
-                            idempotency_key=idem,
-                        )
-                    elif prop.kind == "transfer_eth":
-                        res = transfer_eth(
-                            to_address=str(payload["to_address"]),
-                            amount=float(payload["amount"]),
-                            chain=str(payload.get("chain") or "ethereum"),
-                            idempotency_key=idem,
-                        )
-                    elif prop.kind == "place_cex_order":
-                        res = place_cex_order(
-                            symbol=str(payload["symbol"]),
-                            side=str(payload["side"]),
-                            amount=float(payload["amount"]),
-                            order_type=str(payload.get("order_type") or "market"),
-                            price=float(payload["price"]) if payload.get("price") is not None else None,
-                            exchange=str(payload.get("exchange") or "binance"),
-                            market_type=str(payload.get("market_type") or "spot"),
-                            idempotency_key=idem,
-                        )
-                    else:
-                        raise HTTPException(status_code=400, detail=f"Unknown proposal kind: {prop.kind}")
+            # Tool functions return JSON envelopes and do not raise: a refused or failed order comes back
+            # as {"ok": false, ...}. That is NOT an execution. Report it as an error and leave the proposal
+            # confirmed-but-unexecuted: approvals are single-use, so the agent must propose again.
+            result = json.loads(res)
+            if not (isinstance(result, dict) and result.get("ok") is True):
+                log_event("trade_approval_execution_refused", ctx=API_CTX, data={"request_id": req.request_id, "result": result})
+                return JSONResponse(status_code=422, content=result if isinstance(result, dict) else {"ok": False, "error": {"code": "execution_failed"}})
 
-                    # Mark proposal as executed to prevent double-execution
-                    global_container.execution_store.mark_executed(req.request_id)
-
-                    # Tool functions return JSON strings; convert to object for API output.
-                    return json.loads(res)
-                finally:
-                    set_execution_approval_mode(old_mode.value if hasattr(old_mode, "value") else str(old_mode))
+            # Mark proposal as executed to prevent double-execution
+            store.mark_executed(req.request_id, result=result.get("data") if isinstance(result.get("data"), dict) else None)
+            return result
         else:
-            success = global_container.execution_store.cancel(req.request_id)
+            # Rejecting is as much an operator decision as approving: it permanently consumes the proposal.
+            store = global_container.execution_store
+            token = (req.confirm_token or "").strip()
+            allowed = store.token_matches(req.request_id, token) if token else _operator_may_confirm_without_token(user)
+            if not allowed:
+                log_event("trade_approval_denied", ctx=API_CTX, data={"user": user.get("sub"), "request_id": req.request_id, "reason": "reject_not_allowed"})
+                denied = ApprovalDeniedError(req.request_id, "admin sign-in or the proposal's confirm_token is required to reject")
+                return JSONResponse(status_code=403, content=json_error_response(denied))
+            success = store.cancel(req.request_id)
             return {"ok": success}
     except ReadyTraderError as e:
         log_event("trade_approval_error", ctx=API_CTX, data={"error": e.to_dict()})
@@ -611,7 +669,8 @@ async def get_trade_history(user: dict = Depends(require_auth), limit: int = 50)
                 }
             )
         conn.close()
-        return {"trades": trades, "mode": "paper"}
+        # Rows come straight from SQLite: a non-finite float in an old ledger must not 500 the endpoint.
+        return _sanitize_json({"trades": trades, "mode": "paper"})
 
     return {"trades": [], "mode": "live", "note": "Live trade history available via audit log export"}
 

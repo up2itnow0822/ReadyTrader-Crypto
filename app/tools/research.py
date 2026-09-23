@@ -1,20 +1,11 @@
-import json
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from fastmcp import FastMCP
 
 from app.core.container import global_container
+from app.core.jsonio import json_err as _json_err
+from app.core.jsonio import json_ok as _json_ok
 from intelligence import analyze_social_sentiment, fetch_financial_news, fetch_rss_news
-
-
-def _json_ok(data: Dict[str, Any] | None = None) -> str:
-    payload = {"ok": True, "data": data or {}}
-    return json.dumps(payload, indent=2, sort_keys=True)
-
-
-def _json_err(code: str, message: str, data: Dict[str, Any] | None = None) -> str:
-    payload = {"ok": False, "error": {"code": code, "message": message, "data": data or {}}}
-    return json.dumps(payload, indent=2, sort_keys=True)
 
 
 def _rate_limit(tool_name: str) -> Optional[str]:
@@ -29,7 +20,7 @@ def _rate_limit(tool_name: str) -> Optional[str]:
 def register_research_tools(mcp: FastMCP):
     @mcp.tool()
     def get_social_sentiment(symbol: str) -> str:
-        """Get simulated social media sentiment (X/Reddit)."""
+        """Score recent X/Reddit text for the symbol (-1 bearish .. +1 bullish) and cache it for the Risk Guardian."""
         return _json_ok({"symbol": symbol, "social_sentiment": analyze_social_sentiment(symbol)})
 
     @mcp.tool()

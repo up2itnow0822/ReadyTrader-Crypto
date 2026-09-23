@@ -118,6 +118,7 @@ applicable items are verified.**
   - [ ] All secrets in environment variables or secrets manager
   - [ ] No secrets in source code, config files, or logs
   - [x] `.env` / `.env.live` / `.env.*.local` gitignored (templates `env*.example` stay tracked)
+
 - [ ] **Container Security**
 
   - [ ] Running as non-root user
@@ -129,7 +130,7 @@ applicable items are verified.**
 - [ ] **Dependency Audit**
 
   - [ ] `pip-audit` shows no known vulnerabilities
-  - [ ] `npm audit` shows no critical vulnerabilities (frontend)
+  - [ ] `npm audit` shows 0 vulnerabilities, including `devDependencies` (frontend; PR CI / `make security`)
   - [ ] Dependencies pinned to specific versions (`requirements.lock.txt`)
 
 - [ ] **Static Analysis**

@@ -328,13 +328,15 @@ The core server exposes tools organized into categories:
 │  8. Return to Agent: { approval_required: true, request_id }    │
 │       │                                                          │
 │       ▼                                                          │
-│  9. Operator: Reviews in Web UI, clicks "Approve"               │
-│       │                                                          │
+│  9. Operator: Reviews and approves — TODAY this only works if   │
+│       │   the approver is the SAME PROCESS that created the     │
+│       │   proposal. See "Approval gate" below before assuming    │
+│       │   the Web UI can do this for an MCP-created proposal.    │
 │       ▼                                                          │
 │  10. API Server: POST /api/approve-trade                        │
-│       │   - Verify confirm_token                                 │
-│       │   - Check not expired                                    │
-│       │   - Execute order                                        │
+│       │   - Verify confirm_token OR admin session                │
+│       │   - Check not expired / not already used                 │
+│       │   - Execute order (refusals are not recorded as executed)│
 │       │                                                          │
 │       ▼                                                          │
 │  11. CexExecutor: Place order via CCXT                          │
@@ -346,6 +348,63 @@ The core server exposes tools organized into categories:
 │  13. Return: { ok: true, order: {...} }                         │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+## Approval gate
+
+`EXECUTION_APPROVAL_MODE=approve_each` makes `place_cex_order`/`swap_tokens`/`transfer_eth`
+return a proposal (`request_id`, `confirm_token`, `expires_at`) instead of executing
+immediately, **only when `PAPER_MODE=false`** — paper orders never propose. The proposal is
+held in `ExecutionStore` (`execution_store.py`).
+
+### Confirming a proposal
+
+`POST /api/approve-trade` (`api_server.py`) confirms or rejects one:
+
+- `{"request_id", "confirm_token", "approve": true}` — the normal agent-relayed path. The
+  agent gets `confirm_token` back with the proposal and hands it to whoever is approving.
+- `{"request_id", "approve": true}` with no `confirm_token` — token-less approval. This is an
+  HTTP-admin-only path: it requires an authenticated admin session when
+  `API_AUTH_REQUIRED=true`, or `PAPER_MODE=true` when auth is off (live trading without auth is
+  already refused by settings validation, so this is a second lock on the same door). No MCP
+  tool may call the underlying `ExecutionStore.confirm_as_operator()` — only `api_server.py`
+  does.
+- Rejecting (`"approve": false`) needs the same authority as approving (a valid
+  `confirm_token`, or admin/paper-mode as above) — it permanently consumes the proposal.
+
+While an approved order actually executes, `app.tools.execution.approved_execution()` marks
+*only that one call* as approved (a `ContextVar`, not a process-wide flag) — the approval gate
+is never switched off for the rest of the process during that window.
+
+### Known limitation: proposals do not cross processes
+
+`ExecutionStore` stamps every proposal with a random per-process session id at construction,
+and refuses to load a proposal stamped with any other session id — deliberately, so a stale
+proposal from a previous process (a restart) can never be approved (`execution_store.py`'s
+module docstring and `_load`/`list_pending`).
+
+The MCP server (`server.py`) and the API server (`api_server.py`) are **separate processes** in
+every documented deployment (Docker image, `docker-compose.yml`, Hermes stdio config). Each has
+its own `ExecutionStore` instance with its own session id. The practical consequence:
+
+- A proposal created by an agent calling `place_cex_order` through the MCP process is invisible
+  to `GET /api/pending-approvals` and cannot be confirmed or rejected by
+  `POST /api/approve-trade` in the API process — **neither with the correct `confirm_token` nor
+  with an admin session** — because the API process's `ExecutionStore` never has that
+  `request_id` at all.
+- There is currently no MCP tool that can confirm a proposal either (by design: approval is
+  meant to be a human/dashboard action, not something the agent can do to itself).
+- The only configuration in which `POST /api/approve-trade` can confirm a real proposal today
+  is one where the same running process both creates it and serves the HTTP API — not how any
+  shipped deployment is documented to run.
+
+**What this means for an operator today:** with `EXECUTION_APPROVAL_MODE=approve_each` and
+`PAPER_MODE=false`, a live order placed through the MCP-facing agent returns a proposal that
+cannot currently be approved through the dashboard/API in the standard two-process deployment.
+Do not tell agents or operators to "approve the trade in the Web UI" for an MCP-originated
+proposal — it will not find it. The owner has not yet decided how to close this gap (candidates
+include a shared external store, or running both surfaces in one process); track this doc and
+`CHANGELOG.md` for when it changes. See also `docs/ERRORS.md` for the `EXEC_309` (unknown
+proposal) code this produces.
 
 ## Deployment Architectures
 

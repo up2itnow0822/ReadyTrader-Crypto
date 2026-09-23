@@ -29,9 +29,9 @@ The core philosophy of this project is a strict separation of powers:
 ## 🔄 A Day in the Life of a Trade
 
 1. **Research:** You ask your agent, "Find a good entry for BTC." The agent calls `fetch_ohlcv` and `get_sentiment`.
-1. **Proposal:** The agent concludes, "BTC is oversold; I want to buy $100." It calls `place_limit_order`.
-1. **Governance:** The MCP server checks its rules. Is $100 within your `MAX_TRADE_AMOUNT`? If yes, it creates a **Pending Execution**.
-1. **Consent:** If you've enabled "Human-in-the-loop," the agent notifies you. You click **Confirm** in the [Web UI](#premium-nextjs-dashboard), and only then does the trade hit the exchange.
+1. **Proposal:** The agent concludes, "BTC is oversold; I want to buy $100." It calls `place_cex_order` (paper mode by default; live mode requires `LIVE_TRADING_ENABLED=true`).
+1. **Governance:** The Risk Guardian (`validate_trade_risk`) and the policy engine's allowlists/limits (live orders only) check the request before anything executes.
+1. **Consent:** With `EXECUTION_APPROVAL_MODE=approve_each` in **live** mode, the server returns a proposal (`request_id` + `confirm_token`) instead of executing immediately. Today this can only be confirmed from the **same process** that created it — see [Known limitation: cross-process approvals](docs/ARCHITECTURE.md#approval-gate) before relying on the dashboard for this.
 
 ______________________________________________________________________
 
@@ -193,9 +193,157 @@ Tools:
 - `replace_cex_order(exchange, order_id, symbol, side, amount, order_type='limit', price=None, market_type='spot')`
 - `wait_for_cex_order(exchange, order_id, symbol='', market_type='spot', timeout_sec=30, poll_interval_sec=2.0)`
 
-Market-data introspection:
+Exchange/market introspection:
 
-- `get_marketdata_capabilities(exchange_id='')`
+- `get_cex_capabilities(exchange='binance', symbol='', market_type='spot')` — the MCP tool agents
+  call. (`ExchangeProvider.get_marketdata_capabilities()` is the internal Python method behind
+  it; it is not itself an MCP tool.)
+
+______________________________________________________________________
+
+## ⚡ Zero-key quickstart (paper)
+
+No exchange keys, no RPC endpoint. Clone, install into a venv, then add ONE of the config
+blocks below to your MCP client.
+
+```bash
+git clone https://github.com/up2itnow0822/ReadyTrader-Crypto.git
+cd ReadyTrader-Crypto
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+```
+
+Replace `/ABSOLUTE/PATH/TO/ReadyTrader-Crypto` below with the absolute path to that clone.
+Every block pins the same safe paper profile: `PAPER_MODE=true`, `LIVE_TRADING_ENABLED=false`,
+`TRADING_HALTED=true`, `EXECUTION_MODE=cex`, `SIGNER_TYPE=null`. All four were launched over
+stdio with exactly this command + args + env (see `discovery/m3/mcp_smoke_*.txt` in the
+build's evidence) and returned the full 29-tool list.
+
+<details>
+<summary><b>Claude Desktop</b> (<code>claude_desktop_config.json</code>)</summary>
+
+```json
+{
+  "mcpServers": {
+    "readytrader-crypto": {
+      "command": "/ABSOLUTE/PATH/TO/ReadyTrader-Crypto/.venv/bin/python",
+      "args": ["/ABSOLUTE/PATH/TO/ReadyTrader-Crypto/server.py"],
+      "env": {
+        "PAPER_MODE": "true",
+        "LIVE_TRADING_ENABLED": "false",
+        "TRADING_HALTED": "true",
+        "EXECUTION_MODE": "cex",
+        "SIGNER_TYPE": "null"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Claude Code</b> (<code>claude mcp add</code>)</summary>
+
+```bash
+claude mcp add readytrader-crypto \
+  -e PAPER_MODE=true \
+  -e LIVE_TRADING_ENABLED=false \
+  -e TRADING_HALTED=true \
+  -e EXECUTION_MODE=cex \
+  -e SIGNER_TYPE=null \
+  -- /ABSOLUTE/PATH/TO/ReadyTrader-Crypto/.venv/bin/python /ABSOLUTE/PATH/TO/ReadyTrader-Crypto/server.py
+```
+
+</details>
+
+<details>
+<summary><b>Cursor</b> (<code>.cursor/mcp.json</code>)</summary>
+
+```json
+{
+  "mcpServers": {
+    "readytrader-crypto": {
+      "command": "/ABSOLUTE/PATH/TO/ReadyTrader-Crypto/.venv/bin/python",
+      "args": ["/ABSOLUTE/PATH/TO/ReadyTrader-Crypto/server.py"],
+      "env": {
+        "PAPER_MODE": "true",
+        "LIVE_TRADING_ENABLED": "false",
+        "TRADING_HALTED": "true",
+        "EXECUTION_MODE": "cex",
+        "SIGNER_TYPE": "null"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>VS Code</b> (<code>.vscode/mcp.json</code>)</summary>
+
+```json
+{
+  "servers": {
+    "readytrader-crypto": {
+      "type": "stdio",
+      "command": "/ABSOLUTE/PATH/TO/ReadyTrader-Crypto/.venv/bin/python",
+      "args": ["/ABSOLUTE/PATH/TO/ReadyTrader-Crypto/server.py"],
+      "env": {
+        "PAPER_MODE": "true",
+        "LIVE_TRADING_ENABLED": "false",
+        "TRADING_HALTED": "true",
+        "EXECUTION_MODE": "cex",
+        "SIGNER_TYPE": "null"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+### Startup scenarios
+
+Three copy-paste env profiles. Pick one; do not mix them.
+
+| Profile                     | Env                                                                                                                                                                                           | Use when                                                                                                                                                                                                                              |
+| :-------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Market-data only**        | `PAPER_MODE=true`, `LIVE_TRADING_ENABLED=false`, `TRADING_HALTED=true`, `SIGNER_TYPE=null` (no `deposit_paper_funds` needed)                                                                  | You only want price/news/sentiment/backtest tools — no wallet, no orders.                                                                                                                                                             |
+| **Paper trading (default)** | `PAPER_MODE=true`, `LIVE_TRADING_ENABLED=false`, `TRADING_HALTED=true`, `EXECUTION_MODE=cex`, `SIGNER_TYPE=null`                                                                              | Everyday development and the quickstart above — full paper order lifecycle, zero real risk.                                                                                                                                           |
+| **Live-but-halted**         | `PAPER_MODE=false`, `LIVE_TRADING_ENABLED=true`, `TRADING_HALTED=true`, `EXECUTION_MODE=cex`, allowlists set, `SIGNER_TYPE` set to `remote`/`keystore`/`cb_mpc_2pc` (never `env_private_key`) | What you set up and validate **before ever** flipping `TRADING_HALTED=false`. Follow `docs/LIVE_TESTING_PROTOCOL.md` and `docs/OPS_BTC_PRODUCTION.md` — there is no one-step "go live" recipe, and this README does not give you one. |
+
+### Try it: example prompts
+
+Paste into your agent once connected (paper mode). Also see the full
+`prompts/READYTRADER_PROMPT_PACK.md` for more.
+
+1. "Deposit 10,000 USDC into my paper wallet, then get the current BTC/USDT price." →
+   `deposit_paper_funds`, `fetch_ohlcv` or `get_crypto_price`.
+1. "Check social sentiment for ETH, then tell me if the Risk Guardian would allow a $500
+   ETH buy against a $10,000 portfolio." → `get_social_sentiment`, `validate_trade_risk`.
+1. "Try to validate a BTC buy sized at 50% of a $10,000 portfolio — I want to see it get
+   blocked." → `validate_trade_risk` refusing on position size (verified: this call returns
+   `result.allowed: false`).
+1. "Place a paper limit order for 0.05 ETH/USDT at the price you just fetched, then show me
+   my paper balances." → `place_cex_order` (with an explicit `price`), `get_cex_balance`.
+1. "Backtest a simple RSI mean-reversion strategy (buy under 30, sell over 70) on BTC/USDT and
+   report PnL." → `run_backtest_simulation` (verified end-to-end through `BacktestEngine` with
+   this exact strategy shape — see `docs/STRATEGY_SANDBOX.md` for the contract).
+
+### Troubleshooting
+
+| Symptom                                                                                       | Likely cause                                                                                                                                                                                                                         | Fix                                                                                                                                                                                                                                                              |
+| :-------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Server doesn't appear in the client                                                           | Relative paths, or a `python` that lacks the deps                                                                                                                                                                                    | Use absolute paths for both `command` and the `server.py` arg, and point at the venv's `python` (`.venv/bin/python`), not a bare `python`/`python3`.                                                                                                             |
+| `paper_price_required`                                                                        | `place_cex_order` in paper mode with no `price` and no market-data-bus price for that symbol                                                                                                                                         | Pass `price` explicitly, or call `fetch_ohlcv`/`get_crypto_price` first to confirm data is flowing.                                                                                                                                                              |
+| `insufficient_funds`                                                                          | No paper balance for the asset being spent                                                                                                                                                                                           | Call `deposit_paper_funds` first.                                                                                                                                                                                                                                |
+| `execution_mode_blocked`                                                                      | `EXECUTION_MODE` doesn't allow the venue you're calling (`cex`/`dex`/`hybrid`)                                                                                                                                                       | Set `EXECUTION_MODE` to the venue you need.                                                                                                                                                                                                                      |
+| Exchange/network errors (`cex_error`, `fetch_price_error`, `NET_501`) in a restricted network | Outbound access to the exchange is blocked (firewalled sandbox, corporate proxy)                                                                                                                                                     | Confirm outbound HTTPS to the exchange is allowed; this is environmental, not a bug — the server itself starts and lists tools fine (verified: all four quickstart configs above listed 29 tools while this exact network error occurred on `get_crypto_price`). |
+| Strategy rejected (`error_kind: "forbidden"` or `"compile"`)                                  | Strategy code imports something other than `math`, uses an underscore-prefixed name, or has a syntax error                                                                                                                           | Read `docs/STRATEGY_SANDBOX.md`; no `pandas`/`ta`/`string`/`random`, no `_private` names.                                                                                                                                                                        |
+| API refuses to start with `DEV_MODE=false`                                                    | `api_server.py` fails closed: needs `API_AUTH_REQUIRED=true` + `API_JWT_SECRET`, and non-wildcard CORS, once `DEV_MODE=false`                                                                                                        | Set those, or keep `DEV_MODE=true` for local HTTP API work (the MCP stdio path above doesn't need the API server at all).                                                                                                                                        |
+| Approvals never show up in the dashboard                                                      | **Known limitation**, not a misconfiguration: `EXECUTION_APPROVAL_MODE=approve_each` proposals created by the MCP process are invisible to the API process's `ExecutionStore` (separate processes, separate per-process session ids) | Read `docs/ARCHITECTURE.md#approval-gate` before relying on the dashboard for an MCP-originated proposal — today it cannot see or approve one.                                                                                                                   |
 
 ______________________________________________________________________
 
@@ -281,11 +429,16 @@ Your agent can "research" before it trades. Ask it to **develop and test** a str
 
 ### 2. Paper Trading Laboratory
 
-Perfect for "interning" your agent.
+Perfect for "interning" your agent. The real paper workflow, tool by tool:
 
 - **Deposit Funds**: `deposit_paper_funds("USDC", 10000)`
-- **Place Orders**: `place_limit_order("buy", "ETH/USDT", 1.0, 2500.0)`
-- **Check Status**: `get_address_balance(..., "paper")`
+- **Get a price**: `fetch_ohlcv("ETH/USDT", "1h", 1)` (numeric `close`) or `get_crypto_price("ETH/USDT")`
+- **Place an order**: `place_cex_order("ETH/USDT", "buy", 1.0, order_type="limit", price=2500.0)` —
+  paper mode routes to the paper engine and needs no exchange credentials. Pass `price`
+  explicitly; if you omit it, the paper fill uses the market-data bus and fails with
+  `paper_price_required` if that has no usable price for the symbol.
+- **Check balances**: `get_cex_balance()` — in paper mode this returns the paper wallet, no
+  credentials required.
 
 ### 3. Market Regime & Risk
 
@@ -302,23 +455,26 @@ ______________________________________________________________________
 
 ## 🧰 Tool Reference
 
-For the complete (generated) tool catalog with signatures and docstrings, see: `docs/TOOLS.md`.
+ReadyTrader-Crypto registers **29 MCP tools** (`server.py` + `app/tools/*.py`). For the complete,
+generated catalog with exact signatures and docstrings, see: `docs/TOOLS.md` (run
+`python tools/generate_tool_docs.py` to regenerate it from the live registry — a test,
+`tests/test_docs_tool_roster.py`, fails the build if this README or `docs/TOOLS.md` ever drift
+from what `server.py` actually registers). A representative slice:
 
-| Category         | Tool                        | Description                                                                           |
-| :--------------- | :-------------------------- | :------------------------------------------------------------------------------------ |
-| **Market Data**  | `get_crypto_price`          | Live price from CEX.                                                                  |
-|                  | `fetch_ohlcv`               | Historical candles for research.                                                      |
-|                  | `get_market_regime`         | **Trend/Chop Detection** (Phase 6).                                                   |
-| **Intelligence** | `get_sentiment`             | Fear & Greed Index.                                                                   |
-|                  | `get_social_sentiment`      | X/Reddit Analysis (Simulated).                                                        |
-|                  | `get_financial_news`        | Bloomberg/Reuters (Simulated).                                                        |
-| **Trading**      | `swap_tokens`               | Execute market order swap.                                                            |
-|                  | `place_limit_order`         | **Limit Order** (Paper Mode).                                                         |
-|                  | `check_orders`              | Update Order Book (Paper Mode).                                                       |
-| **Account**      | `get_address_balance`       | Check Wallet Balance.                                                                 |
-|                  | `deposit_paper_funds`       | Get fake money (Paper Mode).                                                          |
-| **Research**     | `run_backtest_simulation`   | **Run Strategy Backtest**.                                                            |
-| **Research**     | `run_synthetic_stress_test` | Run **synthetic black-swan stress test** with deterministic replay + recommendations. |
+| Category         | Tool                      | Description                                                   |
+| :--------------- | :------------------------ | :------------------------------------------------------------ |
+| **Market Data**  | `get_crypto_price`        | Live price from the market-data bus.                          |
+|                  | `fetch_ohlcv`             | Historical candles (numeric OHLCV) for research.              |
+|                  | `get_market_regime`       | Trend/chop detection (ADX-based).                             |
+| **Intelligence** | `get_sentiment`           | Crypto Fear & Greed Index.                                    |
+|                  | `get_social_sentiment`    | X/Reddit text scored -1..+1; feeds the Falling Knife check.   |
+|                  | `get_financial_news`      | Simulated high-tier financial news.                           |
+| **Trading**      | `swap_tokens`             | DEX swap (paper or live).                                     |
+|                  | `place_cex_order`         | CEX order — paper mode by default, no credentials required.   |
+|                  | `get_cex_balance`         | Account balance (paper wallet, or the real exchange balance). |
+| **Risk & Paper** | `deposit_paper_funds`     | Seed the paper wallet.                                        |
+|                  | `validate_trade_risk`     | Risk Guardian check (position size, drawdown, Falling Knife). |
+| **Research**     | `run_backtest_simulation` | Run a strategy through the isolated sandbox against history.  |
 
 ______________________________________________________________________
 
@@ -326,9 +482,19 @@ ______________________________________________________________________
 
 ## 🧪 Synthetic Stress Testing (Phase 5)
 
-This MCP includes a **100% randomized (but deterministic-by-seed)** synthetic market simulator. It can generate trending, ranging, and volatile regimes and inject **black swan crashes** and **parabolic blow-off tops**.
+This repo includes a **100% randomized (but deterministic-by-seed)** synthetic market simulator. It can generate trending, ranging, and volatile regimes and inject **black swan crashes** and **parabolic blow-off tops**.
 
-### Tool: `run_synthetic_stress_test(strategy_code, config_json='{}')`
+`stress_test_engine.run_synthetic_stress_test(strategy_code, config)` is a **Python function**,
+not an MCP tool — there is no agent-callable stress-test tool today. Run it locally:
+
+```bash
+python examples/stress_test_demo.py
+```
+
+That script imports `run_synthetic_stress_test` directly and writes its artifacts under
+`artifacts/demo_stress/`. To validate a strategy through the MCP surface instead, use the
+`run_backtest_simulation` tool (single historical run, not the stress lab's many synthetic
+scenarios).
 
 Returns JSON containing:
 
@@ -369,22 +535,30 @@ ReadyTrader-Crypto maintains rigorous quality standards through comprehensive au
 | **Risk Manager**           |   5   |   96%    | Position sizing, drawdown, sentiment checks  |
 | **Policy Engine**          |  12+  |   89%    | Allowlists, signing guardrails, limits       |
 
-### CI/CD Quality Gates
+### Quality Gates
 
-Every commit and PR must pass:
+`.github/workflows/ci.yml` runs on every push and PR to `main`. It installs the exact pinned
+set (`pip install --no-deps -r requirements.lock.txt` followed by `pip check`), installs the
+frontend with `npm ci`, then runs `make check`, `make security`, and
+`pip-audit -r requirements.lock.txt`. So the first six rows below are enforced on every PR, not
+only locally; the remaining scans run on a schedule or on release:
 
-| Check                | Tool          | Purpose                             |
-| :------------------- | :------------ | :---------------------------------- |
-| **Lint**             | `ruff check`  | Code quality, unused imports, style |
-| **Format**           | `ruff format` | Consistent code formatting          |
-| **Type Check**       | `mypy`        | Static type analysis                |
-| **Security Scan**    | `bandit`      | Python security vulnerabilities     |
-| **Dependency Audit** | `pip-audit`   | Known CVEs in dependencies          |
-| **Secret Scan**      | `trufflehog`  | Prevent credential leaks            |
-| **Container Scan**   | `trivy`       | Docker image vulnerabilities        |
-| **CodeQL**           | GitHub        | SAST for Python & JavaScript        |
-| **Frontend Lint**    | `eslint`      | TypeScript/React best practices     |
-| **Docs Format**      | `mdformat`    | Consistent documentation            |
+| Check                | Command                                 | Purpose                                                          | Where it runs today                                                    |
+| :------------------- | :-------------------------------------- | :--------------------------------------------------------------- | :--------------------------------------------------------------------- |
+| **Lint**             | `ruff check`                            | Code quality, unused imports, style                              | CI on every push/PR + local (`make check`)                             |
+| **Format**           | `ruff format`                           | Consistent code formatting                                       | CI on every push/PR + local (`make check`)                             |
+| **Tests**            | `pytest`                                | Unit + integration suite                                         | CI on every push/PR + local (`make check`)                             |
+| **Docs truth**       | `pytest tests/test_docs_tool_roster.py` | No phantom tool references; `docs/TOOLS.md` matches the registry | CI on every push/PR + local (`make check`)                             |
+| **Security Scan**    | `bandit`                                | Python security vulnerabilities                                  | CI on every push/PR (`make security`) + daily (`security-audit.yml`)   |
+| **Dependency Audit** | `pip-audit` + `npm audit`               | Known CVEs in Python and frontend (including `devDependencies`)  | CI on every push/PR (`make security`) + daily (`security-audit.yml`)   |
+| **Secret Scan**      | `trufflehog`                            | Prevent credential leaks                                         | CI daily/manual (`security-audit.yml`)                                 |
+| **Container Scan**   | `trivy`                                 | Docker image vulnerabilities                                     | CI daily/manual (`security-audit.yml`); CI on tag push (`release.yml`) |
+| **CodeQL**           | GitHub                                  | SAST for Python & JavaScript                                     | CI daily/manual (`security-audit.yml`)                                 |
+| **Frontend Lint**    | `eslint`                                | TypeScript/React best practices                                  | CI on every push/PR (`make check`) + local                             |
+| **Docs Format**      | `mdformat`                              | Consistent documentation                                         | CI on every push/PR + local (`make check`)                             |
+
+There is no `mypy` gate anywhere in this repo (`pyproject.toml` carries an unused `[tool.mypy]`
+config block, but no Makefile target or workflow invokes it).
 
 ### Operational Safeguards (Verified by Tests)
 
@@ -403,11 +577,12 @@ These safety mechanisms are continuously verified:
 
 ### GitHub Actions Workflows
 
-| Workflow            | Trigger         | Purpose                    |
-| :------------------ | :-------------- | :------------------------- |
-| **CI**              | Push/PR         | Full quality gates + tests |
-| **Live-Path Tests** | Manual dispatch | Exchange sandbox testing   |
-| **Security Audit**  | Daily + manual  | SBOM, CVE scan, CodeQL     |
+| Workflow            | File                                    | Trigger          | Purpose                                                                           |
+| :------------------ | :-------------------------------------- | :--------------- | :-------------------------------------------------------------------------------- |
+| **CI**              | `.github/workflows/ci.yml`              | Push/PR          | Locked-deps check, `make check`, `make security` (bandit, pip-audit, `npm audit`) |
+| **Live-Path Tests** | `.github/workflows/live-path-tests.yml` | Manual dispatch  | Exchange sandbox testing                                                          |
+| **Security Audit**  | `.github/workflows/security-audit.yml`  | Daily + manual   | pip-audit, bandit, trufflehog, trivy, CodeQL, SBOM                                |
+| **Release**         | `.github/workflows/release.yml`         | Tag push, manual | Version validation, trivy container scan on release                               |
 
 ### Running Tests Locally
 
@@ -443,6 +618,7 @@ ______________________________________________________________________
 
 - `docs/README.md`: docs index / navigation
 - `docs/TOOLS.md`: complete tool catalog (generated from `app/tools`)
+- `docs/STRATEGY_SANDBOX.md`: strategy contract, isolation layers, and limits for `run_backtest_simulation`
 - `docs/ERRORS.md`: common error codes and operator troubleshooting
 - `docs/EXCHANGES.md`: exchange capability matrix (Supported vs Experimental)
 - `docs/MARKETDATA.md`: market data routing, freshness scoring, plugins, and guardrails

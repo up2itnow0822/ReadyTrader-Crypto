@@ -150,20 +150,31 @@ python examples/paper_quick_demo.py
 Test that the Risk Guardian correctly blocks dangerous trades:
 
 ```python
-# Test position size limit (should be blocked)
-from app.tools.trading import validate_trade_risk
-result = validate_trade_risk("buy", "BTC/USDT", 600, 10000)  # 6% > 5% limit
-assert not result["allowed"]
+import json
 
-# Test falling knife protection
-result = validate_trade_risk("buy", "BTC/USDT", 100, 10000, sentiment=-0.6)
-assert not result["allowed"]
+from app.tools.trading import validate_trade_risk
+from intelligence import analyze_social_sentiment
+from risk_manager import RiskGuardian
+
+# Position size limit (should be blocked): 6% > 5% limit
+check = json.loads(validate_trade_risk("buy", "BTC/USDT", 600, 10000))["data"]
+assert not check["result"]["allowed"]
+
+# Falling knife rule, with a hand-fed score
+assert not RiskGuardian().validate_trade("buy", "BTC/USDT", 100, 10000, sentiment_score=-0.6)["allowed"]
+
+# Falling knife data path: refresh with X/Reddit keys configured, then recompute
+# the trade check. Status must be "ok"; otherwise the rule has no measurement.
+refresh = analyze_social_sentiment("BTC")
+check = json.loads(validate_trade_risk("buy", "BTC/USDT", 100, 10000))["data"]
+assert check["sentiment"]["status"] == "ok", refresh
+print(check["sentiment"])
 ```
 
 - [ ] Position size limit enforced (>5% blocked)
 - [ ] Daily loss limit enforced (>5% daily loss halts buys)
 - [ ] Max drawdown limit enforced (>10% halts buys)
-- [ ] Falling knife protection active (sentiment < -0.5 blocks buys)
+- [ ] Falling knife protection active (`sentiment.status` is `ok`; score < -0.5 blocks buys)
 
 ### 2.4 Error Handling Verification
 
