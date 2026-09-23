@@ -4,6 +4,7 @@ import json
 import os
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
+from urllib.parse import urlsplit
 
 import requests
 
@@ -18,6 +19,18 @@ class _RemoteSignedTx(SignedTx):
     """
 
     rawTransaction: bytes
+
+
+def _require_tls() -> bool:
+    """REMOTE_SIGNER_REQUIRE_TLS, parsed exactly like ``app.core.settings._parse_bool``.
+
+    Unset/blank -> True (the documented default); otherwise true only for true/1/yes/on, so
+    RemoteSigner and the Settings object can never disagree about whether TLS is required.
+    """
+    value = os.getenv("REMOTE_SIGNER_REQUIRE_TLS")
+    if value is None or value.strip() == "":
+        return True
+    return value.strip().lower() in ("true", "1", "yes", "on")
 
 
 def _auth_headers() -> Dict[str, str]:
@@ -50,12 +63,24 @@ class RemoteSigner(Signer):
     When REMOTE_SIGNER_AUTH_TOKEN is set, both requests carry `Authorization: Bearer
     <token>` (see _auth_headers); it is omitted entirely when unset, so third-party signers
     that do not expect this header keep working unchanged.
+
+    REMOTE_SIGNER_REQUIRE_TLS (default true) is enforced here: a non-https SIGNER_REMOTE_URL is
+    refused at construction, before any request can carry the transaction to sign or the
+    bearer token in cleartext. Set it to false only for a signer on a private network, such as
+    the dev/demo sentinel compose stack.
     """
 
     def __init__(self, url_env: str = "SIGNER_REMOTE_URL") -> None:
         url = (os.getenv(url_env) or "").strip()
         if not url:
             raise ValueError(f"{url_env} environment variable not set")
+        if urlsplit(url).scheme.lower() != "https" and _require_tls():
+            raise ValueError(
+                f"{url_env} must use https:// while REMOTE_SIGNER_REQUIRE_TLS is enabled (the default): "
+                "plaintext HTTP would expose the transaction to sign and any REMOTE_SIGNER_AUTH_TOKEN. "
+                "Set REMOTE_SIGNER_REQUIRE_TLS=false only for a signer on a private network, such as "
+                "the dev/demo sentinel compose stack."
+            )
         self._base_url = url.rstrip("/")
         self._cached_address: Optional[str] = None
 

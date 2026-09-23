@@ -78,6 +78,11 @@ REMOTE_SIGNER_REQUIRE_TLS=true
 # REMOTE_SIGNER_AUTH_TOKEN=...
 ```
 
+`RemoteSigner` enforces `REMOTE_SIGNER_REQUIRE_TLS` (default `true`): a `SIGNER_REMOTE_URL`
+that is not `https://` is refused at startup, before any transaction or bearer token can be
+sent in cleartext. Set it to `false` only when the signer is on a private network with the
+agent (the bundled dev/demo compose stack below does exactly that).
+
 > **Bundled dev/demo signer:** `docker-compose.sentinel.yml` / `sentinel/app.py` is a
 > reference `SIGNER_TYPE=remote` implementation for local development only — not a
 > production custody path. It requires `Authorization: Bearer <token>` on every request

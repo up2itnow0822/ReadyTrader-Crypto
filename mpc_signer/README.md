@@ -18,7 +18,10 @@ This folder contains a **self-hosted**, open-source MPC signing service built on
     `sentinel/AGENTS.md`. Generate with `python -c "import secrets; print(secrets.token_hex(32))"`.
 - Run the trading agent with:
   - `SIGNER_TYPE=remote`
-  - `SIGNER_REMOTE_URL=http://<sentinel-host>:8888`
+  - `SIGNER_REMOTE_URL=https://<sentinel-host>:8888` -- put sentinel behind TLS (uvicorn
+    `--ssl-keyfile`/`--ssl-certfile`, or a TLS-terminating proxy). `RemoteSigner` refuses a
+    non-https URL while `REMOTE_SIGNER_REQUIRE_TLS=true` (the default); set it to `false`
+    only when sentinel and the agent share a private network.
   - `REMOTE_SIGNER_AUTH_TOKEN=<the same token as SENTINEL_AUTH_TOKEN above>`
 
 ### Running (high level)
