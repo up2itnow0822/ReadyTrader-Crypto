@@ -101,7 +101,10 @@ Default section order:
 - `make check` (ruff + pytest)
 - `make security` (bandit + pip-audit + `npm audit --prefix frontend`)
 - Paper BTC harness: `python examples/paper_btc_uat.py`
-- UAT evidence: `docs/UAT_BTC_PRODUCTION_MINUS_DUST.md`
+- UAT evidence: `UAT.md` (current graduation-gate status, test matrix, sign-off table) +
+  `docs/uat/2026-09-23-reverification.md` (latest dated re-verification pass — exact commands,
+  pass/fail/skip counts, limits). `docs/UAT_BTC_PRODUCTION_MINUS_DUST.md` is the 2026-09-14
+  pass, now superseded and kept for history — do not treat it as current.
 - Hermes skill (public MIT package): https://github.com/up2itnow0822/readytrader-crypto-hermes →
   install into `~/.hermes/skills/` with
   `hermes skills install up2itnow0822/readytrader-crypto-hermes/skills/finance/readytrader-crypto --category finance`
@@ -124,14 +127,14 @@ Default section order:
 
 ## Child DOX Index
 
-| Path                                     | Owns                                                                                         |
-| ---------------------------------------- | -------------------------------------------------------------------------------------------- |
-| [signing/AGENTS.md](signing/AGENTS.md)   | Signer backends, policy wrapper, live-key custody rules                                      |
-| [sentinel/AGENTS.md](sentinel/AGENTS.md) | Dev/demo remote-signer reference service: Bearer-token auth, fail-closed posture             |
-| [docs/AGENTS.md](docs/AGENTS.md)         | Operator docs, Hermes integration, UAT/runbooks                                              |
-| [frontend/AGENTS.md](frontend/AGENTS.md) | Next.js operator dashboard: auth, approvals, status                                          |
-| [app/](app/)                             | Core settings, container, MCP/API tool wiring (parent-owned until split)                     |
-| [execution/](execution/)                 | CEX/DEX executors (parent-owned)                                                             |
-| [intelligence/](intelligence/)           | News/social fetchers and the sentiment scorer behind Falling Knife protection (parent-owned) |
-| [tests/](tests/)                         | Unit/integration tests (parent-owned)                                                        |
-| [.autoimprove/AGENTS.md](.autoimprove/AGENTS.md) | Paper/CI auto-improve loop evidence (Phase 0 baseline, Phase 1 Falling Knife rounds) |
+| Path                                             | Owns                                                                                         |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| [signing/AGENTS.md](signing/AGENTS.md)           | Signer backends, policy wrapper, live-key custody rules                                      |
+| [sentinel/AGENTS.md](sentinel/AGENTS.md)         | Dev/demo remote-signer reference service: Bearer-token auth, fail-closed posture             |
+| [docs/AGENTS.md](docs/AGENTS.md)                 | Operator docs, Hermes integration, UAT/runbooks                                              |
+| [frontend/AGENTS.md](frontend/AGENTS.md)         | Next.js operator dashboard: auth, approvals, status                                          |
+| [app/](app/)                                     | Core settings, container, MCP/API tool wiring (parent-owned until split)                     |
+| [execution/](execution/)                         | CEX/DEX executors (parent-owned)                                                             |
+| [intelligence/](intelligence/)                   | News/social fetchers and the sentiment scorer behind Falling Knife protection (parent-owned) |
+| [tests/](tests/)                                 | Unit/integration tests (parent-owned)                                                        |
+| [.autoimprove/AGENTS.md](.autoimprove/AGENTS.md) | Paper/CI auto-improve loop evidence (Phase 0 baseline, Phase 1 Falling Knife rounds)         |

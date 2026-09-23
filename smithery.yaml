@@ -8,7 +8,7 @@ description: >-
   A specialized bridge that turns your AI Agent into a professional crypto trading operator.
   Features specific "Intelligence vs. Execution" separation of powers, a "Risk Guardian" safety layer,
   and deep DeFi integrations (Aave, Uniswap).
-projectUrl: https://github.com/up2itnow/ReadyTrader-Crypto
+projectUrl: https://github.com/up2itnow0822/ReadyTrader-Crypto
 configSchema:
   type: object
   properties:
