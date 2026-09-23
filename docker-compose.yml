@@ -53,6 +53,9 @@ services:
       - SIGNER_TYPE=${SIGNER_TYPE:-env_private_key}
       - PRIVATE_KEY=${PRIVATE_KEY}
       - SIGNER_REMOTE_URL=${SIGNER_REMOTE_URL}
+      # Bearer token for SIGNER_REMOTE_URL; see docker-compose.live.yml for why this is not
+      # marked required.
+      - REMOTE_SIGNER_AUTH_TOKEN=${REMOTE_SIGNER_AUTH_TOKEN}
       
       # Policy limits
       - ALLOW_CHAINS=${ALLOW_CHAINS}
