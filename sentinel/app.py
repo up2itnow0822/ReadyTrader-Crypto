@@ -44,9 +44,12 @@ def _require_auth(authorization: Optional[str] = Header(default=None)) -> None:
                 "in the environment before sending requests -- there is no bypass."
             ),
         )
-    if not authorization or not authorization.startswith("Bearer "):
+    # RFC 7235: the auth-scheme name is case-insensitive ("Bearer", "bearer", ...); only the
+    # token itself is compared, in constant time, below.
+    scheme, _, provided = (authorization or "").strip().partition(" ")
+    provided = provided.strip()
+    if scheme.lower() != "bearer" or not provided:
         raise HTTPException(status_code=401, detail="Missing or malformed Authorization header")
-    provided = authorization[len("Bearer ") :]
     # Compare encoded bytes, not str: hmac.compare_digest raises TypeError for non-ASCII str
     # operands (e.g. a header decoded latin-1 off the wire with a byte >= 0x80), which would
     # otherwise surface a malformed Authorization header as a 500 instead of the required

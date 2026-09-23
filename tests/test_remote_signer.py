@@ -115,3 +115,20 @@ def test_remote_signer_allows_http_only_with_explicit_tls_opt_out(flag):
         with patch("signing.remote_signer.requests.get", return_value=addr_resp) as get_mock:
             assert RemoteSigner().get_address() == "0xabc"
         assert get_mock.call_args.kwargs.get("headers") == {"Authorization": "Bearer tok-abc-123"}
+
+
+@pytest.mark.parametrize("flag", ["treu", "maybe", "enabled", "yes please"])
+def test_remote_signer_unrecognised_tls_flag_fails_closed(flag):
+    """A typo in REMOTE_SIGNER_REQUIRE_TLS must keep TLS required, never fall open."""
+    env = {"SIGNER_REMOTE_URL": "http://signer", "REMOTE_SIGNER_REQUIRE_TLS": flag}
+    with patch.dict("os.environ", env, clear=True):
+        with pytest.raises(ValueError, match="https://"):
+            RemoteSigner()
+
+
+def test_settings_tls_flag_uses_the_same_fail_closed_rule():
+    from app.core.settings import Settings
+
+    for flag, expected in (("", True), ("true", True), ("treu", True), ("FALSE", False), ("off", False)):
+        with patch.dict("os.environ", {"REMOTE_SIGNER_REQUIRE_TLS": flag}):
+            assert Settings().REMOTE_SIGNER_REQUIRE_TLS is expected, flag

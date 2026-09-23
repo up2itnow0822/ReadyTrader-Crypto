@@ -21,16 +21,19 @@ class _RemoteSignedTx(SignedTx):
     rawTransaction: bytes
 
 
-def _require_tls() -> bool:
-    """REMOTE_SIGNER_REQUIRE_TLS, parsed exactly like ``app.core.settings._parse_bool``.
+TLS_OPT_OUT_VALUES = ("false", "0", "no", "off")
 
-    Unset/blank -> True (the documented default); otherwise true only for true/1/yes/on, so
-    RemoteSigner and the Settings object can never disagree about whether TLS is required.
+
+def _require_tls() -> bool:
+    """REMOTE_SIGNER_REQUIRE_TLS, parsed fail-closed.
+
+    Only an explicit false/0/no/off (any case) disables the requirement. Unset, blank, true,
+    and any unrecognised value (e.g. a typo such as ``treu``) keep TLS required, so a
+    mistyped flag can never send a transaction or bearer token in plaintext. The Settings
+    field uses the same rule (app/core/settings.py).
     """
-    value = os.getenv("REMOTE_SIGNER_REQUIRE_TLS")
-    if value is None or value.strip() == "":
-        return True
-    return value.strip().lower() in ("true", "1", "yes", "on")
+    value = (os.getenv("REMOTE_SIGNER_REQUIRE_TLS") or "").strip().lower()
+    return value not in TLS_OPT_OUT_VALUES
 
 
 def _auth_headers() -> Dict[str, str]:

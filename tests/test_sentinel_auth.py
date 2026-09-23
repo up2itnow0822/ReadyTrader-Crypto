@@ -126,3 +126,21 @@ def test_non_ascii_authorization_header_is_rejected_as_401_not_500():
         with pytest.raises(HTTPException) as exc_info:
             sentinel_app._require_auth(authorization="Bearer " + ("é" * 40))
     assert exc_info.value.status_code == 401
+
+
+@pytest.mark.parametrize("scheme", ["bearer", "BEARER", "BeArEr"])
+def test_auth_scheme_is_case_insensitive(client, scheme):
+    """RFC 7235 scheme names are case-insensitive; the token is still compared exactly."""
+    with patch.dict(os.environ, {"SENTINEL_AUTH_TOKEN": VALID_TOKEN}, clear=True):
+        with patch("sentinel.app.get_signer", return_value=_FakeSigner()):
+            resp = client.get("/address", headers={"Authorization": f"{scheme} {VALID_TOKEN}"})
+    assert resp.status_code == 200
+
+
+@pytest.mark.parametrize("header", ["Bearer", "Bearer   ", "Basic " + VALID_TOKEN, VALID_TOKEN])
+def test_wrong_scheme_or_missing_token_is_rejected(client, header):
+    with patch.dict(os.environ, {"SENTINEL_AUTH_TOKEN": VALID_TOKEN}, clear=True):
+        with patch("sentinel.app.get_signer") as get_signer:
+            resp = client.get("/address", headers={"Authorization": header})
+    assert resp.status_code == 401
+    get_signer.assert_not_called()

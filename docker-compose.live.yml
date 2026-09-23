@@ -155,6 +155,7 @@ services:
       # Signer (remote only)
       - SIGNER_TYPE=${SIGNER_TYPE:-remote}
       - SIGNER_REMOTE_URL=${SIGNER_REMOTE_URL:?SIGNER_REMOTE_URL is required}
+      - REMOTE_SIGNER_REQUIRE_TLS=${REMOTE_SIGNER_REQUIRE_TLS:-true}
       # See the `api` service above for why this is not marked required (:?).
       - REMOTE_SIGNER_AUTH_TOKEN=${REMOTE_SIGNER_AUTH_TOKEN}
       - SIGNER_POLICY_ENABLED=${SIGNER_POLICY_ENABLED:-true}
