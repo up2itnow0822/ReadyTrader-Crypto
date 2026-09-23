@@ -17,6 +17,7 @@ import pytest
 # Skip tests if httpx not available (TestClient dependency), matching tests/test_api_server.py.
 pytest.importorskip("httpx")
 
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 import sentinel.app as sentinel_app
@@ -102,3 +103,26 @@ def test_sign_transaction_without_auth_returns_401_before_signing(client):
             resp = client.post("/sign_transaction", json={"tx": {"to": "0x1", "value": 0}})
     assert resp.status_code == 401
     get_signer.assert_not_called()
+
+
+def test_docs_and_openapi_routes_are_disabled(client):
+    # /docs, /redoc, /openapi.json are FastAPI's auto-generated routes. They are mounted as
+    # plain Starlette routes (Starlette.add_route), not through APIRouter.add_api_route, so
+    # a Depends()-based auth check on the real routes would not cover them -- they must be
+    # disabled outright (docs_url=None etc. in sentinel/app.py) rather than gated, so this
+    # holds regardless of SENTINEL_AUTH_TOKEN.
+    for path in ("/docs", "/redoc", "/openapi.json"):
+        resp = client.get(path)
+        assert resp.status_code == 404
+
+
+def test_non_ascii_authorization_header_is_rejected_as_401_not_500():
+    # Starlette decodes request headers latin-1 off the wire, so a header byte >= 0x80
+    # reaches us as a non-ASCII str codepoint. hmac.compare_digest(str, str) raises
+    # TypeError for non-ASCII operands; _require_auth must not let that escape as an
+    # unhandled 500 -- it must still fail closed with 401. Exercised directly against the
+    # dependency function so this does not depend on httpx's own header-encoding behavior.
+    with patch.dict(os.environ, {"SENTINEL_AUTH_TOKEN": VALID_TOKEN}, clear=True):
+        with pytest.raises(HTTPException) as exc_info:
+            sentinel_app._require_auth(authorization="Bearer " + ("é" * 40))
+    assert exc_info.value.status_code == 401

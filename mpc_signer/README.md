@@ -13,9 +13,13 @@ This folder contains a **self-hosted**, open-source MPC signing service built on
 - Run `sentinel/app.py` with:
   - `SIGNER_TYPE=cb_mpc_2pc`
   - `MPC_SIGNER_URL=http://<party-0-host>:8787`
+  - `SENTINEL_AUTH_TOKEN=<a long, random token>` -- required. Every route on
+    `sentinel/app.py`, including this MPC-backed one, fails closed (503) without it; see
+    `sentinel/AGENTS.md`. Generate with `python -c "import secrets; print(secrets.token_hex(32))"`.
 - Run the trading agent with:
   - `SIGNER_TYPE=remote`
   - `SIGNER_REMOTE_URL=http://<sentinel-host>:8888`
+  - `REMOTE_SIGNER_AUTH_TOKEN=<the same token as SENTINEL_AUTH_TOKEN above>`
 
 ### Running (high level)
 

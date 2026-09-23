@@ -9,7 +9,17 @@ from signing import get_signer
 from signing.intents import build_evm_tx_intent
 from signing.policy import SignerPolicyViolation
 
-app = FastAPI(title="Sentinel Signer", version="1.0.0")
+# No unauthenticated surface: FastAPI's auto-generated /docs, /redoc, and /openapi.json
+# routes are mounted as plain Starlette routes (Starlette.add_route), not through
+# APIRouter.add_api_route -- an app/router-level `dependencies=[Depends(...)]` does NOT
+# cover them, so they are disabled outright rather than left reachable without a token.
+app = FastAPI(
+    title="Sentinel Signer",
+    version="1.0.0",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 
 # Sentinel is a dev/demo reference remote signer (SIGNER_TYPE=env_private_key) meant to run
 # on a private compose network -- see docker-compose.sentinel.yml and docs/CUSTODY.md for
@@ -37,9 +47,15 @@ def _require_auth(authorization: Optional[str] = Header(default=None)) -> None:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing or malformed Authorization header")
     provided = authorization[len("Bearer ") :]
-    # hmac.compare_digest is constant-time in the length of `expected`, so this does not leak
-    # the token through response-timing differences. The token itself is never echoed back.
-    if not hmac.compare_digest(provided, expected):
+    # Compare encoded bytes, not str: hmac.compare_digest raises TypeError for non-ASCII str
+    # operands (e.g. a header decoded latin-1 off the wire with a byte >= 0x80), which would
+    # otherwise surface a malformed Authorization header as a 500 instead of the required
+    # 401. encode(..., errors="surrogateescape") never raises. Still constant-time in the
+    # length of `expected`, so this does not leak the token through response-timing
+    # differences; the token itself is never echoed back.
+    provided_bytes = provided.encode("utf-8", errors="surrogateescape")
+    expected_bytes = expected.encode("utf-8", errors="surrogateescape")
+    if not hmac.compare_digest(provided_bytes, expected_bytes):
         raise HTTPException(status_code=401, detail="Invalid authentication token")
 
 
