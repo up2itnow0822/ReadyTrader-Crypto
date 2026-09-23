@@ -4,6 +4,7 @@ import json
 import os
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
+from urllib.parse import urlsplit
 
 import requests
 
@@ -20,6 +21,50 @@ class _RemoteSignedTx(SignedTx):
     rawTransaction: bytes
 
 
+TLS_OPT_OUT_VALUES = ("false", "0", "no", "off")
+
+
+def _require_tls() -> bool:
+    """REMOTE_SIGNER_REQUIRE_TLS, parsed fail-closed.
+
+    Only an explicit false/0/no/off (any case) disables the requirement. Unset, blank, true,
+    and any unrecognised value (e.g. a typo such as ``treu``) keep TLS required, so a
+    mistyped flag can never send a transaction or bearer token in plaintext. The Settings
+    field uses the same rule (app/core/settings.py).
+    """
+    value = (os.getenv("REMOTE_SIGNER_REQUIRE_TLS") or "").strip().lower()
+    return value not in TLS_OPT_OUT_VALUES
+
+
+def _auth_headers() -> Dict[str, str]:
+    """`Authorization: Bearer <token>` when REMOTE_SIGNER_AUTH_TOKEN is set, else no headers.
+
+    This is what the bundled dev/demo sentinel reference signer
+    (docker-compose.sentinel.yml, sentinel/app.py) requires. A third-party remote signer
+    that does not expect this header is unaffected when the env var is left unset.
+    """
+    token = (os.getenv("REMOTE_SIGNER_AUTH_TOKEN") or "").strip()
+    if not token:
+        return {}
+    return {"Authorization": f"Bearer {token}"}
+
+
+def _refuse_redirect(r: requests.Response) -> None:
+    """Refuse any 3xx: every request is sent with allow_redirects=False.
+
+    Following a 307/308 would resend the transaction JSON to wherever the signer points,
+    including an http:// URL, and the https check in RemoteSigner.__init__ only covers the
+    configured SIGNER_REMOTE_URL. A signer that redirects is refused instead; point
+    SIGNER_REMOTE_URL at the final signer URL.
+    """
+    if 300 <= r.status_code < 400:
+        raise ValueError(
+            f"Remote signer answered HTTP {r.status_code} (redirect to {r.headers.get('location')!r}); "
+            "redirects are not followed, so the transaction and any REMOTE_SIGNER_AUTH_TOKEN are only "
+            "ever sent to SIGNER_REMOTE_URL. Set SIGNER_REMOTE_URL to the final signer URL."
+        )
+
+
 class RemoteSigner(Signer):
     """
     Remote signer (enterprise-friendly).
@@ -33,12 +78,29 @@ class RemoteSigner(Signer):
     POST {SIGNER_REMOTE_URL}/sign_transaction
     body: {"tx": {...}, "chain_id": 1}
     response: {"rawTransactionHex": "0x..."}
+
+    When REMOTE_SIGNER_AUTH_TOKEN is set, both requests carry `Authorization: Bearer
+    <token>` (see _auth_headers); it is omitted entirely when unset, so third-party signers
+    that do not expect this header keep working unchanged.
+
+    REMOTE_SIGNER_REQUIRE_TLS (default true) is enforced here: a non-https SIGNER_REMOTE_URL is
+    refused at construction, before any request can carry the transaction to sign or the
+    bearer token in cleartext. Set it to false only for a signer on a private network, such as
+    the dev/demo sentinel compose stack. Redirects are never followed (see _refuse_redirect), so
+    a 307/308 cannot move the transaction to another URL, http:// included.
     """
 
     def __init__(self, url_env: str = "SIGNER_REMOTE_URL") -> None:
         url = (os.getenv(url_env) or "").strip()
         if not url:
             raise ValueError(f"{url_env} environment variable not set")
+        if urlsplit(url).scheme.lower() != "https" and _require_tls():
+            raise ValueError(
+                f"{url_env} must use https:// while REMOTE_SIGNER_REQUIRE_TLS is enabled (the default): "
+                "plaintext HTTP would expose the transaction to sign and any REMOTE_SIGNER_AUTH_TOKEN. "
+                "Set REMOTE_SIGNER_REQUIRE_TLS=false only for a signer on a private network, such as "
+                "the dev/demo sentinel compose stack."
+            )
         self._base_url = url.rstrip("/")
         self._cached_address: Optional[str] = None
 
@@ -47,7 +109,8 @@ class RemoteSigner(Signer):
         timeout = float(os.getenv("HTTP_TIMEOUT_SEC", "10"))
         if self._cached_address:
             return self._cached_address
-        r = requests.get(f"{self._base_url}/address", timeout=timeout)
+        r = requests.get(f"{self._base_url}/address", timeout=timeout, headers=_auth_headers(), allow_redirects=False)
+        _refuse_redirect(r)
         r.raise_for_status()
         data = r.json()
         addr = str(data.get("address") or "").strip()
@@ -63,7 +126,14 @@ class RemoteSigner(Signer):
         # for policy enforcement and safer audit logs.
         intent = build_evm_tx_intent(tx, chain_id=chain_id)
         payload = {"tx": tx, "chain_id": chain_id, "intent": intent.to_dict()}
-        r = requests.post(f"{self._base_url}/sign_transaction", json=payload, timeout=timeout)
+        r = requests.post(
+            f"{self._base_url}/sign_transaction",
+            json=payload,
+            timeout=timeout,
+            headers=_auth_headers(),
+            allow_redirects=False,
+        )
+        _refuse_redirect(r)
         r.raise_for_status()
         data = r.json() if isinstance(r.headers.get("content-type", ""), str) else json.loads(r.text)
         raw_hex: Optional[str] = data.get("rawTransactionHex") or data.get("raw_transaction_hex")

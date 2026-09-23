@@ -309,7 +309,11 @@ class Settings:
     # Remote signer timeouts
     REMOTE_SIGNER_TIMEOUT_SEC: int = field(default_factory=lambda: _parse_int(os.getenv("REMOTE_SIGNER_TIMEOUT_SEC"), 30) or 30)
     REMOTE_SIGNER_RETRY_COUNT: int = field(default_factory=lambda: _parse_int(os.getenv("REMOTE_SIGNER_RETRY_COUNT"), 3) or 3)
-    REMOTE_SIGNER_REQUIRE_TLS: bool = field(default_factory=lambda: _parse_bool(os.getenv("REMOTE_SIGNER_REQUIRE_TLS"), True))
+    # Fail-closed: only an explicit false/0/no/off disables TLS for the remote signer; blank
+    # or unrecognised values keep it required (same rule as signing/remote_signer.py).
+    REMOTE_SIGNER_REQUIRE_TLS: bool = field(
+        default_factory=lambda: (os.getenv("REMOTE_SIGNER_REQUIRE_TLS") or "").strip().lower() not in ("false", "0", "no", "off")
+    )
 
     def __post_init__(self) -> None:
         """Validate settings after initialization."""

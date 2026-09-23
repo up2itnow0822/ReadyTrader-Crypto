@@ -74,7 +74,24 @@ SIGNER_REMOTE_URL=https://signer.internal:8443
 REMOTE_SIGNER_TIMEOUT_SEC=30
 REMOTE_SIGNER_RETRY_COUNT=3
 REMOTE_SIGNER_REQUIRE_TLS=true
+# Only if the remote signer expects it (the bundled dev/demo sentinel below does):
+# REMOTE_SIGNER_AUTH_TOKEN=...
 ```
+
+`RemoteSigner` enforces `REMOTE_SIGNER_REQUIRE_TLS` (default `true`): a `SIGNER_REMOTE_URL`
+that is not `https://` is refused at startup, before any transaction or bearer token can be
+sent in cleartext. Set it to `false` only when the signer is on a private network with the
+agent (the bundled dev/demo compose stack below does exactly that). Redirects are never
+followed: a signer that answers 3xx is refused, so point `SIGNER_REMOTE_URL` at the final URL.
+`RemoteSigner` presents no TLS client certificate; a signer that requires mTLS is not supported.
+
+> **Bundled dev/demo signer:** `docker-compose.sentinel.yml` / `sentinel/app.py` is a
+> reference `SIGNER_TYPE=remote` implementation for local development only — not a
+> production custody path. It requires `Authorization: Bearer <token>` on every request
+> (`SENTINEL_AUTH_TOKEN` on the signer side, `REMOTE_SIGNER_AUTH_TOKEN` on the
+> ReadyTrader-Crypto side — same value) and fails closed (503) if that token is unset or
+> under 32 characters. It publishes no host port; reachable only on the compose-internal
+> network.
 
 ### 4) `SIGNER_TYPE=cb_mpc_2pc` (Coinbase cb-mpc, Self-Hosted MPC)
 

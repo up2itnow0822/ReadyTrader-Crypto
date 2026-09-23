@@ -52,23 +52,22 @@ Please report details privately with:
 - This project uses a **signer abstraction**; prefer keystore-based signing over raw private keys.
 - For live trading deployments, review `docs/THREAT_MODEL.md` and follow least-privilege patterns.
 
+### Resolved in 0.2.0 (re-verify at UAT)
+
+- **Sentinel signer auth (issue #2's P0) — PR #18:** `sentinel/app.py` requires
+  `Authorization: Bearer <SENTINEL_AUTH_TOKEN>` on every route, fails closed (503) while the
+  token is unset or shorter than 32 characters, answers 401 for a missing or wrong token, and
+  no longer serves `/docs` / `/openapi.json`; `docker-compose.sentinel.yml` publishes no host
+  port. `RemoteSigner` sends `REMOTE_SIGNER_AUTH_TOKEN` as a Bearer header and refuses a
+  non-`https://` `SIGNER_REMOTE_URL` while `REMOTE_SIGNER_REQUIRE_TLS=true` (the default); it
+  never follows redirects, so a 307/308 cannot move a transaction to another URL.
+  Sentinel remains a dev/demo reference signer, not a production custody path — see
+  `docs/CUSTODY.md`. UAT T11.
+- **`EXECUTION_MODE=auto` routing (issue #8) — PR #9:** `venue_allowed()` treats `auto`, the
+  `Settings` default, like `hybrid`; unknown modes still fail closed. UAT T10.
+
 ### Known gaps
 
-- **Sentinel signer (issue #2, open since 2026-09-06):** `docker-compose.sentinel.yml` runs
-  `sentinel/app.py` bound to `0.0.0.0:8888` with `SIGNER_TYPE=env_private_key` and a raw
-  `PRIVATE_KEY` environment variable. Its `POST /sign_transaction` and `GET /address` routes
-  have no authentication — no API key, JWT, or middleware; the only integrity check is an
-  optional client-supplied `intent` field a caller can simply omit. **Do not deploy
-  `docker-compose.sentinel.yml`** until this is authenticated or the compose file is marked
-  unsupported. **PR #18** (opened 2026-09-23, `fix/sentinel-signer-auth-2026-09-23`, open and
-  mergeable, not yet merged) adds required `Authorization: Bearer` auth to both routes and
-  stops publishing port 8888 on the host; until it merges, `main` has the gap described above
-  — see `UAT.md`.
-- **`EXECUTION_MODE=auto` routing (issue #8):** `venue_allowed()` denies the documented
-  default `EXECUTION_MODE=auto`, failing closed (denies rather than misroutes) but blocking
-  legitimate use of that default. Fix is PR #9 — open and mergeable, not yet merged, as of
-  2026-09-23. Operators following the documented BTC production path are unaffected:
-  `env.live.btc.example` sets `EXECUTION_MODE=cex` explicitly.
 - **Frontend dependency advisories:** `npm audit --include=dev` against `frontend/` reported
   **0 vulnerabilities** (549 dependencies: 63 prod, 448 dev, 89 optional, 43 peer) as of
   2026-09-23 — see `docs/uat/2026-09-23-reverification.md` for the exact command and output.
