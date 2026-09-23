@@ -13,7 +13,12 @@ ReadyTrader-Crypto documentation tree. Keep contracts accurate to code in `app/c
 - `HERMES_INTEGRATION.md` — stdio MCP config for Hermes (`mcp_servers.readytrader-crypto`); skill package: https://github.com/up2itnow0822/readytrader-crypto-hermes
 - `OPS_BTC_PRODUCTION.md` — halted live compose, CEX key hygiene, monitoring
 - `LIVE_TESTING_PROTOCOL.md` — Phases 1–5; Phase 4 dust is optional/future; sentiment validation refreshes the feed and then recomputes the risk result
-- `UAT_BTC_PRODUCTION_MINUS_DUST.md` — evidence for production-minus-dust gate
+- `UAT_BTC_PRODUCTION_MINUS_DUST.md` — 2026-09-14 evidence pass; superseded, kept for history
+  (see the note at its top)
+- `uat/` — dated re-verification passes that supersede the file above as they land (e.g.
+  `uat/2026-09-23-reverification.md`): exact commands, pass/fail/skip counts, and limits for
+  one pass. Files here are never rewritten after the fact — a later pass adds a new dated file
+  and updates the pointers in `../UAT.md` and this file instead
 - `SECURITY_REVIEW.md` / `CUSTODY.md` / `RUNBOOK.md` — production ops
 - `SENTIMENT.md` — feed setup plus the Falling Knife score contract (scale, threshold, no-data semantics); keep in step with `intelligence/sentiment.py` and the `sentiment` block of `validate_trade_risk`
 - `STRATEGY_SANDBOX.md` — strategy contract, isolation layers, limits, and stated (non-)guarantees for `run_backtest_simulation` / the stress lab; keep in step with `strategy_sandbox.py`

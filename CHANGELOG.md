@@ -2,6 +2,45 @@
 
 This project follows a lightweight changelog format. Major changes are summarized here to help operators and integrators understand what changed between versions.
 
+### 0.2.0 — unreleased (pending UAT graduation)
+
+`pyproject.toml` already declares `version = "0.2.0"`; this is that version's changelog entry
+— previously everything below sat under an open-ended "Unreleased" heading with no version
+boundary. **No git tag or GitHub Release exists for 0.2.0 yet** (`git tag -l` and
+`gh release list` are both empty as of 2026-09-23): this heading records what has shipped to
+`main`, not a released version. Graduation is gated on `UAT.md` and
+`docs/uat/2026-09-23-reverification.md`.
+
+**Merged PRs in this release, grouped by area** (each verified live against GitHub with
+`gh pr view <n>` on 2026-09-23; current `main` tip is PR #17, `fa52d1e`):
+
+- **BTC production hardening & Hermes surface:** #3 (BTC production-minus-dust hardening +
+  Hermes ops pack), #4 (SEC-001/002 — `/ws` JWT, `.env.live` gitignored)
+- **Execution & paper-trading correctness:** #5 (paper order path, enum/string settings
+  compare, `app/main.py` entrypoint, stale tool docs), #7 (closed issue #6 live-safety gaps)
+- **Risk / Falling Knife sentiment gate:** #10 (made the rule reachable), #11 (fail-closed
+  across degraded refreshes), #17 (Phase 1: 8%+ printed drop counts as bearish evidence)
+- **Security & quality gates:** #12 (restored real CI — `ci.yml` had been an 8-line Node stub
+  since 2026-03-11 with no Python gate running on push; closed that half of issue #2), #13 (M2
+  back-end hardening: strategy sandbox isolation, approval-gate `ContextVar`, paper-ledger
+  atomicity)
+- **Documentation truth & operator dashboard:** #14 (M3 — removed phantom tool references,
+  added `tests/test_docs_tool_roster.py` as a CI drift guard), #15 (M4 — Next.js
+  approve/reject-trades dashboard with an 18-journey Playwright e2e suite under
+  `frontend/e2e/`; not yet wired into a CI workflow)
+
+**Not part of this version:**
+
+- **#9** (closes issue #8, `venue_allowed()` denies the documented default
+  `EXECUTION_MODE=auto`) is **open and mergeable** (`mergeStateStatus: CLEAN` on a live
+  re-check) but **not yet merged** as of 2026-09-23 — see `UAT.md`.
+- **#16** (Phase 0 autoimprove baseline) was opened, then **closed unmerged**: Bill closed it
+  as superseded by #17, whose Phase 1 work already includes the Phase 0 `.autoimprove` docs.
+  Listed here for the record, not as a shipped change.
+- Issue #2's other finding — the unauthenticated `sentinel/` remote-signing endpoint — has a
+  fix open as **PR #18** (opened 2026-09-23, open and mergeable, not yet merged); see
+  `SECURITY.md` "Known gaps".
+
 ### Unreleased
 
 - **Falling Knife (paper/CI):** `intelligence/sentiment.py` now treats a printed 8%+ drop

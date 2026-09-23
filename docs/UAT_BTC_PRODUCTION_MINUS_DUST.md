@@ -1,5 +1,13 @@
 # UAT Evidence — BTC Production Minus Dust
 
+> **Superseding evidence (2026-09-23):** this pass predates PRs #9–#17 (issue #8's fix is
+> still open as PR #9; M2/M3/M4 hardening, docs truth, and the operator dashboard all landed
+> after this date) and is now ~9 days stale against `main`. For current, independently-run
+> results — including a full CI-equivalent suite, an MCP stdio smoke test, and pass/fail/skip
+> counts with limits — see [`docs/uat/2026-09-23-reverification.md`](uat/2026-09-23-reverification.md)
+> and the graduation gates in [`UAT.md`](../UAT.md). This document is kept as-is for history;
+> its content below is not rewritten.
+
 **Date:** 2026-09-14\
 **Conductor:** UAT agent (local read-mostly)\
 **Scope:** LIVE_TESTING_PROTOCOL Phases 1–3 + Production checklist\
