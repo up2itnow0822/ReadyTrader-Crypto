@@ -118,6 +118,10 @@ ALLOWLIST: dict[str, str] = {
     # HERMES_INTEGRATION.md prose, not MCP tools.
     "get_signer": "signing/factory.py::get_signer(): internal signer factory, not an MCP tool",
     "Settings._validate": "app.core.settings.Settings._validate(): internal validation method, not an MCP tool",
+    # CHANGELOG.md's issue #8 entry documents the routing fix by naming the function it
+    # changed. venue_allowed() is a plain helper in execution/router.py that _require_live_allowed
+    # calls; it has never been registered with mcp.tool().
+    "venue_allowed": "execution/router.py::venue_allowed(): internal routing helper referenced in CHANGELOG.md, not an MCP tool",
     # docs/STRATEGY_SANDBOX.md's threat-model section illustrates a PAST vulnerability (the old
     # in-process sandbox exposed pandas) using these two pandas methods as attack examples.
     "pd.read_csv": "illustrative attack example in docs/STRATEGY_SANDBOX.md's threat model, not an MCP tool",
