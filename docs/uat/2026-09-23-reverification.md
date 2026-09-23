@@ -32,8 +32,10 @@ ______________________________________________________________________
    Mac (`/opt/homebrew/bin/python3.11`, `python3.13`, `python3.14` are; no `3.12`). This pass
    used **3.13.14** as the closest available interpreter. `requirements.lock.txt` installed
    cleanly under 3.13 (`pip check` → "No broken requirements found"), so this is not shown to
-   be a problem — but it is a real, undisclosed difference from CI's exact interpreter, and is
-   the most likely explanation for the pytest failures in Section 3.
+   be a problem, and it is **not** the cause of the 55 pytest failures in Section 3 — those are
+   independently and fully traced there to a macOS/Darwin `RLIMIT_AS` enforcement gap, unrelated
+   to the interpreter minor version. It remains a real, undisclosed difference from CI's exact
+   interpreter worth recording on its own.
 1. **`NODE_ENV=production` is set globally in this Mac's shell profile**, and `npm config get omit` accordingly returns `dev`. Under that default, `npm ci` and `npm audit` silently
    **omit devDependencies** — which on a first pass produced an artificially clean-looking
    `npm ci` (only 69 packages) and an `npm audit` that never touched `eslint`/`typescript`/
@@ -61,7 +63,7 @@ python3.13 -m venv .venv
 ### 2.2 Frontend dependency install (matches `ci.yml`'s `npm ci --prefix frontend`)
 
 ```bash
-env -u NODE_ENV npm ci --include=dev
+cd frontend && env -u NODE_ENV npm ci --include=dev
 ```
 
 **Result: PASS.** 471 packages added, 472 audited (0 vulnerabilities in the install-time
@@ -220,6 +222,7 @@ PATH="$PWD/.venv/bin:$PATH" make security
 ### 2.7 Frontend typecheck + unit tests (beyond `ci.yml`'s own gate; per `frontend/AGENTS.md` Verification section)
 
 ```bash
+cd frontend
 env -u NODE_ENV npm run typecheck   # tsc --noEmit
 env -u NODE_ENV npm test -- --run   # vitest run
 ```
@@ -240,12 +243,12 @@ Started the server exactly as `README.md`'s "Zero-key quickstart" documents — 
 `SIGNER_TYPE=null`. The driver script is ad hoc evidence tooling, kept outside this repo (not
 committed — it is not product code).
 
-| Step                                                                                                      | Result                                                                                                                                                                                            |
-| :-------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `initialize`                                                                                              | **PASS** — `serverInfo.name="ReadyTrader-Crypto"`, `protocolVersion="2025-11-25"`                                                                                                                 |
-| `list_tools()`                                                                                            | **PASS** — **29 tools**, matching `docs/TOOLS.md`'s generated catalog and README's "29 MCP tools" claim exactly (also CI-enforced by `tests/test_docs_tool_roster.py`, which passed in Section 3) |
-| `call_tool` → `deposit_paper_funds(asset="USDC", amount=10000.0)`                                         | **PASS** — `isError=false`, `{"balance": 10000.0, "result": "Deposited 10000.0 USDC. New Balance: 10000.0"}`                                                                                      |
-| `call_tool` → `validate_trade_risk(side="buy", symbol="BTC/USDT", amount_usd=600, portfolio_value=10000)` | **PASS** — `isError=false`, `result.allowed=false`, `reason="Position size too large (6.0%). Max allowed is 5%."` — reproduces the exact behavior README's own example #3 documents               |
+| Step                                                                                                      | Result                                                                                                                                                                                                                                                                                                                                              |
+| :-------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `initialize`                                                                                              | **PASS** — `serverInfo.name="ReadyTrader-Crypto"`, `protocolVersion="2025-11-25"`                                                                                                                                                                                                                                                                   |
+| `list_tools()`                                                                                            | **PASS** — **29 tools**, matching `docs/TOOLS.md`'s generated catalog and README's "29 MCP tools" claim exactly (also CI-enforced by `tests/test_docs_tool_roster.py`, which passed in Section 3)                                                                                                                                                   |
+| `call_tool` → `deposit_paper_funds(asset="USDC", amount=10000.0)`                                         | **PASS** — `isError=false`; raw envelope: `{"ok": true, "data": {"amount": 10000.0, "asset": "USDC", "balance": 20000.0, "result": "Deposited 10000.0 USDC. New Balance: 20000.0"}}` (balance is 20000, not 10000 — the paper ledger's running total across this pass's repeated smoke-test invocations, not a bug)                                 |
+| `call_tool` → `validate_trade_risk(side="buy", symbol="BTC/USDT", amount_usd=600, portfolio_value=10000)` | **PASS** — `isError=false`; raw envelope: `{"ok": true, "data": {"amount_usd": 600.0, "result": {"allowed": false, "reason": "Position size too large (6.0%). Max allowed is 5%."}, "sentiment": {"score": 0.0, "status": "no_data", ...}, "side": "buy", "symbol": "BTC/USDT"}}` — reproduces the exact behavior README's own example #3 documents |
 
 Full 29-tool roster returned by `list_tools()`:
 

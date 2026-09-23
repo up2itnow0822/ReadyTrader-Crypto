@@ -12,9 +12,9 @@ See also: `DISCLAIMER.md`.
 ## 📍 Status
 
 **Paper-first.** The default configuration is zero-risk paper trading (`PAPER_MODE=true`,
-`LIVE_TRADING_ENABLED=false`, `TRADING_HALTED=true`). Live BTC spot trading is
-**production-minus-dust**: fail-closed hardening, a paper UAT pass, and the operator
-dashboard have shipped, but graduation to any live capital — including a first "dust" trade —
+`LIVE_TRADING_ENABLED=false`, `TRADING_HALTED=true`). Live BTC spot trading is **targeting
+production-minus-dust**: fail-closed hardening, a paper UAT pass, and the operator dashboard
+have shipped, but the repo does not yet meet its own production-minus-dust gate — graduation
 requires the gates in `UAT.md` to close first (PR #9 merged, the sentinel signer fix merged, a
 fresh re-verification green on the release SHA, and separate owner authorization for Phase 4).
 
