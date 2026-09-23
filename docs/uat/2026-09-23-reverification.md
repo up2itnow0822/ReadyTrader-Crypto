@@ -120,7 +120,7 @@ strategy_sandbox.StrategyError: sandbox limit RLIMIT_AS was not applied
 ```
 
 `9223372036854775807` is `2**63 - 1` (`RLIM_INFINITY` on this platform) — i.e. after
-`strategy_sandbox.py`'s child calls `resource.setrlimit(RLIMIT_AS, ...)` to request a 1 GiB
+`strategy_sandbox.py`'s child calls `resource.setrlimit` with `RLIMIT_AS` to request a 1 GiB
 address-space cap, reading the limit back shows it was **not applied**. The sandbox's own
 fail-closed self-check (added in PR #13, see `CHANGELOG.md`) correctly detects this and refuses
 to run rather than executing unconstrained — which is its documented fail-closed intent — but
@@ -128,7 +128,7 @@ every test in these files consequently reports as a failure rather than a pass, 
 tests expect the sandboxed strategy to actually execute.
 
 **Assessment:** this is consistent with a known macOS/Darwin behavior — `RLIMIT_AS` is not
-enforced by `setrlimit()` on Darwin the way it is on Linux (the requested limit silently does
+enforced by `setrlimit` on Darwin the way it is on Linux (the requested limit silently does
 not take effect). `CHANGELOG.md` itself already scopes this limit as "(on POSIX)"; Darwin is
 POSIX but its `RLIMIT_AS` support differs from Linux's in practice, and the code's own runtime
 self-check is what is surfacing that gap here — not a logic bug being newly discovered. This
@@ -240,12 +240,12 @@ Started the server exactly as `README.md`'s "Zero-key quickstart" documents — 
 `SIGNER_TYPE=null`. The driver script is ad hoc evidence tooling, kept outside this repo (not
 committed — it is not product code).
 
-| Step                                                                                                           | Result                                                                                                                                                                                            |
-| :------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `initialize()`                                                                                                 | **PASS** — `serverInfo.name="ReadyTrader-Crypto"`, `protocolVersion="2025-11-25"`                                                                                                                 |
-| `list_tools()`                                                                                                 | **PASS** — **29 tools**, matching `docs/TOOLS.md`'s generated catalog and README's "29 MCP tools" claim exactly (also CI-enforced by `tests/test_docs_tool_roster.py`, which passed in Section 3) |
-| `call_tool("deposit_paper_funds", {asset: "USDC", amount: 10000.0})`                                           | **PASS** — `isError=false`, `{"balance": 10000.0, "result": "Deposited 10000.0 USDC. New Balance: 10000.0"}`                                                                                      |
-| `call_tool("validate_trade_risk", {side: "buy", symbol: "BTC/USDT", amount_usd: 600, portfolio_value: 10000})` | **PASS** — `isError=false`, `result.allowed=false`, `reason="Position size too large (6.0%). Max allowed is 5%."` — reproduces the exact behavior README's own example #3 documents               |
+| Step                                                                                                      | Result                                                                                                                                                                                            |
+| :-------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `initialize`                                                                                              | **PASS** — `serverInfo.name="ReadyTrader-Crypto"`, `protocolVersion="2025-11-25"`                                                                                                                 |
+| `list_tools()`                                                                                            | **PASS** — **29 tools**, matching `docs/TOOLS.md`'s generated catalog and README's "29 MCP tools" claim exactly (also CI-enforced by `tests/test_docs_tool_roster.py`, which passed in Section 3) |
+| `call_tool` → `deposit_paper_funds(asset="USDC", amount=10000.0)`                                         | **PASS** — `isError=false`, `{"balance": 10000.0, "result": "Deposited 10000.0 USDC. New Balance: 10000.0"}`                                                                                      |
+| `call_tool` → `validate_trade_risk(side="buy", symbol="BTC/USDT", amount_usd=600, portfolio_value=10000)` | **PASS** — `isError=false`, `result.allowed=false`, `reason="Position size too large (6.0%). Max allowed is 5%."` — reproduces the exact behavior README's own example #3 documents               |
 
 Full 29-tool roster returned by `list_tools()`:
 
