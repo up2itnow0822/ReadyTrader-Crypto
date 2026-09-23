@@ -63,12 +63,15 @@ This checklist is meant to be used before any public release or major announceme
 
 ### 8) Release packaging & distribution
 
-- [x] Tag release (or document why tags aren't used yet)
-- [x] GitHub Release notes include:
-  - [x] upgrade steps
-  - [x] breaking changes
-  - [x] safety reminders (paper first)
-- [x] Announcement copy uses "safe claims" (see `docs/POSITIONING.md`)
+- [x] Tag release (or document why tags aren't used yet) — no tag/release exists as of
+  2026-09-23 (`git tag -l` / `gh release list` both empty); documented in `CHANGELOG.md`'s
+  "0.2.0" section and `UAT.md`
+- [ ] GitHub Release notes include (not applicable until a release exists — see above):
+  - [ ] upgrade steps
+  - [ ] breaking changes
+  - [ ] safety reminders (paper first)
+- [ ] Announcement copy uses "safe claims" (see `docs/POSITIONING.md`) — no release
+  announcement has been made yet
 
 ______________________________________________________________________
 

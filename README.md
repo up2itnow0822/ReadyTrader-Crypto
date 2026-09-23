@@ -9,6 +9,20 @@ ReadyTrader-Crypto is provided for informational and educational purposes only a
 
 See also: `DISCLAIMER.md`.
 
+## 📍 Status
+
+**Paper-first.** The default configuration is zero-risk paper trading (`PAPER_MODE=true`,
+`LIVE_TRADING_ENABLED=false`, `TRADING_HALTED=true`). Live BTC spot trading is **targeting
+production-minus-dust**: fail-closed hardening, a paper UAT pass, and the operator dashboard
+have shipped, but the repo does not yet meet its own production-minus-dust gate — graduation
+requires the gates in `UAT.md` to close first (PR #9 merged, the sentinel signer fix merged, a
+fresh re-verification green on the release SHA, and separate owner authorization for Phase 4).
+
+- Current gate status and test matrix: [`UAT.md`](UAT.md)
+- What shipped and what's still open, by PR: [`CHANGELOG.md`](CHANGELOG.md)
+- Security posture and known gaps: [`SECURITY.md`](SECURITY.md)
+- Latest automated re-verification: [`docs/uat/2026-09-23-reverification.md`](docs/uat/2026-09-23-reverification.md)
+
 ______________________________________________________________________
 
 ______________________________________________________________________
