@@ -13,6 +13,10 @@ applicable items are verified.**
   - [x] NOT using `SIGNER_TYPE=env_private_key` in production
     - **Enforced:** settings + `signing/factory.py` refuse `env_private_key` when `PAPER_MODE=false` or `LIVE_TRADING_ENABLED=true`
   - [ ] Using `keystore`, `remote`, or `cb_mpc_2pc` signer type
+  - [x] Bundled dev/demo `sentinel` reference signer (`docker-compose.sentinel.yml`) requires
+    `Authorization: Bearer <token>` on every route and fails closed (503) if
+    `SENTINEL_AUTH_TOKEN` is unset or under 32 characters — not a production custody path
+    regardless (see `docs/CUSTODY.md`)
   - [ ] Keystore file encrypted with strong passphrase (if applicable)
   - [ ] Remote signer URL uses HTTPS with valid certificate (if applicable)
 

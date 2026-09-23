@@ -127,6 +127,7 @@ Default section order:
 | Path                                     | Owns                                                                                         |
 | ---------------------------------------- | -------------------------------------------------------------------------------------------- |
 | [signing/AGENTS.md](signing/AGENTS.md)   | Signer backends, policy wrapper, live-key custody rules                                      |
+| [sentinel/AGENTS.md](sentinel/AGENTS.md) | Dev/demo remote-signer reference service: Bearer-token auth, fail-closed posture             |
 | [docs/AGENTS.md](docs/AGENTS.md)         | Operator docs, Hermes integration, UAT/runbooks                                              |
 | [frontend/AGENTS.md](frontend/AGENTS.md) | Next.js operator dashboard: auth, approvals, status                                          |
 | [app/](app/)                             | Core settings, container, MCP/API tool wiring (parent-owned until split)                     |

@@ -1,3 +1,9 @@
+# Sentinel is a DEV/DEMO reference remote-signer stack (SIGNER_TYPE=env_private_key), not a
+# production custody path -- see docs/CUSTODY.md for production signer options (keystore,
+# a KMS/HSM-backed remote proxy, cb_mpc_2pc). It is reachable only on the compose-internal
+# network (no host port publish); both services must be given the SAME long, random token
+# via SENTINEL_AUTH_TOKEN / REMOTE_SIGNER_AUTH_TOKEN in the host environment before starting
+# this stack -- sentinel fails closed (503 on every request) until that token is >=32 chars.
 services:
   sentinel:
     build:
@@ -7,13 +13,15 @@ services:
     environment:
       - SIGNER_TYPE=env_private_key
       - PRIVATE_KEY=${PRIVATE_KEY}
-    ports:
-      - "8888:8888"
+      - SENTINEL_AUTH_TOKEN=${SENTINEL_AUTH_TOKEN}
+    expose:
+      - "8888"
 
   readytrader:
     build: .
     environment:
       - SIGNER_TYPE=remote
       - SIGNER_REMOTE_URL=http://sentinel:8888
+      - REMOTE_SIGNER_AUTH_TOKEN=${REMOTE_SIGNER_AUTH_TOKEN}
     depends_on:
       - sentinel

@@ -79,6 +79,19 @@ ______________________________________________________________________
   - Advanced Risk Mode requires additional consent.
   - Keep policy allowlists/limits enabled in production.
 
+### 7) Sentinel dev/demo remote-signer service
+
+- **Threat**: `docker-compose.sentinel.yml` runs `sentinel/app.py`, a convenience remote
+  signer for local development. Unauthenticated HTTP would let anyone who can reach the
+  container sign transactions or read the wallet address.
+- **Mitigations**:
+  - Every route requires `Authorization: Bearer <token>`, checked with `hmac.compare_digest`
+    against `SENTINEL_AUTH_TOKEN`; the service fails closed (503) if that token is unset or
+    shorter than 32 characters — no bypass flag exists.
+  - The compose file does not publish port 8888 on the host (`expose` only).
+  - It is a **dev/demo reference implementation**, not a production custody path — see
+    `docs/CUSTODY.md` for production signer options.
+
 ______________________________________________________________________
 
 ## Recommended production baseline

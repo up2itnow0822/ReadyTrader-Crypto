@@ -20,6 +20,19 @@ class _RemoteSignedTx(SignedTx):
     rawTransaction: bytes
 
 
+def _auth_headers() -> Dict[str, str]:
+    """`Authorization: Bearer <token>` when REMOTE_SIGNER_AUTH_TOKEN is set, else no headers.
+
+    This is what the bundled dev/demo sentinel reference signer
+    (docker-compose.sentinel.yml, sentinel/app.py) requires. A third-party remote signer
+    that does not expect this header is unaffected when the env var is left unset.
+    """
+    token = (os.getenv("REMOTE_SIGNER_AUTH_TOKEN") or "").strip()
+    if not token:
+        return {}
+    return {"Authorization": f"Bearer {token}"}
+
+
 class RemoteSigner(Signer):
     """
     Remote signer (enterprise-friendly).
@@ -33,6 +46,10 @@ class RemoteSigner(Signer):
     POST {SIGNER_REMOTE_URL}/sign_transaction
     body: {"tx": {...}, "chain_id": 1}
     response: {"rawTransactionHex": "0x..."}
+
+    When REMOTE_SIGNER_AUTH_TOKEN is set, both requests carry `Authorization: Bearer
+    <token>` (see _auth_headers); it is omitted entirely when unset, so third-party signers
+    that do not expect this header keep working unchanged.
     """
 
     def __init__(self, url_env: str = "SIGNER_REMOTE_URL") -> None:
@@ -47,7 +64,7 @@ class RemoteSigner(Signer):
         timeout = float(os.getenv("HTTP_TIMEOUT_SEC", "10"))
         if self._cached_address:
             return self._cached_address
-        r = requests.get(f"{self._base_url}/address", timeout=timeout)
+        r = requests.get(f"{self._base_url}/address", timeout=timeout, headers=_auth_headers())
         r.raise_for_status()
         data = r.json()
         addr = str(data.get("address") or "").strip()
@@ -63,7 +80,7 @@ class RemoteSigner(Signer):
         # for policy enforcement and safer audit logs.
         intent = build_evm_tx_intent(tx, chain_id=chain_id)
         payload = {"tx": tx, "chain_id": chain_id, "intent": intent.to_dict()}
-        r = requests.post(f"{self._base_url}/sign_transaction", json=payload, timeout=timeout)
+        r = requests.post(f"{self._base_url}/sign_transaction", json=payload, timeout=timeout, headers=_auth_headers())
         r.raise_for_status()
         data = r.json() if isinstance(r.headers.get("content-type", ""), str) else json.loads(r.text)
         raw_hex: Optional[str] = data.get("rawTransactionHex") or data.get("raw_transaction_hex")
