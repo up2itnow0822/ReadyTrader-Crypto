@@ -43,6 +43,7 @@ boundary. **No git tag or GitHub Release exists for 0.2.0 yet** (`git tag -l` an
 
 ### Unreleased
 
+- **`EXECUTION_MODE=auto` routing (issue #8):** `venue_allowed()` now treats `auto` — the `Settings` default — like `hybrid` (either venue per call). Previously the default silently denied every live venue check (`Execution blocked by EXECUTION_MODE=auto …`) for operators who never set `EXECUTION_MODE`; `dex`/`cex`/`hybrid` behavior and the fail-closed denial of unknown values are unchanged.
 - **Falling Knife (paper/CI):** `intelligence/sentiment.py` now treats a printed 8%+ drop
   (`-10%`, `down 11%`) as bearish even without a lexicon panic word, and three directional
   texts are enough consensus when such a print is present. Promo ` - 92% WIN RATE` does not
