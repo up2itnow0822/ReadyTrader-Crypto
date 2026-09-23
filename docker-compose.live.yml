@@ -51,8 +51,9 @@ services:
       - REMOTE_SIGNER_REQUIRE_TLS=${REMOTE_SIGNER_REQUIRE_TLS:-true}
       # Bearer token for SIGNER_REMOTE_URL, sent as `Authorization: Bearer <token>`. Not
       # marked required (:?): it's needed when SIGNER_REMOTE_URL points at the bundled
-      # dev/demo sentinel reference signer, but a production HSM/KMS proxy may authenticate
-      # a different way (e.g. mTLS) -- see env.live.btc.example.
+      # dev/demo sentinel reference signer, but a production HSM/KMS proxy may not use it.
+      # RemoteSigner presents no TLS client certificate, so a signer that requires mTLS is
+      # not supported -- see env.live.btc.example.
       - REMOTE_SIGNER_AUTH_TOKEN=${REMOTE_SIGNER_AUTH_TOKEN}
 
       # === SIGNER POLICY (Defense in Depth) ===

@@ -59,7 +59,8 @@ Please report details privately with:
   token is unset or shorter than 32 characters, answers 401 for a missing or wrong token, and
   no longer serves `/docs` / `/openapi.json`; `docker-compose.sentinel.yml` publishes no host
   port. `RemoteSigner` sends `REMOTE_SIGNER_AUTH_TOKEN` as a Bearer header and refuses a
-  non-`https://` `SIGNER_REMOTE_URL` while `REMOTE_SIGNER_REQUIRE_TLS=true` (the default).
+  non-`https://` `SIGNER_REMOTE_URL` while `REMOTE_SIGNER_REQUIRE_TLS=true` (the default); it
+  never follows redirects, so a 307/308 cannot move a transaction to another URL.
   Sentinel remains a dev/demo reference signer, not a production custody path — see
   `docs/CUSTODY.md`. UAT T11.
 - **`EXECUTION_MODE=auto` routing (issue #8) — PR #9:** `venue_allowed()` treats `auto`, the
