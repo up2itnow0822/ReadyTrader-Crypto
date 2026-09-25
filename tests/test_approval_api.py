@@ -21,6 +21,8 @@ import pytest
 pytest.importorskip("httpx")
 
 ORDER = {"symbol": "BTC/USDT", "side": "buy", "amount": 0.01, "order_type": "limit", "price": 50000.0, "exchange": "binance", "market_type": "spot"}
+# What a proposal made in paper mode records (app.tools.execution._maybe_propose adds paper_mode).
+PROPOSED = {**ORDER, "paper_mode": True}
 
 
 def _boot(tmp_path, monkeypatch, *, auth: bool):
@@ -119,7 +121,7 @@ def test_html_in_a_rationale_round_trips_as_inert_text(open_api):
 
 
 def test_operator_approves_without_a_token_in_paper_mode_and_it_executes_once(open_api):
-    prop = open_api.store.create(kind="place_cex_order", payload=dict(ORDER))
+    prop = open_api.store.create(kind="place_cex_order", payload=dict(PROPOSED))
     first = _approve(open_api, prop.request_id)
     assert first.status_code == 200 and first.json()["ok"] is True, first.text
     assert len(open_api.calls) == 1
@@ -133,13 +135,13 @@ def test_operator_approves_without_a_token_in_paper_mode_and_it_executes_once(op
 
 
 def test_the_confirm_token_path_still_works(open_api):
-    prop = open_api.store.create(kind="place_cex_order", payload=dict(ORDER))
+    prop = open_api.store.create(kind="place_cex_order", payload=dict(PROPOSED))
     res = _approve(open_api, prop.request_id, token=prop.confirm_token)
     assert res.status_code == 200 and len(open_api.calls) == 1
 
 
 def test_wrong_token_is_403_executes_nothing_and_leaves_the_proposal_pending(open_api):
-    prop = open_api.store.create(kind="place_cex_order", payload=dict(ORDER))
+    prop = open_api.store.create(kind="place_cex_order", payload=dict(PROPOSED))
     res = _approve(open_api, prop.request_id, token="0" * 32)
     assert res.status_code == 403 and res.json()["error"]["code"] == "AUTH_604", res.text
     assert open_api.calls == []
@@ -159,7 +161,7 @@ def test_bad_proposal_states_are_4xx_with_a_code_never_500(open_api, setup, stat
     if setup == "unknown":
         request_id = "f" * 24
     else:
-        prop = open_api.store.create(kind="place_cex_order", payload=dict(ORDER), ttl_seconds=-1 if setup == "expired" else 120)
+        prop = open_api.store.create(kind="place_cex_order", payload=dict(PROPOSED), ttl_seconds=-1 if setup == "expired" else 120)
         request_id = prop.request_id
         if setup == "cancelled":
             assert _approve(open_api, request_id, approve=False).json() == {"ok": True}
@@ -180,7 +182,7 @@ def test_an_order_the_engine_refuses_is_an_error_and_is_not_recorded_as_executed
     """Tool functions return {"ok": false} instead of raising; that used to come back as HTTP 200 + executed."""
     refusal = {"ok": False, "error": {"code": "policy_blocked", "message": "symbol not allowed", "data": {}}}
     monkeypatch.setattr(open_api.mod, "place_cex_order", lambda **kw: json.dumps(refusal))
-    prop = open_api.store.create(kind="place_cex_order", payload=dict(ORDER))
+    prop = open_api.store.create(kind="place_cex_order", payload=dict(PROPOSED))
     res = _approve(open_api, prop.request_id)
     assert res.status_code == 422 and res.json() == refusal, res.text
     assert open_api.store.is_executed(prop.request_id) is False
@@ -192,7 +194,7 @@ def test_an_order_the_engine_refuses_is_an_error_and_is_not_recorded_as_executed
 
 
 def test_secured_api_requires_a_jwt_at_all(secured_api):
-    prop = secured_api.store.create(kind="place_cex_order", payload=dict(ORDER))
+    prop = secured_api.store.create(kind="place_cex_order", payload=dict(PROPOSED))
     assert secured_api.client.get("/api/pending-approvals").status_code == 401
     assert _approve(secured_api, prop.request_id).status_code == 401
     assert _approve(secured_api, prop.request_id, token=prop.confirm_token).status_code == 401, "the token alone is not a login"
@@ -200,13 +202,13 @@ def test_secured_api_requires_a_jwt_at_all(secured_api):
 
 
 def test_admin_jwt_approves_without_a_token(secured_api):
-    prop = secured_api.store.create(kind="place_cex_order", payload=dict(ORDER))
+    prop = secured_api.store.create(kind="place_cex_order", payload=dict(PROPOSED))
     res = _approve(secured_api, prop.request_id, headers=secured_api.admin)
     assert res.status_code == 200 and len(secured_api.calls) == 1, res.text
 
 
 def test_non_admin_jwt_cannot_approve_without_the_token(secured_api):
-    prop = secured_api.store.create(kind="place_cex_order", payload=dict(ORDER))
+    prop = secured_api.store.create(kind="place_cex_order", payload=dict(PROPOSED))
     res = _approve(secured_api, prop.request_id, headers=secured_api.user)
     assert res.status_code == 403 and res.json()["error"]["code"] == "AUTH_604", res.text
     assert secured_api.calls == []
@@ -236,7 +238,7 @@ def test_store_level_contract():
     from execution_store import ExecutionStore, ProposalError
 
     store = ExecutionStore()
-    prop = store.create(kind="place_cex_order", payload=dict(ORDER))
+    prop = store.create(kind="place_cex_order", payload=dict(PROPOSED))
     with pytest.raises(ValueError):
         store.confirm_as_operator(prop.request_id, operator="  ")
     with pytest.raises(ProposalError) as exc:
@@ -252,7 +254,7 @@ def test_store_level_contract():
 
 
 def test_rejecting_needs_the_same_authority_as_approving(secured_api):
-    prop = secured_api.store.create(kind="place_cex_order", payload=dict(ORDER))
+    prop = secured_api.store.create(kind="place_cex_order", payload=dict(PROPOSED))
     denied = _approve(secured_api, prop.request_id, approve=False, headers=secured_api.user)
     assert denied.status_code == 403 and denied.json()["error"]["code"] == "AUTH_604", denied.text
     wrong = _approve(secured_api, prop.request_id, approve=False, token="0" * 32, headers=secured_api.user)
@@ -260,7 +262,7 @@ def test_rejecting_needs_the_same_authority_as_approving(secured_api):
     assert len(secured_api.client.get("/api/pending-approvals", headers=secured_api.admin).json()["pending"]) == 1, "still pending"
     assert _approve(secured_api, prop.request_id, approve=False, token=prop.confirm_token, headers=secured_api.user).json() == {"ok": True}
 
-    other = secured_api.store.create(kind="place_cex_order", payload=dict(ORDER))
+    other = secured_api.store.create(kind="place_cex_order", payload=dict(PROPOSED))
     assert _approve(secured_api, other.request_id, approve=False, headers=secured_api.admin).json() == {"ok": True}
     assert secured_api.calls == []
 
@@ -278,10 +280,10 @@ def test_a_jwt_without_an_expiry_is_not_a_credential(secured_api):
 @pytest.mark.parametrize(
     "kind,payload",
     [
-        ("place_cex_order", {"side": "buy", "amount": 1}),
-        ("place_cex_order", {"symbol": "BTC/USDT", "side": "buy", "amount": "lots"}),
-        ("transfer_eth", {"amount": 1}),
-        ("kind_from_the_future", {"x": 1}),
+        ("place_cex_order", {"side": "buy", "amount": 1, "paper_mode": True}),
+        ("place_cex_order", {"symbol": "BTC/USDT", "side": "buy", "amount": "lots", "paper_mode": True}),
+        ("transfer_eth", {"amount": 1, "paper_mode": True}),
+        ("kind_from_the_future", {"x": 1, "paper_mode": True}),
     ],
 )
 def test_a_malformed_proposal_is_422_never_500(open_api, kind, payload):
@@ -365,14 +367,14 @@ def test_end_to_end_with_the_real_paper_engine(open_api, tmp_path, monkeypatch):
     monkeypatch.setattr(execution_tools, "settings", dataclasses.replace(execution_tools.settings, EXECUTION_MODE=ExecutionMode.CEX, PAPER_MODE=True))
     # Same staleness applies to the container: fill on the engine the tool module actually holds.
     monkeypatch.setattr(execution_tools.global_container, "paper_engine", engine)
-    engine.deposit("agent_zero", "USDT", 1_000.0)
+    engine.deposit("agent_zero", "USDT", 20_000.0)  # 0.01 BTC at 50,000 is 2.5%: inside the 5% size rule
 
-    prop = open_api.store.create(kind="place_cex_order", payload=dict(ORDER))
+    prop = open_api.store.create(kind="place_cex_order", payload=dict(PROPOSED))
     res = _approve(open_api, prop.request_id)
     assert res.status_code == 200, res.text
     assert res.json()["ok"] is True and res.json()["data"]["mode"] == "paper", res.text
     assert engine.get_balance("agent_zero", "BTC") == pytest.approx(0.01)
-    assert engine.get_balance("agent_zero", "USDT") == pytest.approx(1_000.0 - 0.01 * 50_000.0, abs=1.0)
+    assert engine.get_balance("agent_zero", "USDT") == pytest.approx(20_000.0 - 0.01 * 50_000.0, abs=1.0)
 
     assert _approve(open_api, prop.request_id).status_code == 409
     assert engine.get_balance("agent_zero", "BTC") == pytest.approx(0.01), "second approval must not fill again"
@@ -389,7 +391,7 @@ def test_one_non_finite_proposal_cannot_500_the_whole_approvals_list(open_api, b
     /api/pending-approvals return 500 for every operator - hiding every other valid approval.
     """
     open_api.store.create(kind="place_cex_order", payload={**ORDER, "amount": bad})
-    good = open_api.store.create(kind="place_cex_order", payload=dict(ORDER))
+    good = open_api.store.create(kind="place_cex_order", payload=dict(PROPOSED))
 
     res = open_api.client.get("/api/pending-approvals")
     assert res.status_code == 200, res.text
@@ -406,3 +408,42 @@ def test_summarize_payload_drops_non_finite_numbers():
 
     out = summarize_payload("place_cex_order", {"symbol": "BTC/USDT", "amount": float("inf"), "price": 5.0})
     assert out["amount"] is None and out["price"] == 5.0
+
+
+# --------------------------------------------------------------------------- UAT 2026-09-24: modes
+
+
+@pytest.mark.parametrize("made_in", [False, None])
+def test_a_proposal_from_the_other_mode_is_409_and_stays_pending(open_api, made_in):
+    """A live proposal approved on a paper API server used to "execute" as a paper fill and be marked
+    done. Refused before confirming (409 mode_mismatch), so an API server in the right mode can still
+    approve it. A proposal with no recorded mode is refused too (fail closed)."""
+    payload = dict(ORDER) if made_in is None else {**ORDER, "paper_mode": made_in}
+    prop = open_api.store.create(kind="place_cex_order", payload=payload)
+    res = _approve(open_api, prop.request_id, token=prop.confirm_token)
+    assert res.status_code == 409, res.text
+    assert res.json()["error"]["code"] == "EXEC_313" and res.json()["error"]["data"]["reason"] == "mode_mismatch"
+    assert open_api.calls == [], "nothing executes"
+    assert prop.request_id in {p["request_id"] for p in open_api.client.get("/api/pending-approvals").json()["pending"]}
+
+
+def test_the_guardian_refusal_at_approval_time_is_a_422_with_its_reason(open_api, monkeypatch, tmp_path):
+    """The approval API re-runs place_cex_order, and with it the Risk Guardian: an order that no
+    longer fits the account when it is approved is refused, not executed."""
+    import dataclasses
+
+    import app.tools.execution as execution_tools
+    from app.core.settings import ExecutionMode
+    from paper_engine import PaperTradingEngine
+
+    engine = PaperTradingEngine(db_path=str(tmp_path / "paper.db"))
+    engine.deposit("agent_zero", "USDT", 1_000.0)  # 0.01 BTC at 50,000 is half of this account
+    monkeypatch.setattr(open_api.mod, "place_cex_order", execution_tools.place_cex_order)
+    monkeypatch.setattr(execution_tools, "settings", dataclasses.replace(execution_tools.settings, EXECUTION_MODE=ExecutionMode.CEX, PAPER_MODE=True))
+    monkeypatch.setattr(execution_tools.global_container, "paper_engine", engine)
+
+    prop = open_api.store.create(kind="place_cex_order", payload=dict(PROPOSED))
+    res = _approve(open_api, prop.request_id)
+    assert res.status_code == 422, res.text
+    assert res.json()["error"]["code"] == "risk_blocked" and "Position size too large" in res.json()["error"]["message"]
+    assert engine.get_balance("agent_zero", "BTC") == 0.0
