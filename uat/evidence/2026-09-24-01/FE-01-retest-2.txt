@@ -1,0 +1,24 @@
+$ TAILN=12 bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_e2e2.sh
+# at 2026-09-24T17:53:35+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+PW_PYTHON_PATH=<unset>
+[1A[2K[2m[WebServer] [22m
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 0}, "event": "api_client_disconnected", "level": "INFO", "request_id": "54295ba9-48ba-4881-befa-b0db8a1de406", "service": "readytrader", "tool": "api_server", "ts_ms": 1790272472761}
+[1A[2K[18/18] [chromium] › e2e/z-resilience.spec.ts:12:7 › API resilience › unreachable API shows the banner + Mode unknown, and recovers once it restarts
+[1A[2K[2m[WebServer] [22m{"data": {"user": "admin"}, "event": "auth_success", "level": "INFO", "request_id": "54295ba9-48ba-4881-befa-b0db8a1de406", "service": "readytrader", "tool": "api_server", "ts_ms": 1790272473276}
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 1}, "event": "api_client_connected", "level": "INFO", "request_id": "54295ba9-48ba-4881-befa-b0db8a1de406", "service": "readytrader", "tool": "api_server", "ts_ms": 1790272473351}
+[1A[2K[2m[WebServer] [22m
+[1A[2K[2m[WebServer] [22mKilled
+[1A[2K  18 passed (55.8s)
+To open last HTML report run:
+[36m[39m
+[36m  npx playwright show-report[39m
+[36m[39m
+E2E_EXIT=0
+--- npm run lint after the e2e run:
+> eslint
+
+LINT_EXIT=0
+
+
+exit=0
