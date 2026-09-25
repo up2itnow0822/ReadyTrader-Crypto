@@ -6,7 +6,7 @@ TOOLS 29: cancel_all_cex_orders, cancel_cex_order, deposit_paper_funds, fetch_oh
 CALL get_financial_news {"symbol": "BTC"} -> { "error": { "code": "not_configured", "data": { "symbol": "BTC" }, "message": "Financial news needs NEWSAPI_KEY (https://newsapi.org/)." }, "ok": false }
 CALL get_news {} -> { "error": { "code": "not_configured", "data": {}, "message": "Market news needs CRYPTOPANIC_API_KEY (https://cryptopanic.com/developers/api/)." }, "ok": false }
 CALL get_social_sentiment {"symbol": "BTC"} -> { "error": { "code": "not_configured", "data": { "symbol": "BTC" }, "message": "Social Sentiment Unavailable for BTC: No sentiment APIs configured.\nTo enable real-time sentiment analysis:\n1. X (Twitter): Get a Bearer Token from https://developer.x.com/ and set TWITTER_BEARER_TOKEN\n2. Reddit: Create an app at https://www.reddi
-cCALL get_free_news {"symbol": "BTC"} -> { "data": { "news": "Market News (Free RSS):\n1. Sequans exits Bitcoin treasury strategy after selling remaining 314 BTC (Cointelegraph)\n2. Bitcoin ETFs add $347M as BTC falls below $84K after topping $87K (Cointelegraph)\n3. Bitcoin long liquidations hit $280M as BTC price dips under $84K (Cointelegraph)", "symbol": "BTC" }, "
+CALL get_free_news {"symbol": "BTC"} -> { "data": { "news": "Market News (Free RSS):\n1. Sequans exits Bitcoin treasury strategy after selling remaining 314 BTC (Cointelegraph)\n2. Bitcoin ETFs add $347M as BTC falls below $84K after topping $87K (Cointelegraph)\n3. Bitcoin long liquidations hit $280M as BTC price dips under $84K (Cointelegraph)", "symbol": "BTC" }, "
 
 
 exit=0
