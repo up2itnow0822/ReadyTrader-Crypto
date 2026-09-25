@@ -1,0 +1,15 @@
+$ grep -n -A2 'futures/swap' docs/TOOLS.md docs/ERRORS.md; bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev2.sh 'test_probe_guardian.py::test_P2_futures_close_blocked'
+# at 2026-09-24T20:22:38+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+docs/TOOLS.md:264:as new exposure and checked against its sentiment. On a futures/swap account (`market_type` other
+docs/TOOLS.md-265-than `spot`) the position cannot be read here, so every order, a closing one included, is sized as
+docs/TOOLS.md-266-new exposure: close a large derivatives position in steps or on the exchange. A contract symbol
+--
+docs/ERRORS.md:43:    (ETH/BTC) buys that asset and is sized (and checked against its sentiment). On a futures/swap
+docs/ERRORS.md-44-    account the position cannot be read, so a closing order is sized like any other: close in
+docs/ERRORS.md-45-    steps or on the exchange. There is no price-based Falling Knife rule for crypto:
+P2 futures close: False Position size too large (20.0%). Max allowed is 5%.
+.
+
+
+exit=0

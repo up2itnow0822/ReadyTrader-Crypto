@@ -1,0 +1,10 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev2.sh test_probe_daily.py
+# at 2026-09-24T20:21:34+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+E1 2026-09-24: metrics {'daily_pnl_pct': 0.0, 'drawdown_pct': 0.05882352941176472, 'max_drawdown_pct': 0.05882352941176472} BUY 1 SOL -> True 
+E1 2026-09-25: metrics {'daily_pnl_pct': 0.0, 'drawdown_pct': 0.05882352941176472, 'max_drawdown_pct': 0.05882352941176472} BUY 1 SOL -> True 
+E1 2026-09-26: metrics {'daily_pnl_pct': 0.0, 'drawdown_pct': 0.05882352941176472, 'max_drawdown_pct': 0.05882352941176472} BUY 1 SOL -> True 
+.
+
+
+exit=0

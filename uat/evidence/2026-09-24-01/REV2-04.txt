@@ -1,0 +1,10 @@
+$ REPO=/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/cr_head bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev2.sh 'test_probe_guardian.py::test_P2_futures_close_blocked'; grep -n 'never refused\|is an exit and is not size-limited' docs/TOOLS.md docs/ERRORS.md
+# at 2026-09-24T20:14:57+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+P2 futures close: False Position size too large (20.0%). Max allowed is 5%.
+.
+docs/TOOLS.md:262:into cash (a USD stablecoin or fiat quote) is an exit and is not size-limited; selling into a
+docs/ERRORS.md:42:    never refused by the size, loss or sentiment rules; selling into a crypto quote (ETH/BTC) buys
+
+
+exit=0

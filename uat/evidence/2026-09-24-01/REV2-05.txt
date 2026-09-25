@@ -1,0 +1,11 @@
+$ REPO=/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/cr_head bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev2.sh 'test_probe_drawdown.py::test_D2_deposit_during_price_outage_is_a_gain_that_ends_a_halt'
+# at 2026-09-24T20:15:02+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+D2 BUY during drawdown: False Max Drawdown Limit Hit (15.0%). Orders that add exposure are halted; orders that reduce or close a position are allowed.
+D2 deposit 10 ETH while ETH/USDT unpriced: True net deposits now 20000.0
+D2 BUY after the deposit is priced: True None
+D2 metrics: {'daily_pnl_pct': 2.2, 'drawdown_pct': 0.0, 'max_drawdown_pct': 0.15}
+.
+
+
+exit=0
