@@ -2,9 +2,9 @@
 # Security-hardened, non-root runtime with proper healthchecks
 #
 # Usage:
-#   docker build -t readytrader-crypto .
-#   docker build --target mcp -t readytrader-crypto:mcp .
-#   docker build --target api -t readytrader-crypto:api .
+#   docker build -t readytrader-crypto .                    # the MCP server (stdio), the default
+#   docker run --rm -i -e PAPER_MODE=true readytrader-crypto
+#   docker build --target api -t readytrader-crypto:api .   # the approval/dashboard API server
 
 # =============================================================================
 # Build stage
@@ -83,7 +83,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PAPER_MODE=true \
     LIVE_TRADING_ENABLED=false \
-    TRADING_HALTED=false \
+    TRADING_HALTED=true \
     DEV_MODE=false \
     API_HOST=0.0.0.0 \
     API_PORT=8000
@@ -97,18 +97,6 @@ LABEL org.opencontainers.image.title="ReadyTrader-Crypto" \
       org.opencontainers.image.vendor="ReadyTrader" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.source="https://github.com/up2itnow/ReadyTrader-Crypto"
-
-# =============================================================================
-# MCP Server target (default)
-# =============================================================================
-FROM base AS mcp
-
-# MCP uses stdio, no port needed
-# Healthcheck: verify Python can import the server module
-HEALTHCHECK --interval=60s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "from server import mcp; from app.core.settings import settings; print('OK')" || exit 1
-
-CMD ["python", "app/main.py"]
 
 # =============================================================================
 # API Server target
@@ -125,9 +113,14 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
 CMD ["python", "-m", "uvicorn", "api_server:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # =============================================================================
-# Combined target (runs API server, healthcheck matches)
+# MCP Server target: the LAST stage, so `docker build .` (and every README/MCP-client config)
+# produces the stdio MCP server
 # =============================================================================
-FROM api AS production
+FROM base AS mcp
 
-# Default is API server with proper healthcheck
-# Use --target mcp for MCP-only builds
+# MCP uses stdio, no port needed
+# Healthcheck: verify Python can import the server module
+HEALTHCHECK --interval=60s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "from server import mcp; from app.core.settings import settings; print('OK')" || exit 1
+
+CMD ["python", "app/main.py"]
