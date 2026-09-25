@@ -47,7 +47,7 @@ fetches; it only reads the cached score.
 ## Execution (DEX/CEX)
 
 | Tool Name                                               | Description                                                                   |
-| :------------------------------------------------------- | :----------------------------------------------------------------------------- |
+| :------------------------------------------------------ | :---------------------------------------------------------------------------- |
 | [`cancel_all_cex_orders`](#cancel-all-cex-orders)       | Cancel all open orders on a centralized exchange.                             |
 | [`cancel_cex_order`](#cancel-cex-order)                 | Cancel an open order on a centralized exchange.                               |
 | [`get_cex_balance`](#get-cex-balance)                   | Fetch account balance from a centralized exchange.                            |
@@ -292,7 +292,7 @@ Get the current Crypto Fear & Greed Index (alternative.me; no key needed).
 ## Research & intelligence
 
 | Tool Name                                             | Description                                                                                              |
-| :---------------------------------------------------- | :--------------------------------------------------------------------------------------------------------|
+| :---------------------------------------------------- | :------------------------------------------------------------------------------------------------------- |
 | [`get_financial_news`](#get-financial-news)           | Headlines about the symbol from NewsAPI (needs NEWSAPI_KEY).                                             |
 | [`get_free_news`](#get-free-news)                     | Get free market news from RSS feeds (CoinDesk, Cointelegraph); no key needed.                            |
 | [`get_latest_insights`](#get-latest-insights)         | [PHASE 3] Get the most recent high-signal insights.                                                      |
