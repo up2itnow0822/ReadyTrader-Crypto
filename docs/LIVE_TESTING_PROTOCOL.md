@@ -9,7 +9,7 @@ ______________________________________________________________________
 The Live Trading Validation Protocol consists of 5 phases:
 
 | Phase | Name                       | Duration  | Purpose                                    |
-| :---- | :-------------------------- | :--------- | :------------------------------------------|
+| :---- | :------------------------- | :-------- | :----------------------------------------- |
 | 1     | Environment Validation     | 1-2 hours | Verify configuration and connectivity      |
 | 2     | Paper Trading Verification | 1-7 days  | Validate strategy in simulated environment |
 | 3     | Testnet Validation         | 1-3 days  | Test on-chain execution with test tokens   |
@@ -137,8 +137,8 @@ python examples/paper_quick_demo.py
 
 **Required Metrics:**
 
-| Metric             | Target            | Your Result    |
-| :------------------ | :------------------ | :--------------|
+| Metric             | Target             | Your Result    |
+| :----------------- | :---------------- | :------------- |
 | Total Trades       | >20               | \_\_\_\_\_\_\_ |
 | Win Rate           | Document baseline | \_\_\_\_\_\_\_ |
 | Max Drawdown       | \<10%             | \_\_\_\_\_\_\_ |
@@ -270,7 +270,7 @@ ______________________________________________________________________
 Start with minimal values and gradually increase:
 
 | Stage | Max Trade Value | Duration | Success Criteria      |
-| :---- | :---------------- | :--------| :----------------------|
+| :---- | :-------------- | :------- | :-------------------- |
 | 4.1a  | $10             | 24 hours | 3+ successful trades  |
 | 4.1b  | $50             | 24 hours | 5+ successful trades  |
 | 4.1c  | $100            | 48 hours | 10+ successful trades |
@@ -423,7 +423,7 @@ ______________________________________________________________________
 ### Phase Completion Checklist
 
 | Phase                  | Completed | Date           | Signed By      |
-| :---------------------- | :--------- | :---------------| :----------------|
+| :--------------------- | :-------- | :------------- | :------------- |
 | Phase 1: Environment   | ☐         | \_\_\_\_\_\_\_ | \_\_\_\_\_\_\_ |
 | Phase 2: Paper Trading | ☐         | \_\_\_\_\_\_\_ | \_\_\_\_\_\_\_ |
 | Phase 3: Testnet       | ☐         | \_\_\_\_\_\_\_ | \_\_\_\_\_\_\_ |
@@ -440,9 +440,9 @@ By signing below, I acknowledge that:
 1. I have tested rollback procedures
 1. I have configured appropriate risk limits
 
-**Signature:** \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+**Signature:** \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
 
-**Date:** \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+**Date:** \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
 
 ______________________________________________________________________
 
@@ -468,7 +468,7 @@ pytest --cov=. --cov-fail-under=70
 ## Appendix B: Common Issues
 
 | Issue                   | Cause                      | Resolution                          |
-| :----------------------- | :--------------------------| :-------------------------------------|
+| :---------------------- | :------------------------- | :---------------------------------- |
 | "Live trading disabled" | LIVE_TRADING_ENABLED=false | Set to true after validation        |
 | "Trading halted"        | TRADING_HALTED=true        | Set to false when ready             |
 | "Exchange not allowed"  | Missing ALLOW_EXCHANGES    | Add exchange to allowlist           |
