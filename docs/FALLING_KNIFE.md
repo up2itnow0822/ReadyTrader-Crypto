@@ -31,9 +31,9 @@ The question each rule answers: after it fires, is a further severe drop (20% wi
 crypto) more likely than on an ordinary day? "Lift" is that probability divided by the base rate;
 1.0 means the rule knows nothing.
 
-| Attempt | Rule                                                                                                                           | Development years (before 2022) | Held-out years (2022 on)                                                                                                |
-| :------ | :------------------------------------------------------------------------------------------------------------------------------ | :-------------------------------- | :------------------------------------------------------------------------------------------------------------------------ |
-| v1      | close at least 4.5 average true ranges (20-day) below the highest high of the last 4 days, and the lowest of the last 4 closes | lift 2.76                       | **lift 1.39** (fails)                                                                                                   |
+| Attempt | Rule                                                                                                                           | Development years (before 2022) | Held-out years (2022 on)                                                                                               |
+| :------ | :----------------------------------------------------------------------------------------------------------------------------- | :------------------------------ | :--------------------------------------------------------------------------------------------------------------------- |
+| v1      | close at least 4.5 average true ranges (20-day) below the highest high of the last 4 days, and the lowest of the last 4 closes | lift 2.76                       | **lift 1.39** (fails)                                                                                                  |
 | v2      | close at least 30% below the highest of the last 4 closes, and the lowest of them                                              | lift 3.22                       | 30 coins never downloaded before the rule was frozen: lift 2.04 over all years, **1.21** on the held-out years (fails) |
 
 v2's pre-registered criterion was lift ≥ 2.0 over all years **and** ≥ 1.5 on the held-out years for

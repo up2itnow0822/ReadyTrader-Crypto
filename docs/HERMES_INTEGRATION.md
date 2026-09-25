@@ -113,7 +113,7 @@ classes, and refuses live trading without explicit operator authorization.
 ReadyTrader registers 29 tools. Paper-safe without credentials:
 
 | Tool                                                                                         | Use                                                            |
-| --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | `get_crypto_price`, `fetch_ohlcv`                                                            | BTC market data                                                |
 | `get_sentiment`, `get_news`, `get_social_sentiment`, `get_financial_news`, `get_free_news`   | Read-only context (provider keys optional)                     |
 | `get_market_regime`, `run_backtest_simulation`, `post_market_insight`, `get_latest_insights` | Analysis and shared insights                                   |
