@@ -6,7 +6,6 @@ $ grep -o '"event": "[a-z_]*"\|"ts_ms": [0-9]*' /tmp/claude-0/-home-claude/55237
       5 "event": "auth_success"	"ts_ms": 1790267900073
 
 distinct ts_ms values across all API log lines:
-
 "ts_ms": 1790267900073
 
 
