@@ -5,7 +5,7 @@ ReadyTrader-Crypto empowers AI agents with both "Hands" (execution) and "Eyes" (
 ## 🌟 Overview of Sentiment Sources
 
 | Source                 | Level     | Cost           | Required Credentials | Feature                                               |
-| :--------------------- | :-------- | :------------- | :------------------- | :---------------------------------------------------- |
+| :---------------------- | :--------- | :-------------- | :--------------------- | :------------------------------------------------------|
 | **RSS Market News**    | Basic     | Free           | None                 | General market awareness from CoinDesk/Cointelegraph. |
 | **Fear & Greed Index** | Basic     | Free           | None                 | Overall market sentiment (Alternative.me).            |
 | **CryptoPanic**        | Pro       | Free/Paid      | API Key              | Aggregated hot news across the industry.              |
@@ -92,7 +92,7 @@ ______________________________________________________________________
 1. The score is the bull-bear spread over the texts that take a direction: `(bullish - bearish) / (bullish + bearish)`, from `-1.0` to `+1.0`. With fewer than 4 directional texts (or less than a quarter of the sample) there is no consensus and the score is `0.0`, except when at least one text prints an 8%+ drop (`-10%`, `down 11%`): that text is bearish even without a lexicon panic word, and three directional texts are then enough. Promo copy such as ` - 92% WIN RATE` does not count (the minus must sit on the number). Ordinary red-day prints (~3–6%) stay below the line.
 1. The reading is cached per base asset for one hour. `validate_trade_risk` reads the cache; it never fetches.
 
-`validate_trade_risk` blocks a **BUY** when the score is below `-0.5`: enough texts take a direction (4, or 3 when an 8%+ drop is present) and bearish ones outnumber bullish ones by more than three to one. Sells are never blocked by sentiment.
+The Risk Guardian (on every order, and in `validate_trade_risk`) blocks a **BUY** when the score is below `-0.5`: enough texts take a direction (4, or 3 when an 8%+ drop is present) and bearish ones outnumber bullish ones by more than three to one. Sells are never blocked by sentiment.
 
 ### Why a market-only vocabulary
 
@@ -114,7 +114,7 @@ So the rule is precise and only moderately sensitive: about half of crashes are 
 `validate_trade_risk` reports what the rule worked from in its `sentiment.status` field:
 
 | status              | meaning                                                                     | score    |
-| :------------------ | :-------------------------------------------------------------------------- | :------- |
+| :------------------- | :---------------------------------------------------------------------------| :-------- |
 | `ok`                | At least 5 texts were scored within the last hour (the score may be `0.0`). | measured |
 | `no_data`           | `get_social_sentiment` has not been called for this asset in the last hour. | `0.0`    |
 | `not_configured`    | No X or Reddit credentials are set.                                         | `0.0`    |
@@ -126,7 +126,7 @@ A degraded refresh never relaxes the rule. Only providers that supplied usable n
 
 ### Limits worth knowing
 
-- The Risk Guardian is advisory: the rule only acts when the agent calls `get_social_sentiment(symbol)` and then `validate_trade_risk(...)` before trading.
+- The rule reads the cached score: it only has a measured reading after the agent (or a schedule) has called `get_social_sentiment(symbol)` within the last hour. The Risk Guardian itself runs on every order (`place_cex_order`, `swap_tokens`, approvals) and on `validate_trade_risk`; without a fresh reading it treats sentiment as neutral and says so.
 - Fifteen texts is a small sample, and anyone can post. Treat the rule as a circuit breaker for broad, plain-spoken panic, not a forecast. Repeated identical texts count once.
 - Negation more than a few words from its target is missed, and bad news about another asset counts if it uses this vocabulary.
 - `MIN_DIRECTIONAL` and `LARGE_DROP_PCT` are the sensitivity knobs and live with the vocabulary in one file. Every `validate_trade_risk` response carries the score and counts it used, so paper-trading logs can calibrate it. Add fresh feeds to the fixture before tuning against it.

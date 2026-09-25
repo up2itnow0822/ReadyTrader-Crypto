@@ -9,7 +9,7 @@ ______________________________________________________________________
 The Live Trading Validation Protocol consists of 5 phases:
 
 | Phase | Name                       | Duration  | Purpose                                    |
-| :---- | :------------------------- | :-------- | :----------------------------------------- |
+| :---- | :-------------------------- | :--------- | :------------------------------------------|
 | 1     | Environment Validation     | 1-2 hours | Verify configuration and connectivity      |
 | 2     | Paper Trading Verification | 1-7 days  | Validate strategy in simulated environment |
 | 3     | Testnet Validation         | 1-3 days  | Test on-chain execution with test tokens   |
@@ -138,7 +138,7 @@ python examples/paper_quick_demo.py
 **Required Metrics:**
 
 | Metric             | Target            | Your Result    |
-| :----------------- | :---------------- | :------------- |
+| :------------------ | :------------------ | :--------------|
 | Total Trades       | >20               | \_\_\_\_\_\_\_ |
 | Win Rate           | Document baseline | \_\_\_\_\_\_\_ |
 | Max Drawdown       | \<10%             | \_\_\_\_\_\_\_ |
@@ -270,7 +270,7 @@ ______________________________________________________________________
 Start with minimal values and gradually increase:
 
 | Stage | Max Trade Value | Duration | Success Criteria      |
-| :---- | :-------------- | :------- | :-------------------- |
+| :---- | :---------------- | :--------| :----------------------|
 | 4.1a  | $10             | 24 hours | 3+ successful trades  |
 | 4.1b  | $50             | 24 hours | 5+ successful trades  |
 | 4.1c  | $100            | 48 hours | 10+ successful trades |
@@ -344,17 +344,14 @@ curl http://localhost:8000/metrics
 
 If any issues detected:
 
-```bash
-# IMMEDIATE: Enable kill switch
-export TRADING_HALTED=true
-
-# Cancel all open orders
-curl -X POST http://localhost:8000/api/emergency-cancel-all
-
-# Revert to paper mode
-export PAPER_MODE=true
-export LIVE_TRADING_ENABLED=false
-```
+1. **Kill switch:** restart the MCP server (and the API server) with `TRADING_HALTED=true`.
+   Settings are read at start-up, so an `export` in another shell does nothing to a running
+   server. From then on every new order, swap and transfer is refused with `trading_halted`.
+1. **Cancel resting orders:** from the MCP client, `cancel_all_cex_orders(exchange="binance")`
+   (per market type, e.g. also `market_type="future"`), then `list_cex_open_orders(...)` to confirm
+   nothing is left. Reads and cancels still work while halted. The exchange's own web/app UI is
+   the fallback. There is no HTTP cancel endpoint.
+1. **Revert to paper:** restart with `PAPER_MODE=true` and `LIVE_TRADING_ENABLED=false`.
 
 ______________________________________________________________________
 
@@ -426,7 +423,7 @@ ______________________________________________________________________
 ### Phase Completion Checklist
 
 | Phase                  | Completed | Date           | Signed By      |
-| :--------------------- | :-------- | :------------- | :------------- |
+| :---------------------- | :--------- | :---------------| :----------------|
 | Phase 1: Environment   | ☐         | \_\_\_\_\_\_\_ | \_\_\_\_\_\_\_ |
 | Phase 2: Paper Trading | ☐         | \_\_\_\_\_\_\_ | \_\_\_\_\_\_\_ |
 | Phase 3: Testnet       | ☐         | \_\_\_\_\_\_\_ | \_\_\_\_\_\_\_ |
@@ -443,9 +440,9 @@ By signing below, I acknowledge that:
 1. I have tested rollback procedures
 1. I have configured appropriate risk limits
 
-**Signature:** \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+**Signature:** \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
 
-**Date:** \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+**Date:** \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
 
 ______________________________________________________________________
 
@@ -455,8 +452,8 @@ ______________________________________________________________________
 # Enable paper mode (safe)
 export PAPER_MODE=true && export LIVE_TRADING_ENABLED=false
 
-# Emergency stop
-export TRADING_HALTED=true
+# Emergency stop: restart the servers with TRADING_HALTED=true, then cancel_all_cex_orders (section 4.5)
+TRADING_HALTED=true python app/main.py
 
 # Check current mode
 python -c "from app.core.config import settings; print(f'Paper: {settings.PAPER_MODE}, Live: {settings.LIVE_TRADING_ENABLED}, Halted: {settings.TRADING_HALTED}')"
@@ -471,7 +468,7 @@ pytest --cov=. --cov-fail-under=70
 ## Appendix B: Common Issues
 
 | Issue                   | Cause                      | Resolution                          |
-| :---------------------- | :------------------------- | :---------------------------------- |
+| :----------------------- | :--------------------------| :-------------------------------------|
 | "Live trading disabled" | LIVE_TRADING_ENABLED=false | Set to true after validation        |
 | "Trading halted"        | TRADING_HALTED=true        | Set to false when ready             |
 | "Exchange not allowed"  | Missing ALLOW_EXCHANGES    | Add exchange to allowlist           |
