@@ -137,7 +137,7 @@ python examples/paper_quick_demo.py
 
 **Required Metrics:**
 
-| Metric             | Target             | Your Result    |
+| Metric             | Target            | Your Result    |
 | :----------------- | :---------------- | :------------- |
 | Total Trades       | >20               | \_\_\_\_\_\_\_ |
 | Win Rate           | Document baseline | \_\_\_\_\_\_\_ |
