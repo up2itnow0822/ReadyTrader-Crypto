@@ -7,9 +7,13 @@ Instead of executing immediately, the server returns a proposal:
 - `confirm_token`: single-use token (replay protection)
 - `expires_at`: TTL deadline (prevents stale approvals)
 
-Phase 1B: Optional SQLite persistence can be enabled for operator visibility.
-Safety rules:
-- Proposals are invalidated across restarts via a per-process session id (so stale approvals cannot execute).
+Proposals persist to SQLite (EXECUTION_DB_PATH). Safety rules:
+- Proposals are scoped to a session id: a fresh random one per process, so a restart invalidates
+  every earlier proposal. EXECUTION_SESSION_ID, set to the same value for the MCP server and the API
+  server (with the same EXECUTION_DB_PATH), puts both in one session, so the API (and the dashboard)
+  can see and approve proposals the MCP server made. Change it to invalidate every open proposal.
+- With persistence on, the database is the source of truth: confirming or cancelling is one
+  conditional UPDATE, so two processes cannot both approve (or approve and cancel) one proposal.
 - Risk consent is NOT persisted (consent remains in-memory only by design).
 """
 
@@ -24,6 +28,8 @@ import threading
 import time
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
+
+from storage_paths import data_path, ensure_parent
 
 # Phase 2: Webhooks for notifications
 try:
@@ -133,16 +139,17 @@ class ExecutionStore:
         self._lock = threading.Lock()
         self._items: Dict[str, ExecutionProposal] = {}
         self._conn: Optional[sqlite3.Connection] = None
-        # Used to invalidate any persisted proposals across restarts.
-        self._session_id = secrets.token_hex(8)
+        # Scopes persisted proposals (see the module docstring): shared through EXECUTION_SESSION_ID,
+        # otherwise a fresh id per process.
+        self._session_id = (os.getenv("EXECUTION_SESSION_ID") or "").strip() or secrets.token_hex(8)
 
     def persistence_enabled(self) -> bool:
         return bool(self._db_path())
 
     def _db_path(self) -> str:
-        default = "data/execution.db"
+        default = data_path("execution.db")
         p = (os.getenv("READYTRADER_EXECUTION_DB_PATH") or os.getenv("EXECUTION_DB_PATH") or default).strip()
-        os.makedirs(os.path.dirname(p), exist_ok=True)
+        ensure_parent(p)
         return p
 
     def _get_conn(self) -> Optional[sqlite3.Connection]:
@@ -334,6 +341,11 @@ class ExecutionStore:
         with self._lock:
             now = time.time()
             pending = []
+            conn = self._get_conn()
+            if conn is not None:
+                # Every proposal is persisted on create, and another process may have approved or
+                # cancelled one since it was cached here: read the state from the database.
+                return {"pending": self._pending_from_db(conn, now)}
             for p in self._items.values():
                 if p.cancelled_at or p.confirmed_at:
                     continue
@@ -378,6 +390,57 @@ class ExecutionStore:
                     )
             return {"pending": pending}
 
+    def _pending_from_db(self, conn: sqlite3.Connection, now: float) -> list:
+        rows = conn.execute(
+            """
+            SELECT request_id, kind, created_at, expires_at, payload_json
+            FROM execution_proposals
+            WHERE session_id = ? AND confirmed_at IS NULL AND cancelled_at IS NULL AND executed_at IS NULL AND expires_at > ?
+            ORDER BY created_at ASC
+            """,
+            (self._session_id, float(now)),
+        ).fetchall()
+        pending = []
+        for rid, kind, created_at, expires_at, payload_json in rows:
+            try:
+                payload = json.loads(payload_json) if payload_json else {}
+            except Exception:
+                payload = {}
+            pending.append(
+                {
+                    "request_id": str(rid),
+                    "kind": str(kind),
+                    "created_at": float(created_at),
+                    "expires_at": float(expires_at),
+                    "summary": summarize_payload(str(kind), payload if isinstance(payload, dict) else {}),
+                }
+            )
+        return pending
+
+    def _fresh(self, request_id: str) -> Optional[ExecutionProposal]:
+        """The proposal as stored (another process may have changed it), else the cached copy."""
+        if self._get_conn() is not None:
+            p = self._load(request_id)
+            if p is not None:
+                self._items[request_id] = p
+            return p
+        return self._items.get(request_id)
+
+    def _claim(self, request_id: str, column: str) -> bool:
+        """Set `column` (confirmed_at / cancelled_at) only if nobody has confirmed, cancelled or
+        executed the proposal: one conditional UPDATE, so it happens once across processes."""
+        conn = self._get_conn()
+        if conn is None:
+            return True
+        assert column in ("confirmed_at", "cancelled_at")
+        cur = conn.execute(
+            f"UPDATE execution_proposals SET {column} = ? "  # nosec B608 - column is one of two literals
+            "WHERE request_id = ? AND session_id = ? AND confirmed_at IS NULL AND cancelled_at IS NULL AND executed_at IS NULL",
+            (time.time(), request_id, self._session_id),
+        )
+        conn.commit()
+        return cur.rowcount == 1
+
     def token_matches(self, request_id: str, confirm_token: str) -> bool:
         """Constant-time check of a proposal's confirm token. False for unknown proposals. Changes nothing."""
         with self._lock:
@@ -388,12 +451,14 @@ class ExecutionStore:
 
     def cancel(self, request_id: str) -> bool:
         with self._lock:
-            p = self._items.get(request_id) or self._load(request_id)
+            p = self._fresh(request_id)
             if not p:
                 return False
             if p.confirmed_at is not None:
                 return False
             if p.cancelled_at is not None:
+                return False
+            if not self._claim(request_id, "cancelled_at"):
                 return False
             p.cancelled_at = time.time()
             self._items[request_id] = p
@@ -402,7 +467,7 @@ class ExecutionStore:
 
     def _confirmable(self, request_id: str) -> ExecutionProposal:
         """State checks shared by both confirm paths. Caller holds the lock."""
-        p = self._items.get(request_id) or self._load(request_id)
+        p = self._fresh(request_id)
         if not p:
             raise ProposalError("unknown", "Unknown request_id")
         if p.expires_at <= time.time():
@@ -416,6 +481,9 @@ class ExecutionStore:
         return p
 
     def _mark_confirmed(self, p: ExecutionProposal) -> ExecutionProposal:
+        if not self._claim(p.request_id, "confirmed_at"):
+            # Another process confirmed or cancelled it between the state check and now.
+            raise ProposalError("already_confirmed", "Proposal already confirmed")
         p.confirmed_at = time.time()
         self._items[p.request_id] = p
         self._persist(p)
