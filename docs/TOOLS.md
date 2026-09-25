@@ -25,7 +25,7 @@ ______________________________________________________________________
 ## Trading & Risk
 
 | Tool Name                                     | Description                                                    |
-| :--------------------------------------------- | :--------------------------------------------------------------- |
+| :-------------------------------------------- | :------------------------------------------------------------- |
 | [`deposit_paper_funds`](#deposit_paper_funds) | [PAPER MODE] Deposit fake funds into the paper trading wallet. |
 | [`validate_trade_risk`](#validate_trade_risk) | [GUARDIAN] Validate if a trade is safe to execute.             |
 
@@ -119,7 +119,7 @@ ______________________________________________________________________
 ## Execution (DEX/CEX)
 
 | Tool Name                                               | Description                                                    |
-| :-------------------------------------------------------- | :--------------------------------------------------------------- |
+| :------------------------------------------------------ | :------------------------------------------------------------- |
 | [`swap_tokens`](#swap_tokens)                           | Swap tokens on a DEX (paper mode or live).                     |
 | [`transfer_eth`](#transfer_eth)                         | Transfer native currency (ETH/BASE/ARB/OP native token).       |
 | [`place_cex_order`](#place_cex_order)                   | Place an order on a CEX using CCXT authenticated credentials.  |
@@ -755,7 +755,7 @@ ______________________________________________________________________
 ## Market Data
 
 | Tool Name                               | Description                                                          |
-| :---------------------------------------- | :---------------------------------------------------------------------- |
+| :-------------------------------------- | :------------------------------------------------------------------- |
 | [`get_crypto_price`](#get_crypto_price) | Get the current price of a cryptocurrency.                           |
 | [`fetch_ohlcv`](#fetch_ohlcv)           | Fetch historical OHLCV (candlestick) data.                           |
 | [`get_sentiment`](#get_sentiment)       | Get the current Crypto Fear & Greed Index.                           |
@@ -878,7 +878,7 @@ ______________________________________________________________________
 ## Research & Intelligence
 
 | Tool Name                                             | Description                                                                 |
-| :-------------------------------------------------------- | :---------------------------------------------------------------------------- |
+| :---------------------------------------------------- | :--------------------------------------------------------------------------- |
 | [`get_social_sentiment`](#get_social_sentiment)       | Score recent X/Reddit text for a symbol and cache it for the Risk Guardian. |
 | [`get_financial_news`](#get_financial_news)           | Get NewsAPI headlines for a symbol (needs NEWSAPI_KEY).                     |
 | [`get_free_news`](#get_free_news)                     | Get free market news from RSS feeds (CoinDesk, Cointelegraph).              |
@@ -1101,7 +1101,7 @@ Use Case:
 1. Researcher agent analyzes market → posts insight
 2. Executor agent queries insights → makes trade decision
 3. Trades can reference insight_id for audit trail
-```
+````
 
 ### `get_latest_insights`
 
