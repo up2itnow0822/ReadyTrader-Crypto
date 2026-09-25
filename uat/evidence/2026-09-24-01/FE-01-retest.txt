@@ -11,15 +11,15 @@ PW_PYTHON_PATH=<unset>
 [1A[2K[2m[WebServer] [22mKilled
 [1A[2K  1) [chromium] › e2e/z-resilience.spec.ts:12:7 › API resilience › unreachable API shows the banner + Mode unknown, and recovers once it restarts 
     Error: spawn /home/claude/work/venv-rt/bin/python3 ENOENT
-    attachment #1: screenshot (image/png) ───────────────────────────────────────────────────────────
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
     test-results/z-resilience-API-resilienc-ef5b7-d-recovers-once-it-restarts-chromium/test-failed-1.png
-    ──────────────────────────────────────────────────────────────────────────────────────────
+    ────────────────────────────────────────────────────────────────────────────────────────────────
     Error Context: test-results/z-resilience-API-resilienc-ef5b7-d-recovers-once-it-restarts-chromium/error-context.md
-    attachment #3: trace (application/zip) ────────────────────────────────────────────────────────
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
     test-results/z-resilience-API-resilienc-ef5b7-d-recovers-once-it-restarts-chromium/trace.zip
     Usage:
         npx playwright show-trace test-results/z-resilience-API-resilienc-ef5b7-d-recovers-once-it-restarts-chromium/trace.zip
-    ──────────────────────────────────────────────────────────────────────────────────────────
+    ────────────────────────────────────────────────────────────────────────────────────────────────
 [1A[2K  1 failed
     [chromium] › e2e/z-resilience.spec.ts:12:7 › API resilience › unreachable API shows the banner + Mode unknown, and recovers once it restarts 
   17 passed (52.7s)
