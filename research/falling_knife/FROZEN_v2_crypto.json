@@ -1,0 +1,17 @@
+{
+  "frozen_at_utc": "2026-09-24T05:56:37Z",
+  "what": "Second, independent attempt at a crypto Falling Knife rule, after the v1 ATR-normalised rule (FROZEN.json) failed its held-out test. Close-based, the same form as the shipped equity and FX rules.",
+  "selection_rule": "Unchanged, dev split (< 2022-01-01) only: highest lift in P(further 20% drop within 10 days) among configs firing on 0.3%-1.0% of coin-days; ties within 0.2 lift -> simplest. Candidates 15%..50% in 5% steps; in range: 25% (0.66%, lift 2.51) and 30% (0.38%, lift 3.22).",
+  "disclosure": "The 2022+ held-out years were already used to reject v1, so they are not pristine. The decisive test is 30 coins never downloaded before this file was written (data/crypto_fresh).",
+  "pass_criterion": "Ship only if, on the fresh coins, lift >= 2.0 over all years AND lift >= 1.5 on the held-out years, with fire rate between 0.1% and 2%. Otherwise report the failure and ship nothing for crypto.",
+  "crypto": {
+    "K": 3,
+    "dmin": 0.3,
+    "measure": "close",
+    "still": "lowest",
+    "H": 10,
+    "severe": 0.2,
+    "split": "2022-01-01",
+    "dev_result": "fire 0.38%, lift 3.22, P(severe) 66.7% vs 20.7%, median 10-day return +8.4% vs +1.0%"
+  }
+}
