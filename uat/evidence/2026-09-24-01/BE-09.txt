@@ -1,0 +1,12 @@
+$ cd /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/cr_base && /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/.venv/bin/python /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_propose_policy.py
+# at 2026-09-24T17:46:59+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+DOGE/USDT (not allowlisted) -> {"data": {"approval_required": true, "confirm_token": "e399d4a4c3c2b8ffefa6b0e21c5d1608", "expires_at": 1790272142.6471775, "kind": "place_cex_order", "request_id": "3bb68d3d93e3f60a4c3d6a2b"}, "ok": true}
+BTC/USDT 5.0 (over MAX_CEX_ORDER_AMOUNT=0.01) -> {"data": {"approval_required": true, "confirm_token": "b157a7aba39cdcddefce4b2333594a5d", "expires_at": 1790272142.6511939, "kind": "place_cex_order", "request_id": "b35c67ed1cb24dc5f1e097b1"}, "ok": true}
+pending proposals an operator would be asked to approve: 2
+
+--- stderr ---
+<string>:83: UserWarning: SIGNER_POLICY_ENABLED=false: No signer-side guardrails. Enable for defense-in-depth in live trading.
+
+
+exit=0

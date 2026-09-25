@@ -1,0 +1,48 @@
+{
+  "captured_at": "2026-09-24T18:02:28+0000",
+  "request": {
+    "method": "POST",
+    "url": "http://127.0.0.1:8190/api/approve-trade",
+    "headers": {
+      "Authorization": "<redacted>",
+      "Content-Type": "application/json"
+    },
+    "body": "{}"
+  },
+  "response": {
+    "status": 422,
+    "headers": {
+      "date": "Thu, 24 Sep 2026 18:02:27 GMT",
+      "server": "uvicorn",
+      "content-length": "171",
+      "content-type": "application/json",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "DENY",
+      "x-xss-protection": "1; mode=block",
+      "referrer-policy": "strict-origin-when-cross-origin",
+      "Connection": "close"
+    },
+    "body": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"request_id\"],\"msg\":\"Field required\",\"input\":{}},{\"type\":\"missing\",\"loc\":[\"body\",\"approve\"],\"msg\":\"Field required\",\"input\":{}}]}",
+    "elapsed_ms": 10,
+    "error": null
+  },
+  "expectations": [
+    {
+      "expectation": "status == 422",
+      "passed": true,
+      "detail": "got 422"
+    },
+    {
+      "expectation": "body does not contain 'Traceback'",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "expectation": "body does not contain '.py'",
+      "passed": true,
+      "detail": ""
+    }
+  ],
+  "ok": true,
+  "reason": ""
+}
