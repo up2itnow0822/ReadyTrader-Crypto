@@ -114,7 +114,7 @@ So the rule is precise and only moderately sensitive: about half of crashes are 
 `validate_trade_risk` reports what the rule worked from in its `sentiment.status` field:
 
 | status              | meaning                                                                     | score    |
-| :------------------ | :--------------------------------------------------------------------------- | :------- |
+| :------------------ | :-------------------------------------------------------------------------- | :------- |
 | `ok`                | At least 5 texts were scored within the last hour (the score may be `0.0`). | measured |
 | `no_data`           | `get_social_sentiment` has not been called for this asset in the last hour. | `0.0`    |
 | `not_configured`    | No X or Reddit credentials are set.                                         | `0.0`    |
