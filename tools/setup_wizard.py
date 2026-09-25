@@ -32,7 +32,7 @@ def _true(name: str, default: bool) -> bool:
 
 
 def print_banner():
-    print(f"\n{BOLD}ReadyTrader-Crypto Setup Wizard \U0001f6e1️{RESET}")
+    print(f"\n{BOLD}ReadyTrader-Crypto Setup Wizard 🛡️{RESET}")
     print("-----------------------------------")
     print("This script will help you prepare your environment for AI-agentic trading.\n")
 

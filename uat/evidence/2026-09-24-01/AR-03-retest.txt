@@ -7,4 +7,7 @@ $ grep -n 'Daily loss / max drawdown' -A6 docs/TOOLS.md
 75-  trade, a deposit or the first check of a day records one), else its first value today: a move
 76-  after a day's last record counts toward the next day's loss too, which errs toward halting. Live accounts have no loss history here, so these two rules do not run on live
 77-  orders; the order's `risk.inactive_rules` says so.
-78-  Falling Knife (sentiment only — there is no price-based Falling Knife rule for crypto;
+78-- Falling Knife (sentiment only — there is no price-based Falling Knife rule for crypto;
+
+
+exit=0
