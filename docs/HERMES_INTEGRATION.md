@@ -33,7 +33,6 @@ LIVE_TRADING_ENABLED=false
 TRADING_HALTED=true
 DEV_MODE=false
 EXECUTION_MODE=cex
-RISK_PROFILE=conservative
 EXECUTION_APPROVAL_MODE=approve_each
 ALLOW_EXCHANGES=binance,kraken,coinbase
 ALLOW_CEX_SYMBOLS=btc/usdt,btc/usd
@@ -67,7 +66,6 @@ mcp_servers:
       TRADING_HALTED: "true"
       DEV_MODE: "false"
       EXECUTION_MODE: "cex"
-      RISK_PROFILE: "conservative"
       EXECUTION_APPROVAL_MODE: "approve_each"
       ALLOW_EXCHANGES: "binance,kraken,coinbase"
       ALLOW_CEX_SYMBOLS: "btc/usdt,btc/usd"
@@ -114,21 +112,21 @@ classes, and refuses live trading without explicit operator authorization.
 
 ReadyTrader registers 29 tools. Paper-safe without credentials:
 
-| Tool                                                                                         | Use                                                         |
-| -------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `get_crypto_price`, `fetch_ohlcv`                                                            | BTC market data                                             |
-| `get_sentiment`, `get_news`, `get_social_sentiment`, `get_financial_news`, `get_free_news`   | Read-only context (provider keys optional)                  |
-| `get_market_regime`, `run_backtest_simulation`, `post_market_insight`, `get_latest_insights` | Analysis and shared insights                                |
-| `deposit_paper_funds`                                                                        | Seed the paper wallet (response includes balance)           |
-| `validate_trade_risk`                                                                        | Risk Guardian check                                         |
-| `place_cex_order`                                                                            | Paper order when `PAPER_MODE=true` — pass an explicit price |
-| `get_cex_capabilities`                                                                       | Public exchange metadata, no auth                           |
+| Tool                                                                                         | Use                                                            |
+| --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `get_crypto_price`, `fetch_ohlcv`                                                            | BTC market data                                                |
+| `get_sentiment`, `get_news`, `get_social_sentiment`, `get_financial_news`, `get_free_news`   | Read-only context (provider keys optional)                     |
+| `get_market_regime`, `run_backtest_simulation`, `post_market_insight`, `get_latest_insights` | Analysis and shared insights                                   |
+| `deposit_paper_funds`                                                                        | Seed the paper wallet (response includes balance)              |
+| `validate_trade_risk`                                                                        | Risk Guardian check                                            |
+| `place_cex_order`                                                                            | Paper order at the market price (a limit only when marketable) |
+| `get_cex_capabilities`                                                                       | Public exchange metadata, no auth                              |
 
-Not usable in the paper profile — authenticated exchange calls even when `PAPER_MODE=true`:
-`get_cex_balance`, `get_cex_order`, `list_cex_open_orders`, `list_cex_orders`,
-`get_cex_my_trades`, `wait_for_cex_order`, `cancel_cex_order`, `cancel_all_cex_orders`,
-`replace_cex_order`. Return `paper_mode_not_supported`: `start_cex_private_ws`,
-`stop_cex_private_ws`, `list_cex_private_updates`, `transfer_eth`. Out of scope for a
+`get_cex_balance` shows the paper wallet in paper mode. The live-account tools answer
+`paper_mode_not_supported` when `PAPER_MODE=true` (paper orders fill at once and never rest on an
+exchange): `get_cex_order`, `list_cex_open_orders`, `list_cex_orders`, `get_cex_my_trades`,
+`wait_for_cex_order`, `cancel_cex_order`, `cancel_all_cex_orders`, `replace_cex_order`,
+`start_cex_private_ws`, `stop_cex_private_ws`, `list_cex_private_updates`, `transfer_eth`. Out of scope for a
 BTC/CEX profile: `swap_tokens` (DEX; its paper branch does route to the paper engine).
 
 Note that `ALLOW_EXCHANGES`, `ALLOW_CEX_SYMBOLS`, and `ALLOW_CEX_MARKET_TYPES` are enforced by
