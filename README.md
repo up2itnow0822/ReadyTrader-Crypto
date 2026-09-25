@@ -176,7 +176,7 @@ Create a `.env` file or pass environment variables. Start from `env.example` (co
 <summary><b>🛠️ Ops, Observability & Limits</b></summary>
 
 | Variable                     | Default        | Description                                                                                                                              |
-| :--------------------------- | :------------- | :------------------------------------------------------------------------------------------------------------------------------------- |
+| :--------------------------- | :------------- | :--------------------------------------------------------------------------------------------------------------------------------------- |
 | `RATE_LIMIT_DEFAULT_PER_MIN` | `120`          | Default API rate limit.                                                                                                                  |
 | `RISK_PROFILE`               | `conservative` | Reserved, not applied: the Risk Guardian's limits are fixed (5% position, 5% daily loss, 10% drawdown, -0.5 sentiment) whatever it says. |
 | `ALLOW_CHAINS`               | `ethereum...`  | Allowlists for EVM networks.                                                                                                             |
@@ -331,7 +331,7 @@ claude mcp add readytrader-crypto \
 Three copy-paste env profiles. Pick one; do not mix them.
 
 | Profile                     | Env                                                                                                                                                                                           | Use when                                                                                                                                                                                                                              |
-| :-------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| :-------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Market-data only**        | `PAPER_MODE=true`, `LIVE_TRADING_ENABLED=false`, `TRADING_HALTED=true`, `SIGNER_TYPE=null` (no `deposit_paper_funds` needed)                                                                  | You only want price/news/sentiment/backtest tools — no wallet, no orders.                                                                                                                                                             |
 | **Paper trading (default)** | `PAPER_MODE=true`, `LIVE_TRADING_ENABLED=false`, `TRADING_HALTED=true`, `EXECUTION_MODE=cex`, `SIGNER_TYPE=null`                                                                              | Everyday development and the quickstart above — full paper order lifecycle, zero real risk.                                                                                                                                           |
 | **Live-but-halted**         | `PAPER_MODE=false`, `LIVE_TRADING_ENABLED=true`, `TRADING_HALTED=true`, `EXECUTION_MODE=cex`, allowlists set, `SIGNER_TYPE` set to `remote`/`keystore`/`cb_mpc_2pc` (never `env_private_key`) | What you set up and validate **before ever** flipping `TRADING_HALTED=false`. Follow `docs/LIVE_TESTING_PROTOCOL.md` and `docs/OPS_BTC_PRODUCTION.md` — there is no one-step "go live" recipe, and this README does not give you one. |
@@ -487,8 +487,8 @@ catalog, with parameters, examples and error codes, is `docs/TOOLS.md` (curated;
 the server does not register, or misses one it does). `python tools/generate_tool_docs.py` prints
 the live registry (names, signatures and the descriptions agents see). A representative slice:
 
-| Category         | Tool                      | Description                                                    |
-| :---------------- | :------------------------ | :------------------------------------------------------------ |
+| Category         | Tool                      | Description                                                   |
+| :--------------- | :------------------------ | :------------------------------------------------------------ |
 | **Market Data**  | `get_crypto_price`        | Live price from the market-data bus.                          |
 |                  | `fetch_ohlcv`             | Historical candles (numeric OHLCV) for research.              |
 |                  | `get_market_regime`       | Trend/chop detection (ADX-based).                             |
@@ -568,7 +568,7 @@ frontend with `npm ci`, then runs `make check`, `make security`, and
 only locally; the remaining scans run on a schedule or on release:
 
 | Check                | Command                                 | Purpose                                                          | Where it runs today                                                    |
-| :------------------- | :-------------------------------------- | :----------------------------------------------------------------| :--------------------------------------------------------------------- |
+| :------------------- | :-------------------------------------- | :--------------------------------------------------------------- | :--------------------------------------------------------------------- |
 | **Lint**             | `ruff check`                            | Code quality, unused imports, style                              | CI on every push/PR + local (`make check`)                             |
 | **Format**           | `ruff format`                           | Consistent code formatting                                       | CI on every push/PR + local (`make check`)                             |
 | **Tests**            | `pytest`                                | Unit + integration suite                                         | CI on every push/PR + local (`make check`)                             |
@@ -589,21 +589,21 @@ config block, but no Makefile target or workflow invokes it).
 These safety mechanisms are continuously verified:
 
 | Safeguard              | Threshold        | Behavior                                                        |
-| :---------------------- | :---------------- | :---------------------------------------------------------------|
+| :--------------------- | :--------------- | :-------------------------------------------------------------- |
 | **Kill Switch**        | `TRADING_HALTED` | Refuses every new live order; reads and cancels still work      |
 | **Max Drawdown**       | 10% from peak    | Blocks new exposure (paper account; deposits do not clear it)   |
 | **Daily Loss Limit**   | 5% daily loss    | Blocks new exposure today (paper account)                       |
-| **Position Sizing**    | 5% per trade     | Rejects oversized orders                                         |
+| **Position Sizing**    | 5% per trade     | Rejects oversized orders                                        |
 | **Falling Knife**      | -0.5 sentiment   | Blocks BUYs (no price rule for crypto: `docs/FALLING_KNIFE.md`) |
-| **Chain Allowlist**    | Configurable     | Only approved networks                                           |
-| **Token Allowlist**    | Configurable     | Only approved assets                                              |
-| **Exchange Allowlist** | Configurable     | Only approved venues                                              |
-| **Signing Limits**     | Configurable     | Max value, gas, data size                                        |
+| **Chain Allowlist**    | Configurable     | Only approved networks                                          |
+| **Token Allowlist**    | Configurable     | Only approved assets                                            |
+| **Exchange Allowlist** | Configurable     | Only approved venues                                            |
+| **Signing Limits**     | Configurable     | Max value, gas, data size                                       |
 
 ### GitHub Actions Workflows
 
 | Workflow            | File                                    | Trigger          | Purpose                                                                           |
-| :-------------------- | :----------------------------------------| :------------------| :----------------------------------------------------------------------------------|
+| :------------------ | :-------------------------------------- | :--------------- | :-------------------------------------------------------------------------------- |
 | **CI**              | `.github/workflows/ci.yml`              | Push/PR          | Locked-deps check, `make check`, `make security` (bandit, pip-audit, `npm audit`) |
 | **Live-Path Tests** | `.github/workflows/live-path-tests.yml` | Manual dispatch  | Exchange sandbox testing                                                          |
 | **Security Audit**  | `.github/workflows/security-audit.yml`  | Daily + manual   | pip-audit, bandit, trufflehog, trivy, CodeQL, SBOM                                |
