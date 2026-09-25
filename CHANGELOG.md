@@ -41,6 +41,12 @@ boundary. **No git tag or GitHub Release exists for 0.2.0 yet** (`git tag -l` an
 
 - **Public-release UAT, 2026-09-24** (`uat/UAT-LOG.md`, run `2026-09-24-01`):
 
+  - **Hermes guide synced with readytrader-crypto-hermes 1.2.0** (`docs/HERMES_INTEGRATION.md`,
+    found by that repo's UAT): paper market orders are placed without a price, `get_crypto_price`
+    gives the numeric `data.price`, the keyless news answer is `not_configured`, the Docker
+    alternative is a `docker run` entry that passes each paper flag into the container with `-e`
+    (the old `docker compose exec` wrapper ran with the compose env instead), and a paragraph says
+    what older revisions do.
   - **Cross-checked against the FOREX and Stocks reviews** (AR-01..AR-03): `true`/`false` sent
     where a tool takes a number is refused by MCP argument validation (all 18 numeric parameters
     took `true` as 1: `deposit_paper_funds(amount=true)` deposited 1). CORS now wraps every API
