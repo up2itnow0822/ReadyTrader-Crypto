@@ -81,11 +81,13 @@ file and the tests that enforce them.
   `setState` into the render body per React's "adjust state during render" pattern —
   not by disabling the rule.)
 - **`frontend/e2e/api_harness.py` is test tooling, not product code.** It seeds
-  proposals directly into the API process's own in-memory `ExecutionStore` because
-  proposals only exist in the process that created them (a backend limitation this
-  frontend cannot fix). It must never be imported by, or shipped with, the actual
-  Next.js app, and its `/__test/seed` route only exists on that harness process, never
-  on a real deployment.
+  proposals directly into the API process's own `ExecutionStore` (a real deployment
+  gets them from the MCP server through a shared `EXECUTION_SESSION_ID`). Seeded payloads
+  carry `"paper_mode": true`, because the API executes a proposal only in the mode it was
+  made in. It serves fixed market prices (`FIXED_PRICES`) instead of calling an exchange,
+  because paper orders fill at the market price and pass the Risk Guardian. It must never
+  be imported by, or shipped with, the actual Next.js app, and its `/__test/seed` route
+  only exists on that harness process, never on a real deployment.
 
 ## Work Guidance
 
@@ -123,7 +125,9 @@ Run from `frontend/`:
   which runs it automatically via the `pree2e` script).
 - `npm run e2e` — Playwright end-to-end tests. Starts two local `webServer`s per
   `playwright.config.ts`: the Python test harness (`e2e/api_harness.py`, paper mode,
-  temp DB) and `next start`. Deliberately `workers: 1` / `fullyParallel: false` —
+  temp DB, run with the repo's `.venv/bin/python` when it exists, else `python3`;
+  `PW_PYTHON_PATH` overrides) and `next start`. The HTML report goes to
+  `frontend/playwright-report/` (`PW_REPORT_DIR` overrides). Deliberately `workers: 1` / `fullyParallel: false` —
   one spec kills and restarts the harness process to test reconnection, and several
   specs assert exact request counts.
 - Backend contract check after any API-facing change: from the repo root,
