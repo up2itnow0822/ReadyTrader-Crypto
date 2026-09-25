@@ -9,5 +9,8 @@ $ grep -nE 'All checks passed|already formatted|TOTAL|passed,|No known vuln|PASS
 217:Documentation verification PASSED
 43:		High: 0
 48:		High: 0
-52:No known vulnerabilities found
+51:No known vulnerabilities found
 53:found 0 vulnerabilities
+
+
+exit=0
