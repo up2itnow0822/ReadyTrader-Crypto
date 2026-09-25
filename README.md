@@ -150,13 +150,13 @@ Create a `.env` file or pass environment variables. Start from `env.example` (co
 <details>
 <summary><b>🔑 Exchange & Signing Credentials</b></summary>
 
-| Variable              | Description                                                      |
-| :-------------------- | :----------------------------------------------------------------|
-| `PRIVATE_KEY`         | Hex private key for signing (if `SIGNER_TYPE=env_private_key`).  |
-| `CEX_API_KEY`         | API Key for your primary exchange.                                |
-| `CEX_API_SECRET`      | API Secret for your primary exchange.                             |
-| `SIGNER_TYPE`         | `env_private_key`, `keystore`, or `remote`.                       |
-| `CEX_BINANCE_API_KEY` | Exchange-specific keys (e.g., `CEX_BINANCE_...`).                 |
+| Variable              | Description                                                     |
+| :-------------------- | :-------------------------------------------------------------- |
+| `PRIVATE_KEY`         | Hex private key for signing (if `SIGNER_TYPE=env_private_key`). |
+| `CEX_API_KEY`         | API Key for your primary exchange.                              |
+| `CEX_API_SECRET`      | API Secret for your primary exchange.                           |
+| `SIGNER_TYPE`         | `env_private_key`, `keystore`, or `remote`.                     |
+| `CEX_BINANCE_API_KEY` | Exchange-specific keys (e.g., `CEX_BINANCE_...`).               |
 
 </details>
 
@@ -164,7 +164,7 @@ Create a `.env` file or pass environment variables. Start from `env.example` (co
 <summary><b>📈 Market Data & CCXT Tuning</b></summary>
 
 | Variable               | Default      | Description                                        |
-| :---------------------- | :----------- | :--------------------------------------------------|
+| :--------------------- | :----------- | :------------------------------------------------- |
 | `MARKETDATA_EXCHANGES` | `binance...` | Comma-separated list of exchanges to use for data. |
 | `TICKER_CACHE_TTL_SEC` | `5`          | How long to cache price data.                      |
 | `DEX_SLIPPAGE_PCT`     | `1.0`        | Default slippage for DEX swaps.                    |
@@ -176,7 +176,7 @@ Create a `.env` file or pass environment variables. Start from `env.example` (co
 <summary><b>🛠️ Ops, Observability & Limits</b></summary>
 
 | Variable                     | Default        | Description                                                                                                                              |
-| :---------------------------- | :------------- | :------------------------------------------------------------------------------------------------------------------------------------------|
+| :--------------------------- | :------------- | :------------------------------------------------------------------------------------------------------------------------------------- |
 | `RATE_LIMIT_DEFAULT_PER_MIN` | `120`          | Default API rate limit.                                                                                                                  |
 | `RISK_PROFILE`               | `conservative` | Reserved, not applied: the Risk Guardian's limits are fixed (5% position, 5% daily loss, 10% drawdown, -0.5 sentiment) whatever it says. |
 | `ALLOW_CHAINS`               | `ethereum...`  | Allowlists for EVM networks.                                                                                                             |
@@ -331,7 +331,7 @@ claude mcp add readytrader-crypto \
 Three copy-paste env profiles. Pick one; do not mix them.
 
 | Profile                     | Env                                                                                                                                                                                           | Use when                                                                                                                                                                                                                              |
-| :-------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| :-------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Market-data only**        | `PAPER_MODE=true`, `LIVE_TRADING_ENABLED=false`, `TRADING_HALTED=true`, `SIGNER_TYPE=null` (no `deposit_paper_funds` needed)                                                                  | You only want price/news/sentiment/backtest tools — no wallet, no orders.                                                                                                                                                             |
 | **Paper trading (default)** | `PAPER_MODE=true`, `LIVE_TRADING_ENABLED=false`, `TRADING_HALTED=true`, `EXECUTION_MODE=cex`, `SIGNER_TYPE=null`                                                                              | Everyday development and the quickstart above — full paper order lifecycle, zero real risk.                                                                                                                                           |
 | **Live-but-halted**         | `PAPER_MODE=false`, `LIVE_TRADING_ENABLED=true`, `TRADING_HALTED=true`, `EXECUTION_MODE=cex`, allowlists set, `SIGNER_TYPE` set to `remote`/`keystore`/`cb_mpc_2pc` (never `env_private_key`) | What you set up and validate **before ever** flipping `TRADING_HALTED=false`. Follow `docs/LIVE_TESTING_PROTOCOL.md` and `docs/OPS_BTC_PRODUCTION.md` — there is no one-step "go live" recipe, and this README does not give you one. |
@@ -357,7 +357,7 @@ Paste into your agent once connected (paper mode). Also see the full
 ### Troubleshooting
 
 | Symptom                                                                                       | Likely cause                                                                                                                                                     | Fix                                                                                                                                                                                                                                                              |
-| :-------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| :-------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Server doesn't appear in the client                                                           | Relative paths, or a `python` that lacks the deps                                                                                                                | Use absolute paths for both `command` and the `server.py` arg, and point at the venv's `python` (`.venv/bin/python`), not a bare `python`/`python3`.                                                                                                             |
 | `paper_price_required`                                                                        | No market price for the symbol: paper orders and swaps fill at the market price                                                                                  | Call `get_crypto_price` to confirm data is flowing for that symbol (see "Exchange/network errors" below).                                                                                                                                                        |
 | `limit_not_marketable`                                                                        | A paper limit BUY below the market (or SELL above it): it would rest on the book, and paper mode does not simulate resting orders                                | Use a market order, or a limit at or through the market.                                                                                                                                                                                                         |
@@ -487,19 +487,19 @@ catalog, with parameters, examples and error codes, is `docs/TOOLS.md` (curated;
 the server does not register, or misses one it does). `python tools/generate_tool_docs.py` prints
 the live registry (names, signatures and the descriptions agents see). A representative slice:
 
-| Category         | Tool                      | Description                                                   |
-| :----------------| :--------------------------| :----------------------------------------------------------- |
+| Category         | Tool                      | Description                                                    |
+| :---------------- | :------------------------ | :------------------------------------------------------------ |
 | **Market Data**  | `get_crypto_price`        | Live price from the market-data bus.                          |
 |                  | `fetch_ohlcv`             | Historical candles (numeric OHLCV) for research.              |
-|                  | `get_market_regime`       | Trend/chop detection (ADX-based).                              |
-| **Intelligence** | `get_sentiment`           | Crypto Fear & Greed Index.                                     |
-|                  | `get_social_sentiment`    | X/Reddit text scored -1..+1; feeds the Falling Knife check.    |
-|                  | `get_financial_news`      | NewsAPI headlines for a symbol (needs a NewsAPI key).          |
-| **Trading**      | `swap_tokens`             | DEX swap (paper or live).                                      |
-|                  | `place_cex_order`         | CEX order — paper mode by default, no credentials required.    |
-|                  | `get_cex_balance`         | Account balance (paper wallet, or the real exchange balance).  |
-| **Risk & Paper** | `deposit_paper_funds`     | Seed the paper wallet.                                         |
-|                  | `validate_trade_risk`     | Ask the Risk Guardian first (the same rules run on orders).    |
+|                  | `get_market_regime`       | Trend/chop detection (ADX-based).                             |
+| **Intelligence** | `get_sentiment`           | Crypto Fear & Greed Index.                                    |
+|                  | `get_social_sentiment`    | X/Reddit text scored -1..+1; feeds the Falling Knife check.   |
+|                  | `get_financial_news`      | NewsAPI headlines for a symbol (needs a NewsAPI key).         |
+| **Trading**      | `swap_tokens`             | DEX swap (paper or live).                                     |
+|                  | `place_cex_order`         | CEX order — paper mode by default, no credentials required.   |
+|                  | `get_cex_balance`         | Account balance (paper wallet, or the real exchange balance). |
+| **Risk & Paper** | `deposit_paper_funds`     | Seed the paper wallet.                                        |
+|                  | `validate_trade_risk`     | Ask the Risk Guardian first (the same rules run on orders).   |
 | **Research**     | `run_backtest_simulation` | Run a strategy through the isolated sandbox against history.  |
 
 ______________________________________________________________________
@@ -631,7 +631,7 @@ ruff check . && ruff format --check . && bandit -q -r . -c bandit.yaml
 ### Security Documentation
 
 | Document                  | Purpose                        |
-| :--------------------------| :--------------------------------|
+| :------------------------ | :----------------------------- |
 | `SECURITY.md`             | Vulnerability reporting policy |
 | `docs/THREAT_MODEL.md`    | Live trading threat analysis   |
 | `docs/CUSTODY.md`         | Key management & rotation      |
