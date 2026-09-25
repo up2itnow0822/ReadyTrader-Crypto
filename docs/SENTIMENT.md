@@ -5,7 +5,7 @@ ReadyTrader-Crypto empowers AI agents with both "Hands" (execution) and "Eyes" (
 ## 🌟 Overview of Sentiment Sources
 
 | Source                 | Level     | Cost           | Required Credentials | Feature                                               |
-| :---------------------- | :--------- | :-------------- | :--------------------- | :------------------------------------------------------|
+| :--------------------- | :-------- | :------------- | :------------------- | :---------------------------------------------------- |
 | **RSS Market News**    | Basic     | Free           | None                 | General market awareness from CoinDesk/Cointelegraph. |
 | **Fear & Greed Index** | Basic     | Free           | None                 | Overall market sentiment (Alternative.me).            |
 | **CryptoPanic**        | Pro       | Free/Paid      | API Key              | Aggregated hot news across the industry.              |
@@ -114,7 +114,7 @@ So the rule is precise and only moderately sensitive: about half of crashes are 
 `validate_trade_risk` reports what the rule worked from in its `sentiment.status` field:
 
 | status              | meaning                                                                     | score    |
-| :------------------- | :---------------------------------------------------------------------------| :-------- |
+| :------------------ | :--------------------------------------------------------------------------- | :------- |
 | `ok`                | At least 5 texts were scored within the last hour (the score may be `0.0`). | measured |
 | `no_data`           | `get_social_sentiment` has not been called for this asset in the last hour. | `0.0`    |
 | `not_configured`    | No X or Reddit credentials are set.                                         | `0.0`    |

@@ -3,7 +3,7 @@
 If you are just getting started and seeing errors, check these first:
 
 | Issue             | Quick Fix                                                                 | Reference                                |
-| :----------------- | :--------------------------------------------------------------------------| :------------------------------------------|
+| :---------------- | :------------------------------------------------------------------------ | :--------------------------------------- |
 | **Missing .env**  | Run `python tools/setup_wizard.py` to generate one.                       | [Setup Wizard](../tools/setup_wizard.py) |
 | **Missing Keys**  | Check `docs/SENTIMENT.md` for links to get free API keys.                 | [Sentiment Guide](SENTIMENT.md)          |
 | **Blocked Trade** | Read the error `code`; `risk_blocked` carries the Risk Guardian's reason. | [Risk](#risk-guardian)                   |
@@ -135,7 +135,7 @@ No MCP tool raises these; they only appear in HTTP responses. See
 `docs/ARCHITECTURE.md#approval-gate` for the full approval flow.
 
 | Code       | HTTP status | Meaning                                                                                                                                                                                     | Fix                                                                                         |
-| :---------- | :------------| :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------- |
+| :--------- | :---------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------ |
 | `AUTH_604` | 403         | Caller may not approve/reject this proposal (no admin session and no/wrong `confirm_token`).                                                                                                | Sign in as an admin, or supply the proposal's `confirm_token`.                              |
 | `EXEC_308` | 409         | Proposal was already executed.                                                                                                                                                              | Nothing further happens; propose a new trade if needed.                                     |
 | `EXEC_309` | 404         | Proposal does not exist **in this server's proposal session**.                                                                                                                              | Start the MCP and API servers with the same `EXECUTION_DB_PATH` and `EXECUTION_SESSION_ID`. |
