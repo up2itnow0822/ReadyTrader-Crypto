@@ -78,7 +78,7 @@ Default section order:
 ## User Preferences
 
 - Fail closed for production: when `DEV_MODE=false`, API auth required (including WebSocket `/ws` JWT), CORS must not be `*`, `TRADING_HALTED` defaults true; keep `.env.live` / `.env.*.local` gitignored
-- `TRADING_HALTED` refuses new live orders, swaps and transfers and private streams; account reads and cancels (`get_cex_*`, `list_cex_*`, `cancel_*`, `wait_for_cex_order`) pass `allowed_while_halted=True` so an operator can always see and cancel resting orders
+- `TRADING_HALTED` refuses new live orders, swaps, transfers and private streams; account reads and cancels (`get_cex_*`, `list_cex_*`, `cancel_*`, `wait_for_cex_order`) pass `allowed_while_halted=True` so an operator can always see and cancel resting orders
 - Never use `SIGNER_TYPE=env_private_key` when `PAPER_MODE=false` or `LIVE_TRADING_ENABLED=true`
 - Hermes integration is stdio MCP + skill — do not grow core Hermes tools for ReadyTrader
 - Live dust trades are out of scope until a dedicated Phase 4 UAT
@@ -143,7 +143,7 @@ Default section order:
 ## Child DOX Index
 
 | Path                                             | Owns                                                                                         |
-| ------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------- |
 | [uat/AGENTS.md](uat/AGENTS.md)                   | The UAT reporting log, ledger and evidence                                                   |
 | [signing/AGENTS.md](signing/AGENTS.md)           | Signer backends, policy wrapper, live-key custody rules                                      |
 | [sentinel/AGENTS.md](sentinel/AGENTS.md)         | Dev/demo remote-signer reference service: Bearer-token auth, fail-closed posture             |
