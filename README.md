@@ -331,7 +331,7 @@ claude mcp add readytrader-crypto \
 Three copy-paste env profiles. Pick one; do not mix them.
 
 | Profile                     | Env                                                                                                                                                                                           | Use when                                                                                                                                                                                                                              |
-| :-------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| :-------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Market-data only**        | `PAPER_MODE=true`, `LIVE_TRADING_ENABLED=false`, `TRADING_HALTED=true`, `SIGNER_TYPE=null` (no `deposit_paper_funds` needed)                                                                  | You only want price/news/sentiment/backtest tools — no wallet, no orders.                                                                                                                                                             |
 | **Paper trading (default)** | `PAPER_MODE=true`, `LIVE_TRADING_ENABLED=false`, `TRADING_HALTED=true`, `EXECUTION_MODE=cex`, `SIGNER_TYPE=null`                                                                              | Everyday development and the quickstart above — full paper order lifecycle, zero real risk.                                                                                                                                           |
 | **Live-but-halted**         | `PAPER_MODE=false`, `LIVE_TRADING_ENABLED=true`, `TRADING_HALTED=true`, `EXECUTION_MODE=cex`, allowlists set, `SIGNER_TYPE` set to `remote`/`keystore`/`cb_mpc_2pc` (never `env_private_key`) | What you set up and validate **before ever** flipping `TRADING_HALTED=false`. Follow `docs/LIVE_TESTING_PROTOCOL.md` and `docs/OPS_BTC_PRODUCTION.md` — there is no one-step "go live" recipe, and this README does not give you one. |
@@ -357,7 +357,7 @@ Paste into your agent once connected (paper mode). Also see the full
 ### Troubleshooting
 
 | Symptom                                                                                       | Likely cause                                                                                                                                                     | Fix                                                                                                                                                                                                                                                              |
-| :-------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| :-------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Server doesn't appear in the client                                                           | Relative paths, or a `python` that lacks the deps                                                                                                                | Use absolute paths for both `command` and the `server.py` arg, and point at the venv's `python` (`.venv/bin/python`), not a bare `python`/`python3`.                                                                                                             |
 | `paper_price_required`                                                                        | No market price for the symbol: paper orders and swaps fill at the market price                                                                                  | Call `get_crypto_price` to confirm data is flowing for that symbol (see "Exchange/network errors" below).                                                                                                                                                        |
 | `limit_not_marketable`                                                                        | A paper limit BUY below the market (or SELL above it): it would rest on the book, and paper mode does not simulate resting orders                                | Use a market order, or a limit at or through the market.                                                                                                                                                                                                         |
@@ -568,7 +568,7 @@ frontend with `npm ci`, then runs `make check`, `make security`, and
 only locally; the remaining scans run on a schedule or on release:
 
 | Check                | Command                                 | Purpose                                                          | Where it runs today                                                    |
-| :------------------- | :--------------------------------------- | :----------------------------------------------------------------- | :----------------------------------------------------------------------- |
+| :------------------- | :-------------------------------------- | :----------------------------------------------------------------- | :--------------------------------------------------------------------- |
 | **Lint**             | `ruff check`                            | Code quality, unused imports, style                              | CI on every push/PR + local (`make check`)                             |
 | **Format**           | `ruff format`                           | Consistent code formatting                                       | CI on every push/PR + local (`make check`)                             |
 | **Tests**            | `pytest`                                | Unit + integration suite                                         | CI on every push/PR + local (`make check`)                             |
@@ -589,7 +589,7 @@ config block, but no Makefile target or workflow invokes it).
 These safety mechanisms are continuously verified:
 
 | Safeguard              | Threshold        | Behavior                                                        |
-| :---------------------- | :----------------- | :----------------------------------------------------------------- |
+| :--------------------- | :--------------- | :-------------------------------------------------------------- |
 | **Kill Switch**        | `TRADING_HALTED` | Refuses every new live order; reads and cancels still work      |
 | **Max Drawdown**       | 10% from peak    | Blocks new exposure (paper account; deposits do not clear it)   |
 | **Daily Loss Limit**   | 5% daily loss    | Blocks new exposure today (paper account)                       |
@@ -603,7 +603,7 @@ These safety mechanisms are continuously verified:
 ### GitHub Actions Workflows
 
 | Workflow            | File                                    | Trigger          | Purpose                                                                           |
-| :------------------- | :---------------------------------------- | :----------------- | :----------------------------------------------------------------------------------- |
+| :------------------ | :-------------------------------------- | :--------------- | :--------------------------------------------------------------------------------- |
 | **CI**              | `.github/workflows/ci.yml`              | Push/PR          | Locked-deps check, `make check`, `make security` (bandit, pip-audit, `npm audit`) |
 | **Live-Path Tests** | `.github/workflows/live-path-tests.yml` | Manual dispatch  | Exchange sandbox testing                                                          |
 | **Security Audit**  | `.github/workflows/security-audit.yml`  | Daily + manual   | pip-audit, bandit, trufflehog, trivy, CodeQL, SBOM                                |
@@ -631,7 +631,7 @@ ruff check . && ruff format --check . && bandit -q -r . -c bandit.yaml
 ### Security Documentation
 
 | Document                  | Purpose                        |
-| :------------------------- | :-------------------------------- |
+| :------------------------ | :----------------------------- |
 | `SECURITY.md`             | Vulnerability reporting policy |
 | `docs/THREAT_MODEL.md`    | Live trading threat analysis   |
 | `docs/CUSTODY.md`         | Key management & rotation      |
