@@ -58,6 +58,15 @@ def get_web3(chain: str) -> Web3:
 ERC20_MIN_ABI = [
     {
         "constant": True,
+        "inputs": [{"name": "owner", "type": "address"}],
+        "name": "balanceOf",
+        "outputs": [{"name": "", "type": "uint256"}],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function",
+    },
+    {
+        "constant": True,
         "inputs": [],
         "name": "decimals",
         "outputs": [{"name": "", "type": "uint8"}],
