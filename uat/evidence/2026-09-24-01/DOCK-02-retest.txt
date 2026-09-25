@@ -1,1 +1,17 @@
-CALTEST_──────────_END
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_docker_nested.sh
+# at 2026-09-24T19:40:47+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+canaries placed: .env.live deploy/.env.live configs/signer.pem configs/tls.key app/keystore-main.json
+sha256:8c98dfc92a45db924b4c55a4a4c7ecdb0e27eb9d4d6e81661b2a7c2bcbd36330
+--- inside the image:
+absent  /app/.env.live
+absent  /app/deploy/.env.live
+absent  /app/configs/signer.pem
+absent  /app/configs/tls.key
+absent  /app/app/keystore-main.json
+absent  /app/data/paper.db
+canary files found: 0
+(tree clean)
+
+
+exit=0

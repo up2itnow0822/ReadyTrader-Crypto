@@ -1,0 +1,27 @@
+$ REPO=/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto TAG=readytrader-crypto:uat-fixed bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_docker.sh
+# at 2026-09-24T18:12:39+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+context has: .env.live  .git: . .. COMMIT_EDITMSG FETCH_HEAD HEAD branches config description hooks index info logs objects packed-refs refs shallow worktrees  .venv: . .. b
+sha256:2f324fabf43faa061aac65a49ff27fd6879a4bd77bbbf30063663b4b3a91848a
+BUILD_EXIT=0
+--- inside the image:
+ls: cannot access '/app/.env.live': No such file or directory
+/app/data:
+total 8
+drwx------ 1 readytrader readytrader 4096 Sep 24 18:12 .
+drwxr-xr-x 1 root        root        4096 Sep 24 18:12 ..
+env TRADING_HALTED=true PAPER_MODE=true
+2.3M	/app
+ls: cannot access '/app/.venv': No such file or directory
+ls: cannot access '/app/.git': No such file or directory
+ls: cannot access '/app/uat': No such file or directory
+ls: cannot access '/app/frontend/node_modules': No such file or directory
+--- image size:
+225 MB
+--- MCP over stdio, README's docker config:
+TOOLS 29: cancel_all_cex_orders, cancel_cex_order, deposit_paper_funds, fetch_ohlcv, get_cex_balance, get_cex_capabilities, get_cex_my_trades, get_cex_order, get_crypto_price, get_financial_news, get_
+CALL deposit_paper_funds {"asset": "USDT", "amount": 100} -> { "data": { "amount": 100.0, "asset": "USDT", "balance": 100.0, "result": "Deposited 100.0 USDT. New Balance: 100.0" }, "ok": true }
+CALL get_cex_balance {} -> { "data": { "balance": { "USDT": 100.0 }, "exchange": "binance", "market_type": "spot", "mode": "paper" }, "ok": true }
+
+
+exit=0
