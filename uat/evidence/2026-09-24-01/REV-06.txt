@@ -1,0 +1,14 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev/run.sh probe_live_inactive; grep -n 'daily-loss and drawdown\|in both modes\|10% drawdown\|5% daily' README.md docs/TOOLS.md docs/ERRORS.md | head -8
+# at 2026-09-24T19:03:46+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+live pre_trade_check: {'allowed': True, 'equity_usd': 100000.0, 'inactive_rules': ['daily_loss_limit', 'max_drawdown']}
+live _account_state: {'equity_usd': 100000.0, 'position': 0.0, 'daily_pnl_pct': 0.0, 'drawdown_pct': 0.0, 'unmeasured': ['daily_loss_limit', 'max_drawdown']}
+README.md:77:- **🛡️ Risk Guardian**: Hard-coded safety layer on every order, paper and live: 5% position sizing, daily-loss and drawdown limits, and a sentiment Falling Knife rule ([why there is no price rule for crypto](docs/FALLING_KNIFE.md)).
+README.md:593:| **Daily Loss Limit**   | 5% daily loss    | Blocks new exposure today                                       |
+docs/TOOLS.md:72:- Daily loss / max drawdown: after a 5% daily loss or a 10% drawdown, only trades that reduce
+docs/TOOLS.md:252:The Risk Guardian (`docs/FALLING_KNIFE.md`) checks every order, in both modes, before it fills,
+docs/TOOLS.md:254:account's value (the paper account, or the exchange account in live mode); after a 5% daily loss
+docs/TOOLS.md:255:or 10% drawdown only orders that reduce exposure pass; a measured sentiment below -0.5 blocks
+
+
+exit=0

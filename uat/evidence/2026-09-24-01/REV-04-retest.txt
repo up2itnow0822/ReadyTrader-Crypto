@@ -1,0 +1,10 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev/run.sh probe_crossquote
+# at 2026-09-24T19:35:46+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+paper account: 100,000 USDT + 40 ETH (100,000 USD) = equity 200000.0 | 5% cap = 10,000 USD
+pre_trade_check SELL 40 ETH/BTC: {'allowed': False, 'exposure_added_units': 0.0, 'exposure_added_usd': 100000.0}
+place_cex_order SELL 40 ETH/BTC (market): ok= False risk_blocked
+after: BTC held = 0 = 0 USD = 0% of equity
+
+
+exit=0

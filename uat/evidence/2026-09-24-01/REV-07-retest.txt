@@ -1,0 +1,16 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev/docker_volume.sh; grep -n 'docker run' README.md; grep -n 'app/data' configs/*
+# at 2026-09-24T19:37:52+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+documented args (image tag swapped for the local build, --network host for this sandbox): ["run", "-i", "--network", "host", "--rm", "-v", "readytrader-crypto-data:/app/data", "-e", "PAPER_MODE=true", "readytrader-crypto:uat-fixed"]
+--- client session 1
+CALL deposit_paper_funds {"asset": "USDT", "amount": 100} -> { "data": { "amount": 100.0, "asset": "USDT", "balance": 100.0, "result": "Deposited 100.0 USDT. New Balance: 100.0" }, "ok": true }
+--- client session 2
+CALL deposit_paper_funds {"asset": "USDT", "amount": 100} -> { "data": { "amount": 100.0, "asset": "USDT", "balance": 200.0, "result": "Deposited 100.0 USDT. New Balance: 200.0" }, "ok": true }
+readytrader-crypto-data
+108:`docker run -i` (the configs below do exactly that). The image starts paper-only and halted. The
+116:docker run --rm -i -v readytrader-crypto-data:/app/data -e PAPER_MODE=true readytrader-crypto
+configs/agent_zero.mcp.yaml:9:      - "readytrader-crypto-data:/app/data"
+configs/claude_desktop.mcp-server-config.json:5:      "args": ["run", "-i", "--rm", "-v", "readytrader-crypto-data:/app/data", "-e", "PAPER_MODE=true", "readytrader-crypto"]
+
+
+exit=0

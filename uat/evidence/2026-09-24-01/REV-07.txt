@@ -1,0 +1,14 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev/docker_volume.sh; grep -n 'docker run' README.md configs/*
+# at 2026-09-24T19:08:08+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+documented args (image tag swapped for the local build, --network host for this sandbox): ["run", "-i", "--network", "host", "--rm", "-e", "PAPER_MODE=true", "readytrader-crypto:uat-fixed"]
+--- client session 1
+CALL deposit_paper_funds {"asset": "USDT", "amount": 100} -> { "data": { "amount": 100.0, "asset": "USDT", "balance": 100.0, "result": "Deposited 100.0 USDT. New Balance: 100.0" }, "ok": true }
+--- client session 2
+CALL deposit_paper_funds {"asset": "USDT", "amount": 100} -> { "data": { "amount": 100.0, "asset": "USDT", "balance": 100.0, "result": "Deposited 100.0 USDT. New Balance: 100.0" }, "ok": true }
+(no readytrader volume)
+README.md:108:`docker run -i` (the configs below do exactly that). The image starts paper-only and halted.
+README.md:114:docker run --rm -i -e PAPER_MODE=true readytrader-crypto
+
+
+exit=0
