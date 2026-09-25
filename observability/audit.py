@@ -10,6 +10,8 @@ import threading
 import time
 from typing import Any, Dict, Optional
 
+from storage_paths import data_path
+
 
 class AuditLog:
     """
@@ -173,7 +175,7 @@ class AuditLog:
         return output.getvalue()
 
     def _db_path(self) -> str:
-        default = "data/audit.db"
+        default = data_path("audit.db")
         p = (os.getenv("READYTRADER_AUDIT_DB_PATH") or os.getenv("AUDIT_DB_PATH") or default).strip()
         if not os.path.exists(os.path.dirname(p)):
             try:
