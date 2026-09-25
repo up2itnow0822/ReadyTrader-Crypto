@@ -1,0 +1,26 @@
+$ git log --oneline -1; /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/.venv/bin/python /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/bool_all_params.py /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto app.main 2>&1 | grep -v 'Warning\|warnings.warn\|authlib\|compatible before\|httpx2\|"event"'
+# at 2026-09-25T12:16:12+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+fdbdcd4 uat(review): AR-01..AR-03 classes from the FOREX/Stocks reviews, checked in Crypto
+refused  fetch_ohlcv.limit=true -> 1 validation error for call[fetch_ohlcv] limit Value error, a number is required, not true/false [type=value_e
+refused  deposit_paper_funds.amount=true -> 1 validation error for call[deposit_paper_funds] amount Value error, a number is required, not true/false [typ
+refused  validate_trade_risk.amount_usd=true -> 1 validation error for call[validate_trade_risk] amount_usd Value error, a number is required, not true/false 
+refused  validate_trade_risk.portfolio_value=true -> 1 validation error for call[validate_trade_risk] portfolio_value Value error, a number is required, not true/f
+refused  post_market_insight.confidence=true -> 1 validation error for call[post_market_insight] confidence Value error, a number is required, not true/false 
+refused  post_market_insight.ttl_seconds=true -> 1 validation error for call[post_market_insight] ttl_seconds Value error, a number is required, not true/false
+refused  swap_tokens.amount=true -> 1 validation error for call[swap_tokens] amount Value error, a number is required, not true/false [type=value_
+refused  transfer_eth.amount=true -> 1 validation error for call[transfer_eth] amount Value error, a number is required, not true/false [type=value
+refused  place_cex_order.amount=true -> 1 validation error for call[place_cex_order] amount Value error, a number is required, not true/false [type=va
+refused  place_cex_order.price=true -> 1 validation error for call[place_cex_order] price Value error, a number is required, not true/false [type=val
+refused  wait_for_cex_order.timeout_sec=true -> 1 validation error for call[wait_for_cex_order] timeout_sec Value error, a number is required, not true/false 
+refused  wait_for_cex_order.poll_interval_sec=true -> 1 validation error for call[wait_for_cex_order] poll_interval_sec Value error, a number is required, not true/
+refused  list_cex_open_orders.limit=true -> 1 validation error for call[list_cex_open_orders] limit Value error, a number is required, not true/false [typ
+refused  list_cex_orders.limit=true -> 1 validation error for call[list_cex_orders] limit Value error, a number is required, not true/false [type=val
+refused  get_cex_my_trades.limit=true -> 1 validation error for call[get_cex_my_trades] limit Value error, a number is required, not true/false [type=v
+refused  replace_cex_order.amount=true -> 1 validation error for call[replace_cex_order] amount Value error, a number is required, not true/false [type=
+refused  replace_cex_order.price=true -> 1 validation error for call[replace_cex_order] price Value error, a number is required, not true/false [type=v
+refused  list_cex_private_updates.limit=true -> 1 validation error for call[list_cex_private_updates] limit Value error, a number is required, not true/false 
+numeric parameters: 18; true refused: 18; true accepted: 0
+
+
+exit=0
