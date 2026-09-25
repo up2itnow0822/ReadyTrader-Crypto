@@ -4,11 +4,11 @@ $ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpa
 == process 1
 CALL deposit_paper_funds {"asset": "USDT", "amount": 10000} -> { "data": { "amount": 10000.0, "asset": "USDT", "balance": 10000.0, "result": "Deposited 10000.0 USDT. New Balance: 10000.0" }, "ok": true }
 CALL place_cex_order {"symbol": "BTC/USDT", "side": "buy", "amount": 0.004} -> { "data": { "fill": { "amount": 0.004, "price": 84051.4, "quote": "USDT", "side": "buy", "symbol": "BTC/USDT", "total_value": 336.2056 }, "mode": "paper", "result": "Paper Trade Exe
-CALL post_market_insight {"symbol": "BTC/USDT", "agent_id": "researcher", "signal": "bullish", "confidence": 0.7, "reasoning": "<b>ETF inflows</b> — ünïcode ✓", "ttl_seconds": 3600} -> { "data": { "insight": { "agent_id": "researcher", "con
+CALL post_market_insight {"symbol": "BTC/USDT", "agent_id": "researcher", "signal": "bullish", "confidence": 0.7, "reasoning": "<b>ETF inflows</b> \u2014 \u00fcn\u00efcode \u2713", "ttl_seconds": 3600} -> { "data": { "insight": { "agent_id": "researcher", "con
 CALL post_market_insight {"symbol": "BTC/USDT", "agent_id": "scalper", "signal": "bearish", "confidence": 0.4, "reasoning": "short-lived", "ttl_seconds": 4} -> { "data": { "insight": { "agent_id": "scalper", "confidence": 0.4, "expires_at_ms": 1790272875183, "
 == process 2 (restarted), 6 s later
 CALL get_cex_balance {} -> { "data": { "balance": { "BTC": 0.004, "USDT": 9663.7944 }, "exchange": "binance", "market_type": "spot", "mode": "paper" }, "ok": true }
-CALL get_latest_insights {"symbol": "btc/usdt"} -> { "data": { "insights": [ { "agent_id": "researcher", "confidence": 0.7, "expires_at_ms": 1790276471175, "insight_id": "e2358ddefd5e0485", "meta": {}, "reasoning": "<b>ETF inflows</b> — ünïcode ✓", "signal": "bullish", "symbol": "BTC/USDT", "timestamp_ms": 1790272871175 } ] }, "ok": true }
+CALL get_latest_insights {"symbol": "btc/usdt"} -> { "data": { "insights": [ { "agent_id": "researcher", "confidence": 0.7, "expires_at_ms": 1790276471175, "insight_id": "e2358ddefd5e0485", "meta": {}, "reasoning": "<b>ETF inflows</b> \u2014 \u00fcn\u00efcode \u2713", "signal": "bullish", "symbol": "BTC/USDT", "timestamp_ms": 1790272871175 } ] }, "ok": true }
 CALL get_latest_insights {"symbol": "ETH/USDT"} -> { "data": { "insights": [] }, "ok": true }
 == files in the data folder:
 insights.db
