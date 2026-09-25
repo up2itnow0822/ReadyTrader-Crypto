@@ -878,7 +878,7 @@ ______________________________________________________________________
 ## Research & Intelligence
 
 | Tool Name                                             | Description                                                                 |
-| :---------------------------------------------------- | :--------------------------------------------------------------------------- |
+| :---------------------------------------------------- | :-------------------------------------------------------------------------- |
 | [`get_social_sentiment`](#get_social_sentiment)       | Score recent X/Reddit text for a symbol and cache it for the Risk Guardian. |
 | [`get_financial_news`](#get_financial_news)           | Get NewsAPI headlines for a symbol (needs NEWSAPI_KEY).                     |
 | [`get_free_news`](#get_free_news)                     | Get free market news from RSS feeds (CoinDesk, Cointelegraph).              |
@@ -1162,7 +1162,7 @@ This is not a complete list — each tool's own section above has the exact code
 A few codes are shared by many tools:
 
 | Code                       | Description                                                                                                       |
-| :------------------------- | :------------------------------------------------------------------------------------------------------------------ |
+| :------------------------- | :---------------------------------------------------------------------------------------------------------------- |
 | `paper_mode_required`      | Operation requires PAPER_MODE=true                                                                                |
 | `paper_mode_not_supported` | Operation not available in paper mode (all the live-account CEX order/history tools)                              |
 | `risk_blocked`             | The Risk Guardian refused the order/swap; `error.data.risk` has the numbers (`docs/FALLING_KNIFE.md`)             |
