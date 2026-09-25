@@ -120,9 +120,8 @@ class TestCexLiveModeFlow:
             res = json.loads(place_cex_order("BTC/USDT", "buy", 0.01, order_type="market", price=50_000.0))
         assert res["ok"] is False
         mock_executor.assert_not_called()
-        # _json_internal_error logs the exception but never puts its text in the
-        # payload, so the generic "cex_error" code is the only stable signal here.
-        assert res["error"]["code"] == "cex_error"
+        # An operator switch saying no is reported as itself, not as an exchange failure.
+        assert res["error"]["code"] == "live_trading_disabled"
 
     def test_live_mode_halted_blocks_execution(self):
         """Test that TRADING_HALTED blocks live execution."""
@@ -152,14 +151,18 @@ class TestCexLiveModeFlow:
                 EXECUTION_MODE=ExecutionMode.CEX,
                 EXECUTION_APPROVAL_MODE=ApprovalMode.APPROVE_EACH,
             ),
-            patch.object(global_container.execution_store, "create", return_value=proposal),
+            patch.object(global_container.execution_store, "create", return_value=proposal) as create,
             patch("app.tools.execution.CexExecutor") as mock_executor,
+            # The Risk Guardian reads the exchange account before proposing: 100,000 USDT.
+            patch("app.tools.trading.CexExecutor") as account,
         ):
+            account.return_value.fetch_balance.return_value = {"total": {"USDT": 100_000.0}}
             res = json.loads(place_cex_order("BTC/USDT", "buy", 0.01, order_type="market", price=50_000.0))
         assert res["ok"] is True, res
         assert res["data"]["approval_required"] is True
         assert res["data"]["request_id"] == "req-1"
         mock_executor.assert_not_called()
+        assert create.call_args.kwargs["payload"]["paper_mode"] is False, "a proposal records the mode it was made in"
 
 
 class TestIdempotencyFlow:

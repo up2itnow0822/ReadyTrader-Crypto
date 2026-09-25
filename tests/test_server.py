@@ -51,7 +51,10 @@ def test_swap_tokens_real():
                     mock_w3 = MagicMock()
                     mock_w3.eth.get_transaction_count.return_value = 123
                     mock_get_web3.return_value = mock_w3
-                    with patch("app.tools.execution.send_raw_transaction", return_value="0xHASH"):
+                    with (
+                        patch("app.tools.execution.send_raw_transaction", return_value="0xHASH"),
+                        patch("app.tools.trading._dex_wallet_value_usd", return_value=100_000.0),
+                    ):
                         with patch("app.tools.execution.erc20_decimals", return_value=6):
                             # Run
                             res_str = swap_tokens(from_token="USDC", to_token="WETH", amount=1.0, chain="ethereum")
@@ -78,6 +81,11 @@ def test_place_cex_order_paper_mode():
     with patch.object(settings, "PAPER_MODE", True):
         with patch.object(settings, "EXECUTION_MODE", "auto"):
             with patch.object(global_container, "paper_engine") as mock_engine:
+                # The Risk Guardian reads the account first: a 100,000 USDT account with no history.
+                mock_engine.get_risk_metrics.return_value = {"daily_pnl_pct": 0.0, "drawdown_pct": 0.0}
+                mock_engine.get_portfolio_value_usd.return_value = 100_000.0
+                mock_engine.get_balances.return_value = {"USDT": 100_000.0}
+                mock_engine.get_balance.return_value = 0.0
                 # The tool reads the engine's structured result (execute_trade_result), not the prose string.
                 mock_engine.execute_trade_result.return_value = {
                     "ok": True,
