@@ -1,0 +1,4576 @@
+{
+  "run_id": "2026-09-24-01",
+  "project": "ReadyTrader-Crypto",
+  "branch": "uat/2026-09-24-crypto",
+  "base_ref": "main@67fd39c",
+  "started_at": "2026-09-24T16:18:30+00:00",
+  "updated_at": "2026-09-25T12:33:05+00:00",
+  "scope": "In: MCP server (stdio), FastAPI approval API, Next.js dashboard, CLI/examples, config, docs, registry manifest, the Falling Knife decision for crypto. Money paths paper only; no live orders, no dust trades (Phase 4 needs Bill's authorization); signer paths with test keys only.",
+  "surfaces": {},
+  "journeys": [
+    "As an operator evaluating ReadyTrader-Crypto, I install it from the README and connect it to my MCP client (Claude Desktop / Agent Zero / Hermes) so that my agent can research and paper-trade BTC",
+    "As an AI agent, I research BTC (price, candles, sentiment, news) and paper-trade it through the Risk Guardian so that I can practice with zero risk",
+    "As an operator running approve_each, I see each proposal on the dashboard and approve or reject it so that nothing executes without me",
+    "As an operator preparing live BTC, I configure the live profile (env.live.btc.example, signer, kill switch) and confirm it refuses anything unsafe so that a mistake cannot cost money",
+    "As a Hermes user, I install the readytrader-crypto skill and its stdio MCP server so that Hermes runs the paper BTC workflow",
+    "As a strategy developer, I backtest and stress-test a strategy in the sandbox so that I know how it behaves before it trades"
+  ],
+  "checks": [
+    {
+      "id": "PRE-01",
+      "created_at": "2026-09-24T16:24:43+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T16:24:43+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "preflight",
+      "title": "The repo's quality gate (make check / make security) passes",
+      "steps": "ruff check, ruff format --check, pytest (make test env), bandit, pip-audit, tools/verify_docs.py, mdformat --check",
+      "expected": "All green",
+      "observed": "ruff, format, bandit, pip-audit (no known vulnerabilities), verify_docs and mdformat pass; pytest: 635 passed, 9 skipped, 6 failed - all 6 in tests/integration, which call public exchange APIs (see PRE-02)",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/PRE-01.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T16:24:43+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "PRE-02",
+      "created_at": "2026-09-24T16:27:20+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T16:27:20+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "preflight",
+      "title": "Integration tests against the public Kraken/Coinbase APIs pass",
+      "steps": "pytest tests/integration (make test env), first as-is, then with this sandbox's TLS proxy CA trusted by the venv's certifi bundle",
+      "expected": "Pass where the network allows",
+      "observed": "As-is 6 fail with CERTIFICATE_VERIFY_FAILED: this sandbox intercepts TLS and ccxt/aiohttp trusts only certifi's bundle (an environment property, not a defect; curl, which trusts the proxy CA, reaches both). With the proxy CA added to the venv's bundle: 75 passed, 5 skipped. Binance answers 451 (geo-block) from here",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/PRE-02-2.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T16:27:20+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "PRE-03",
+      "created_at": "2026-09-24T16:30:35+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T16:30:35+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "preflight",
+      "title": "README local install (pip install -r requirements-dev.txt; python app/main.py) on a fresh venv",
+      "steps": "Fresh venvs on Python 3.11 (the default python3 here) and 3.12; the README's two commands",
+      "expected": "Installs and the MCP server starts on stdio",
+      "observed": "Both install cleanly and python app/main.py starts the 'ReadyTrader-Crypto' stdio server (pyproject says requires-python >=3.12; the README states no version - see the docs section)",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/PRE-03.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T16:30:35+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "PRE-04",
+      "created_at": "2026-09-24T16:32:04+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T16:32:04+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "preflight",
+      "title": "MCP server registers its tools over stdio (python app/main.py)",
+      "steps": "",
+      "expected": "",
+      "observed": "A real stdio MCP session lists 29 tools (orders, account, streams, market data, news, insights, paper, risk, research, on-chain)",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/PRE-04.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T16:32:04+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "PRE-05",
+      "created_at": "2026-09-24T16:33:58+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T16:33:58+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "preflight",
+      "title": "Documented 10-minute demos run: paper_quick_demo.py and stress_test_demo.py",
+      "steps": "",
+      "expected": "",
+      "observed": "Both exit 0; quick demo passes its balance checks; stress lab writes its 5 artifacts (risk metrics oddity tracked as DATA-01)",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/PRE-05.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T16:33:58+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "BE-01",
+      "created_at": "2026-09-24T16:34:29+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T16:34:29+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:43:23+00:00",
+          "event": "fix",
+          "commit": "9e25268,9c65746",
+          "note": "Every order path (place_cex_order, swap_tokens, replace_cex_order; paper and live; before a proposal and again at approval) runs app/tools/trading.pre_trade_check / swap_check: the Risk Guardian sizes the exposure an order adds against the account (paper / exchange / signer wallet) and fails closed when it cannot value the order or read the account (or the account is worth nothing)"
+        },
+        {
+          "at": "2026-09-24T17:47:43+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Same MCP session: validate_trade_risk refuses 5000/10000 and place_cex_order now answers risk_blocked for the 0.05 BTC buy (exposure 4211.88 USD vs 10000 equity, error.data.risk has the numbers); the wallet stays 10000 USDT"
+        },
+        {
+          "at": "2026-09-24T19:44:24+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Strengthened with the live path: over MCP (paper) the 50% order is refused risk_blocked with the same reason validate_trade_risk gives; live (recording exchange) every oversized order is refused at the market price whatever price it carries, and a 840 USD market BUY passes and reaches the exchange."
+        }
+      ],
+      "section": "backend",
+      "title": "Risk Guardian runs in the order path (README: every request is filtered; a 50% bet is blocked automatically)",
+      "steps": "paper: deposit 10000 USDT; validate_trade_risk buy 5000/10000; place_cex_order buy 0.05 BTC @100000 (5000 USDT)",
+      "expected": "place_cex_order refused with the same Risk Guardian reason validate_trade_risk gives",
+      "observed": "validate_trade_risk: allowed=false (Position size 50%); place_cex_order executes the same 50% buy; no order path (place/replace/swap, paper or live) calls the Risk Guardian",
+      "result": "FAIL",
+      "severity": "critical",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/BE-01.txt"
+      ],
+      "journey": "trade BTC in paper behind the Risk Guardian",
+      "notes": "",
+      "updated_at": "2026-09-24T16:34:29+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Every order path (place_cex_order, swap_tokens, replace_cex_order; paper and live; before a proposal and again at approval) runs app/tools/trading.pre_trade_check / swap_check: the Risk Guardian sizes the exposure an order adds against the account (paper / exchange / signer wallet) and fails closed when it cannot value the order or read the account (or the account is worth nothing)",
+        "root_cause": "The Guardian lived only in the advisory validate_trade_risk tool; no order path called it",
+        "files": [
+          "app/tools/trading.py",
+          "app/tools/execution.py",
+          "risk_manager.py"
+        ],
+        "commit": "9e25268,9c65746",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_paper_order_is_refused_for_the_same_reason_validate_trade_risk_gives",
+        "at": "2026-09-24T17:43:23+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:47:43+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/BE-01-retest.txt"
+          ],
+          "observed": "Same MCP session: validate_trade_risk refuses 5000/10000 and place_cex_order now answers risk_blocked for the 0.05 BTC buy (exposure 4211.88 USD vs 10000 equity, error.data.risk has the numbers); the wallet stays 10000 USDT"
+        },
+        {
+          "at": "2026-09-24T19:44:24+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/BE-01-retest-2.txt"
+          ],
+          "observed": "Strengthened with the live path: over MCP (paper) the 50% order is refused risk_blocked with the same reason validate_trade_risk gives; live (recording exchange) every oversized order is refused at the market price whatever price it carries, and a 840 USD market BUY passes and reaches the exchange."
+        }
+      ]
+    },
+    {
+      "id": "BE-02",
+      "created_at": "2026-09-24T16:34:29+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T16:34:29+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:43:23+00:00",
+          "event": "fix",
+          "commit": "9e25268",
+          "note": "Paper place_cex_order fills at the market-data price: market orders ignore a passed price; a limit fills (at market) only when marketable, else limit_not_marketable"
+        },
+        {
+          "at": "2026-09-24T17:47:43+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "limit BUY 0.005 @40000 with market 84237.6 -> limit_not_marketable (limit and market price in data); market SELL with price=200000 no longer fills at the invented price (insufficient_funds: nothing held); wallet unchanged at 10000 USDT"
+        },
+        {
+          "at": "2026-09-24T19:41:01+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Strengthened: with 0.05 BTC held, a market SELL carrying price=10,000,000 fills at the market (84,000); a limit SELL at 10,000,000 is refused limit_not_marketable; the round trip ends at exactly 100,000 USDT (no invented profit)."
+        }
+      ],
+      "section": "backend",
+      "title": "Paper fills use the market price (a limit fills only when marketable; a market order ignores an invented price)",
+      "steps": "market 84520; limit BUY 0.005 @40000; market SELL 0.005 with price=200000",
+      "expected": "limit buy below market refused or left unfilled; market order fills at the market price",
+      "observed": "both filled at the caller's price; 10000 USDT became 10800 USDT from two round-trip orders (fabricated +8% PnL)",
+      "result": "FAIL",
+      "severity": "high",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/BE-02.txt"
+      ],
+      "journey": "trade BTC in paper behind the Risk Guardian",
+      "notes": "",
+      "updated_at": "2026-09-24T16:34:29+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Paper place_cex_order fills at the market-data price: market orders ignore a passed price; a limit fills (at market) only when marketable, else limit_not_marketable",
+        "root_cause": "The paper branch filled at whatever price the caller passed",
+        "files": [
+          "app/tools/execution.py"
+        ],
+        "commit": "9e25268",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_paper_limit_below_market_is_not_filled",
+        "at": "2026-09-24T17:43:23+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:47:43+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/BE-02-retest.txt"
+          ],
+          "observed": "limit BUY 0.005 @40000 with market 84237.6 -> limit_not_marketable (limit and market price in data); market SELL with price=200000 no longer fills at the invented price (insufficient_funds: nothing held); wallet unchanged at 10000 USDT"
+        },
+        {
+          "at": "2026-09-24T19:41:01+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/BE-02-retest-2.txt"
+          ],
+          "observed": "Strengthened: with 0.05 BTC held, a market SELL carrying price=10,000,000 fills at the market (84,000); a limit SELL at 10,000,000 is refused limit_not_marketable; the round trip ends at exactly 100,000 USDT (no invented profit)."
+        }
+      ]
+    },
+    {
+      "id": "FE-01",
+      "created_at": "2026-09-24T16:38:08+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T16:38:08+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:43:24+00:00",
+          "event": "fix",
+          "commit": "9e25268",
+          "note": "playwright.config.ts uses the repo's .venv python (else python3) and frontend/playwright-report by default; the harness seeds paper_mode and serves fixed prices"
+        },
+        {
+          "at": "2026-09-24T17:50:58+00:00",
+          "event": "retest",
+          "result": "FAIL",
+          "note": "17 passed, 1 failed: the resilience spec restarts the harness through e2e/apiControl.ts, which has its own copy of the old default (/home/claude/work/venv-rt/bin/python3): spawn ENOENT"
+        },
+        {
+          "at": "2026-09-24T17:53:35+00:00",
+          "event": "fix",
+          "commit": "ce047ec",
+          "note": "e2e/constants.ts HARNESS_PYTHON (repo .venv, else python3, PW_PYTHON_PATH overrides) is used by playwright.config.ts and apiControl.ts; report in frontend/playwright-report; ESLint ignores playwright-report/ and test-results/"
+        },
+        {
+          "at": "2026-09-24T17:55:15+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "the documented command with PW_PYTHON_PATH unset: 18 passed (55.8s), E2E_EXIT=0; npm run lint afterwards is clean (LINT_EXIT=0)"
+        }
+      ],
+      "section": "frontend",
+      "title": "Documented dashboard e2e command (UAT.md T6) runs on a fresh clone",
+      "steps": "cd frontend && npm ci && env -u NODE_ENV npm run e2e",
+      "expected": "Playwright starts the API harness and runs the suite",
+      "observed": "webServer fails: /home/claude/work/venv-rt/bin/python3 not found (playwright.config.ts defaults to the original author's sandbox paths, report dir too)",
+      "result": "FAIL",
+      "severity": "medium",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/FE-01.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T16:38:08+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "e2e/constants.ts HARNESS_PYTHON (repo .venv, else python3, PW_PYTHON_PATH overrides) is used by playwright.config.ts and apiControl.ts; report in frontend/playwright-report; ESLint ignores playwright-report/ and test-results/",
+        "root_cause": "Two copies of a machine-specific default; the first retest caught the second copy",
+        "files": [
+          "frontend/e2e/constants.ts",
+          "frontend/e2e/apiControl.ts",
+          "frontend/playwright.config.ts",
+          "frontend/eslint.config.mjs"
+        ],
+        "commit": "ce047ec",
+        "regression_test": "",
+        "at": "2026-09-24T17:53:35+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:50:58+00:00",
+          "result": "FAIL",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/FE-01-retest.txt"
+          ],
+          "observed": "17 passed, 1 failed: the resilience spec restarts the harness through e2e/apiControl.ts, which has its own copy of the old default (/home/claude/work/venv-rt/bin/python3): spawn ENOENT"
+        },
+        {
+          "at": "2026-09-24T17:55:15+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/FE-01-retest-2.txt"
+          ],
+          "observed": "the documented command with PW_PYTHON_PATH unset: 18 passed (55.8s), E2E_EXIT=0; npm run lint afterwards is clean (LINT_EXIT=0)"
+        }
+      ]
+    },
+    {
+      "id": "FE-02",
+      "created_at": "2026-09-24T16:39:19+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T16:39:19+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "frontend",
+      "title": "Dashboard e2e suite (18 journeys: auth, approvals, smoke, mobile, API-down resilience) against the real API harness",
+      "steps": "",
+      "expected": "",
+      "observed": "18 passed (54.4s) with PW_PYTHON_PATH set to the clone's venv; closes UAT.md T6 'not run'",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/FE-02.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T16:39:19+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "DATA-01",
+      "created_at": "2026-09-24T16:40:26+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T16:40:26+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:43:23+00:00",
+          "event": "fix",
+          "commit": "9e25268",
+          "note": "get_risk_metrics reports the current drawdown (max_drawdown_pct keeps the record); portfolio value counts funds reserved by resting orders"
+        },
+        {
+          "at": "2026-09-24T17:48:07+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "(a) resting 2000 buy: equity 10000, drawdown 0; (b) 12% loss then a new high: drawdown_pct 0.0, max_drawdown_pct 0.12, and the small BUY is allowed"
+        }
+      ],
+      "section": "data",
+      "title": "Paper risk metrics: drawdown is the current fall from the peak; resting orders keep their reserved value",
+      "steps": "engine: (a) deposit 10000, rest a 2000 limit buy; (b) lose 12%, then recover to a new high (10100) and ask the Risk Guardian about a 100 USDT buy",
+      "expected": "(a) equity 10000, drawdown 0; (b) drawdown 0 after recovery, BUY allowed",
+      "observed": "(a) equity 8000, daily -20%, drawdown 20% (reserved funds vanish, tripping both limits); (b) drawdown stays 12% at a new high and every BUY is refused forever (historical max reported as current)",
+      "result": "FAIL",
+      "severity": "high",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/DATA-01.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T16:40:26+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "get_risk_metrics reports the current drawdown (max_drawdown_pct keeps the record); portfolio value counts funds reserved by resting orders",
+        "root_cause": "drawdown_pct was the historical maximum; reserved funds were excluded from equity",
+        "files": [
+          "paper_engine.py"
+        ],
+        "commit": "9e25268",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_drawdown_is_current_and_recovers",
+        "at": "2026-09-24T17:43:23+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:48:07+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/DATA-01-retest.txt"
+          ],
+          "observed": "(a) resting 2000 buy: equity 10000, drawdown 0; (b) 12% loss then a new high: drawdown_pct 0.0, max_drawdown_pct 0.12, and the small BUY is allowed"
+        }
+      ]
+    },
+    {
+      "id": "BE-03",
+      "created_at": "2026-09-24T16:40:45+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T16:40:45+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:43:23+00:00",
+          "event": "fix",
+          "commit": "9e25268",
+          "note": "Paper swap_tokens trades at the market rate (FROM/TO, inverse, or through USDT) and is risk-checked; paper_price_required when no rate"
+        },
+        {
+          "at": "2026-09-24T17:47:43+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "1 ETH -> 2670.24 USDC (ETH/USDC 2670.24); 100 USDC -> 0.03745 ETH (1/2670.24 each): paper swaps trade at the market rate"
+        }
+      ],
+      "section": "backend",
+      "title": "Paper swap_tokens trades at the market rate",
+      "steps": "deposit 1 ETH; swap ETH->USDC 1 (ETH/USDC 2695); deposit 100 USDC; swap USDC->ETH 100",
+      "expected": "about 2695 USDC for 1 ETH; about 0.037 ETH for 100 USDC (or a refusal when no rate)",
+      "observed": "every paper swap fills at a fixed 1.0: 1 ETH became 1 USDC; 100 USDC became 100 ETH (~270,000 USD of phantom value)",
+      "result": "FAIL",
+      "severity": "high",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/BE-03.txt"
+      ],
+      "journey": "trade BTC in paper behind the Risk Guardian",
+      "notes": "",
+      "updated_at": "2026-09-24T16:40:45+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Paper swap_tokens trades at the market rate (FROM/TO, inverse, or through USDT) and is risk-checked; paper_price_required when no rate",
+        "root_cause": "The paper swap used a hard-coded price of 1.0",
+        "files": [
+          "app/tools/execution.py"
+        ],
+        "commit": "9e25268",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_paper_swap_trades_at_the_market_rate",
+        "at": "2026-09-24T17:43:23+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:47:43+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/BE-03-retest.txt"
+          ],
+          "observed": "1 ETH -> 2670.24 USDC (ETH/USDC 2670.24); 100 USDC -> 0.03745 ETH (1/2670.24 each): paper swaps trade at the market rate"
+        }
+      ]
+    },
+    {
+      "id": "BE-04",
+      "created_at": "2026-09-24T16:43:08+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T16:43:08+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:43:23+00:00",
+          "event": "fix",
+          "commit": "9e25268",
+          "note": "In paper mode the exchange-order tools answer paper_mode_not_supported before any exchange client is built"
+        },
+        {
+          "at": "2026-09-24T17:47:43+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "all five tools answer paper_mode_not_supported; the recording exchange client was called 0 times"
+        }
+      ],
+      "section": "backend",
+      "title": "Paper mode never touches a real exchange account (cancel/replace/read tools)",
+      "steps": "PAPER_MODE=true TRADING_HALTED=true; call replace_cex_order, cancel_cex_order, cancel_all_cex_orders, get_cex_order, list_cex_open_orders with a recording exchange client",
+      "expected": "paper_mode_not_supported (nothing reaches an authenticated exchange client)",
+      "observed": "all five reach the authenticated client (replace_order places a new BTC/USDT buy 5 @90000); _require_live_allowed returns early in paper mode, so the kill switch and live flags are skipped; with CEX keys in .env a 'zero-risk' paper session edits the real account",
+      "result": "FAIL",
+      "severity": "critical",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/BE-04.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T16:43:08+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "In paper mode the exchange-order tools answer paper_mode_not_supported before any exchange client is built",
+        "root_cause": "_require_live_allowed returns early in paper mode, so the account tools fell through to the authenticated exchange client",
+        "files": [
+          "app/tools/execution.py"
+        ],
+        "commit": "9e25268",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_paper_mode_never_reaches_an_exchange_account",
+        "at": "2026-09-24T17:43:23+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:47:43+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/BE-04-retest.txt"
+          ],
+          "observed": "all five tools answer paper_mode_not_supported; the recording exchange client was called 0 times"
+        }
+      ]
+    },
+    {
+      "id": "BE-05",
+      "created_at": "2026-09-24T16:43:08+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T16:43:08+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:43:23+00:00",
+          "event": "fix",
+          "commit": "9e25268",
+          "note": "replace_cex_order is refused (approval_required) under approve_each and otherwise runs validate_cex_order and the Risk Guardian on the replacement order"
+        },
+        {
+          "at": "2026-09-24T17:47:43+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "place_cex_order still proposes; replace_cex_order now answers approval_required and sends nothing (0 exchange calls). The probe now also gives the Guardian's account read a 100,000 USDT recorder so the gates, not an unreadable account, decide. Policy/Guardian on an auto-mode replace: tests/test_uat_2026_09_24.py::test_live_replace_passes_policy_and_the_guardian"
+        }
+      ],
+      "section": "backend",
+      "title": "Live replace_cex_order passes the approval gate, allowlists and size limit",
+      "steps": "live, approve_each, ALLOW_CEX_SYMBOLS=ETH/USDT, MAX_CEX_ORDER_AMOUNT=0.1; place_cex_order then replace_cex_order(123 -> BTC/USDT buy 5)",
+      "expected": "replace refused (needs approval; BTC/USDT not allowlisted; 5 > 0.1)",
+      "observed": "place_cex_order proposes (approval_required), but replace_cex_order sends replace_order BTC/USDT buy 5 @90000 straight to the exchange: no proposal, no validate_cex_order, no Risk Guardian",
+      "result": "FAIL",
+      "severity": "critical",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/BE-05.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T16:43:08+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "replace_cex_order is refused (approval_required) under approve_each and otherwise runs validate_cex_order and the Risk Guardian on the replacement order",
+        "root_cause": "replace_cex_order only called validate_cex_access and never _maybe_propose",
+        "files": [
+          "app/tools/execution.py"
+        ],
+        "commit": "9e25268",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_live_replace_passes_policy_and_the_guardian",
+        "at": "2026-09-24T17:43:23+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:47:43+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/BE-05-retest.txt"
+          ],
+          "observed": "place_cex_order still proposes; replace_cex_order now answers approval_required and sends nothing (0 exchange calls). The probe now also gives the Guardian's account read a 100,000 USDT recorder so the gates, not an unreadable account, decide. Policy/Guardian on an auto-mode replace: tests/test_uat_2026_09_24.py::test_live_replace_passes_policy_and_the_guardian"
+        }
+      ]
+    },
+    {
+      "id": "BE-06",
+      "created_at": "2026-09-24T16:48:13+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T16:48:13+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:43:23+00:00",
+          "event": "fix",
+          "commit": "9e25268",
+          "note": "Live gates raise LiveGateRefused(code) and policy refusals keep their PolicyError code/message/data; only unexpected exceptions become cex_error"
+        },
+        {
+          "at": "2026-09-24T17:47:22+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": "FAIL",
+            "status": "FIXED"
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:47:43+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "trading_halted, symbol_not_allowed (allow_cex_symbols in data), order_amount_too_large (max_cex_order_amount in data); the allowed order still goes through"
+        }
+      ],
+      "section": "backend",
+      "title": "A refused live order says why (kill switch, allowlist, size limit)",
+      "steps": "live, TRADING_HALTED=true, then false with ALLOW_CEX_SYMBOLS=ETH/USDT, MAX_CEX_ORDER_AMOUNT=0.1 (recording exchange client), run in a checkout of the base commit",
+      "expected": "distinct codes: trading_halted, symbol_not_allowed, order_amount_too_large, with the rule in data",
+      "observed": "all three answer cex_error 'Exchange operation failed.' - the reason exists only in the server log (docs/ERRORS.md documents this as a limitation); an agent cannot tell the kill switch from an exchange outage. (BE-06.txt shows the same from the working tree before the error-mapping change; BE-06-2.txt is the base commit.)",
+      "result": "FAIL",
+      "severity": "medium",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/BE-06-2.txt",
+        "uat/evidence/2026-09-24-01/BE-06.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T17:47:22+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Live gates raise LiveGateRefused(code) and policy refusals keep their PolicyError code/message/data; only unexpected exceptions become cex_error",
+        "root_cause": "_json_internal_error mapped every exception, including the operator's own switches, to a fixed 'Exchange operation failed.'",
+        "files": [
+          "app/tools/execution.py"
+        ],
+        "commit": "9e25268",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_live_refusals_name_the_rule",
+        "at": "2026-09-24T17:43:23+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:47:43+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/BE-06-retest.txt"
+          ],
+          "observed": "trading_halted, symbol_not_allowed (allow_cex_symbols in data), order_amount_too_large (max_cex_order_amount in data); the allowed order still goes through"
+        }
+      ]
+    },
+    {
+      "id": "CF-01",
+      "created_at": "2026-09-24T16:49:49+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T16:49:49+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:43:24+00:00",
+          "event": "fix",
+          "commit": "9e25268",
+          "note": "storage_paths.data_path anchors every default data file to <repo>/data (READYTRADER_DATA_DIR overrides; *_PATH still wins)"
+        },
+        {
+          "at": "2026-09-24T17:48:36+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "from an empty client folder nothing is written there (data goes to <repo>/data); from an unwritable folder the server starts and lists 29 tools"
+        }
+      ],
+      "section": "config",
+      "title": "Server started by an MCP client (README configs: absolute python + server.py, client's working directory) keeps its data in the repo",
+      "steps": "launch server.py from the base commit with the README env block, cwd = an empty folder, then cwd = an unwritable folder (as '/' is for Claude Desktop on macOS)",
+      "expected": "starts; data/*.db under the repo (shared with the API server and dashboard)",
+      "observed": "empty cwd: paper.db, insights.db, strategies.db created in the client's folder (the dashboard never sees that account); unwritable cwd: the server dies at startup (FileNotFoundError: 'data') and the client sees 'Connection closed'. All six DB defaults are cwd-relative 'data/...'",
+      "result": "FAIL",
+      "severity": "high",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/CF-01.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T16:49:49+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "storage_paths.data_path anchors every default data file to <repo>/data (READYTRADER_DATA_DIR overrides; *_PATH still wins)",
+        "root_cause": "Six defaults were cwd-relative 'data/...'",
+        "files": [
+          "storage_paths.py",
+          "paper_engine.py",
+          "execution_store.py",
+          "idempotency_store.py",
+          "observability/audit.py",
+          "intelligence/insights.py",
+          "strategy/marketplace.py"
+        ],
+        "commit": "9e25268",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_server_started_from_another_folder_keeps_its_data_out_of_it",
+        "at": "2026-09-24T17:43:24+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:48:36+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/CF-01-retest.txt"
+          ],
+          "observed": "from an empty client folder nothing is written there (data goes to <repo>/data); from an unwritable folder the server starts and lists 29 tools"
+        }
+      ]
+    },
+    {
+      "id": "BE-07",
+      "created_at": "2026-09-24T16:51:43+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T16:51:43+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:43:23+00:00",
+          "event": "fix",
+          "commit": "9e25268",
+          "note": "log_event stamps ts_ms at emit time"
+        },
+        {
+          "at": "2026-09-24T17:55:15+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "two logins 1.5 s apart through the real API app: auth_success events at ts_ms 1790272506413 and 1790272507921 (1508 ms apart)"
+        }
+      ],
+      "section": "backend",
+      "title": "API server log lines carry the time of the event",
+      "steps": "run the dashboard e2e suite (FE-02) and read the API server's JSON log lines",
+      "expected": "each event has its own ts_ms",
+      "observed": "all 23 events over the 54 s run carry the same ts_ms (the API context is built once at import and log_event copies its ts_ms), so the log cannot order or time an incident",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/BE-07.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T16:51:43+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "log_event stamps ts_ms at emit time",
+        "root_cause": "The API's log context is built once at import and log_event copied its ts_ms",
+        "files": [
+          "observability/logging.py"
+        ],
+        "commit": "9e25268",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_log_lines_carry_the_time_of_the_event",
+        "at": "2026-09-24T17:43:23+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:55:15+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/BE-07-retest.txt"
+          ],
+          "observed": "two logins 1.5 s apart through the real API app: auth_success events at ts_ms 1790272506413 and 1790272507921 (1508 ms apart)"
+        }
+      ]
+    },
+    {
+      "id": "INT-01",
+      "created_at": "2026-09-24T16:52:57+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T16:52:57+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:43:24+00:00",
+          "event": "fix",
+          "commit": "9e25268",
+          "note": "News and sentiment sources raise intelligence.SourceError; get_financial_news, get_news, get_social_sentiment, get_free_news and get_sentiment return not_configured / source_unavailable"
+        },
+        {
+          "at": "2026-09-24T17:48:36+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "get_financial_news, get_news and get_social_sentiment answer not_configured naming the missing key; get_free_news still returns Cointelegraph headlines"
+        }
+      ],
+      "section": "integrations",
+      "title": "A news/sentiment source that cannot answer is an error, not a result",
+      "steps": "zero-key install: get_financial_news, get_news, get_social_sentiment, get_free_news over stdio",
+      "expected": "not_configured (or source_unavailable) errors naming the missing key; real headlines where a source answers",
+      "observed": "get_financial_news, get_news and get_social_sentiment all answer ok:true with 'Unavailable ... not configured' text as the payload (an agent reads it as data); get_financial_news is described as 'simulated high-tier financial news (Bloomberg/Reuters)' but calls NewsAPI; get_free_news works (Cointelegraph headlines)",
+      "result": "FAIL",
+      "severity": "medium",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/INT-01.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T16:52:57+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "News and sentiment sources raise intelligence.SourceError; get_financial_news, get_news, get_social_sentiment, get_free_news and get_sentiment return not_configured / source_unavailable",
+        "root_cause": "The source functions returned their failures as text and the tools wrapped it in ok:true",
+        "files": [
+          "intelligence/core.py",
+          "app/tools/research.py",
+          "app/tools/market_data.py"
+        ],
+        "commit": "9e25268",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_unconfigured_sources_are_errors",
+        "at": "2026-09-24T17:43:24+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:48:36+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/INT-01-retest.txt"
+          ],
+          "observed": "get_financial_news, get_news and get_social_sentiment answer not_configured naming the missing key; get_free_news still returns Cointelegraph headlines"
+        }
+      ]
+    },
+    {
+      "id": "DATA-02",
+      "created_at": "2026-09-24T17:04:52+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T17:04:52+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:43:23+00:00",
+          "event": "fix",
+          "commit": "9e25268",
+          "note": "The paper ledger upper-cases asset codes (orders, deposits, lookups)"
+        },
+        {
+          "at": "2026-09-24T17:48:07+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "'usdt' deposit lands in USDT; BTC/USDT and btc/usdt both fill against it into one BTC balance (0.001); wallet {BTC, USDT}"
+        }
+      ],
+      "section": "data",
+      "title": "Asset codes are case-insensitive in the paper ledger",
+      "steps": "deposit 'usdt' 1000; buy BTC/USDT; buy btc/usdt; get_cex_balance",
+      "expected": "one USDT balance; both spellings trade against it",
+      "observed": "the deposit lands in a separate lower-case 'usdt' balance: BTC/USDT is refused 'Have 0.0 USDT'; btc/usdt fills and creates a separate 'btc' balance; the wallet shows {btc, usdt} beside any upper-case holdings",
+      "result": "FAIL",
+      "severity": "medium",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/DATA-02.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T17:04:52+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "The paper ledger upper-cases asset codes (orders, deposits, lookups)",
+        "root_cause": "Balances were keyed by the caller's spelling",
+        "files": [
+          "paper_engine.py",
+          "app/tools/trading.py"
+        ],
+        "commit": "9e25268",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_asset_codes_are_case_insensitive",
+        "at": "2026-09-24T17:43:23+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:48:07+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/DATA-02-retest.txt"
+          ],
+          "observed": "'usdt' deposit lands in USDT; BTC/USDT and btc/usdt both fill against it into one BTC balance (0.001); wallet {BTC, USDT}"
+        }
+      ]
+    },
+    {
+      "id": "DOC-01",
+      "created_at": "2026-09-24T17:08:33+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T17:08:33+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:43:24+00:00",
+          "event": "fix",
+          "commit": "9e25268,e152134",
+          "note": "docs/TOOLS.md corrected tool by tool against the code (curated, roster-tested); generate_tool_docs.py prints the registry and refuses to overwrite TOOLS.md"
+        },
+        {
+          "at": "2026-09-24T17:49:30+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "the README's command prints the live registry and leaves docs/TOOLS.md untouched (git status empty); --write docs/TOOLS.md is refused; roster test 4 passed; the fabricated fields (simulated data, analyst_commentary, price_targets, Bitcoin Magazine) are gone (the one hit is a sentence saying the field does not exist)"
+        }
+      ],
+      "section": "docs",
+      "title": "docs/TOOLS.md is what the README says: generated from the live registry",
+      "steps": "README:474 - run python tools/generate_tool_docs.py",
+      "expected": "no diff (the committed catalog is the generator's output)",
+      "observed": "the documented command rewrites docs/TOOLS.md: 783 lines deleted - the per-tool usage, parameters, examples and error codes are not in the code docstrings (the file was curated by hand after generation); 'make docs' would erase them",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/DOC-01.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T17:08:33+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "docs/TOOLS.md corrected tool by tool against the code (curated, roster-tested); generate_tool_docs.py prints the registry and refuses to overwrite TOOLS.md",
+        "root_cause": "The catalog was hand-edited after generation and drifted (simulated data, fields that do not exist)",
+        "files": [
+          "docs/TOOLS.md",
+          "tools/generate_tool_docs.py",
+          "Makefile",
+          "docs/SCORECARD.md"
+        ],
+        "commit": "9e25268,e152134",
+        "regression_test": "",
+        "at": "2026-09-24T17:43:24+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:49:30+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/DOC-01-retest-2.txt"
+          ],
+          "observed": "the README's command prints the live registry and leaves docs/TOOLS.md untouched (git status empty); --write docs/TOOLS.md is refused; roster test 4 passed; the fabricated fields (simulated data, analyst_commentary, price_targets, Bitcoin Magazine) are gone (the one hit is a sentence saying the field does not exist)"
+        }
+      ]
+    },
+    {
+      "id": "DOC-02",
+      "created_at": "2026-09-24T17:09:07+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T17:09:07+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:43:24+00:00",
+          "event": "fix",
+          "commit": "e152134",
+          "note": "README corrected (see commit)"
+        },
+        {
+          "at": "2026-09-24T17:49:40+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Prerequisites now name Python 3.12+ (matches pyproject) or Docker"
+        }
+      ],
+      "section": "docs",
+      "title": "README prerequisites name what the install needs",
+      "steps": "README Prerequisites vs pyproject",
+      "expected": "Python 3.12+ named (the zero-key quickstart and local dev use a venv)",
+      "observed": "Prerequisites list only Docker; pyproject requires-python >=3.12 and PRE-03 showed a python3 older than 3.12 is the default on some hosts",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/DOC-02.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T17:09:07+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "README corrected (see commit)",
+        "root_cause": "README drifted from the code",
+        "files": [
+          "README.md"
+        ],
+        "commit": "e152134",
+        "regression_test": "",
+        "at": "2026-09-24T17:43:24+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:49:40+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/DOC-02-retest.txt"
+          ],
+          "observed": "Prerequisites now name Python 3.12+ (matches pyproject) or Docker"
+        }
+      ]
+    },
+    {
+      "id": "DOC-03",
+      "created_at": "2026-09-24T17:09:07+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T17:09:07+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:43:24+00:00",
+          "event": "fix",
+          "commit": "e152134",
+          "note": "README corrected (see commit)"
+        },
+        {
+          "at": "2026-09-24T17:49:40+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "README table says TRADING_HALTED defaults to true, as Settings() does; the safeguards table's Kill Switch row is TRADING_HALTED"
+        }
+      ],
+      "section": "docs",
+      "title": "README configuration defaults match the code",
+      "steps": "README config table vs Settings() with an empty environment",
+      "expected": "TRADING_HALTED default true (fail closed)",
+      "observed": "README says TRADING_HALTED defaults to false; the code defaults to true (the README's own Status section says true) - an operator reading the table believes live trading is not halted by default",
+      "result": "FAIL",
+      "severity": "medium",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/DOC-02.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T17:09:07+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "README corrected (see commit)",
+        "root_cause": "README drifted from the code",
+        "files": [
+          "README.md"
+        ],
+        "commit": "e152134",
+        "regression_test": "",
+        "at": "2026-09-24T17:43:24+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:49:40+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/DOC-02-retest.txt"
+          ],
+          "observed": "README table says TRADING_HALTED defaults to true, as Settings() does; the safeguards table's Kill Switch row is TRADING_HALTED"
+        }
+      ]
+    },
+    {
+      "id": "DOC-04",
+      "created_at": "2026-09-24T17:09:07+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T17:09:07+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:43:24+00:00",
+          "event": "fix",
+          "commit": "e152134",
+          "note": "README corrected (see commit)"
+        },
+        {
+          "at": "2026-09-24T17:49:40+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "the feature grep no longer finds Deep DeFi / Strategy Marketplace / Mobile Guard / simulated news; the feature list says what ships (defi/ is a library not exposed as tools; no push notifications; strategy research = backtest + stress lab). (The defi import scan also walked this clone's .venv - noise, not repo code.)"
+        }
+      ],
+      "section": "docs",
+      "title": "README feature list describes what ships",
+      "steps": "each README feature claim checked against the code",
+      "expected": "every claimed feature reachable by the agent or the dashboard",
+      "observed": "'Deep DeFi Integration: direct support for Aave V3 / Uniswap V3' - nothing imports defi/; 'Strategy Marketplace for saving and sharing' - no tool saves a strategy (read-only list at /api/strategies); 'Mobile Guard: push notifications' - the dashboard has no push; get_financial_news listed as 'simulated' (it is NewsAPI); 'Kill Switch = 10% max drawdown' (the kill switch is TRADING_HALTED)",
+      "result": "FAIL",
+      "severity": "medium",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/DOC-02.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T17:09:07+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "README corrected (see commit)",
+        "root_cause": "README drifted from the code",
+        "files": [
+          "README.md"
+        ],
+        "commit": "e152134",
+        "regression_test": "",
+        "at": "2026-09-24T17:43:24+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:49:40+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/DOC-02-retest.txt"
+          ],
+          "observed": "the feature grep no longer finds Deep DeFi / Strategy Marketplace / Mobile Guard / simulated news; the feature list says what ships (defi/ is a library not exposed as tools; no push notifications; strategy research = backtest + stress lab). (The defi import scan also walked this clone's .venv - noise, not repo code.)"
+        }
+      ]
+    },
+    {
+      "id": "DOC-05",
+      "created_at": "2026-09-24T17:09:07+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T17:09:07+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:43:24+00:00",
+          "event": "fix",
+          "commit": "e152134",
+          "note": "README corrected (see commit)"
+        },
+        {
+          "at": "2026-09-24T17:49:40+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Agent Zero UI args end with readytrader-crypto, the image the README builds"
+        }
+      ],
+      "section": "docs",
+      "title": "README Agent Zero UI instructions run the image the README builds",
+      "steps": "README Option A UI args vs the docker build tag",
+      "expected": "same image name",
+      "observed": "UI args end with 'readytrader'; the README builds 'readytrader-crypto' (the agent.yaml block two lines below uses readytrader-crypto) - the UI config fails with 'image not found'",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/DOC-02.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T17:09:07+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "README corrected (see commit)",
+        "root_cause": "README drifted from the code",
+        "files": [
+          "README.md"
+        ],
+        "commit": "e152134",
+        "regression_test": "",
+        "at": "2026-09-24T17:43:24+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:49:40+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/DOC-02-retest.txt"
+          ],
+          "observed": "Agent Zero UI args end with readytrader-crypto, the image the README builds"
+        }
+      ]
+    },
+    {
+      "id": "BE-08",
+      "created_at": "2026-09-24T17:09:29+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T17:09:29+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:43:23+00:00",
+          "event": "fix",
+          "commit": "9e25268",
+          "note": "ExecutionStore takes EXECUTION_SESSION_ID; with persistence the database is the source of truth (list/confirm/cancel read it; confirm and cancel are conditional UPDATEs); proposals record paper_mode and /api/approve-trade answers 409 EXEC_313 in the other mode"
+        },
+        {
+          "at": "2026-09-24T17:48:36+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "process B (API) lists the MCP process's proposal and confirms it with the token; process C (a second API worker) is refused: already_confirmed (single use across processes)"
+        },
+        {
+          "at": "2026-09-24T19:41:01+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Strengthened: a proposal made in one process is listed by the real uvicorn API server (auth on, shared EXECUTION_DB_PATH/SESSION_ID), approved with the admin JWT (paper fill at the live market price), and a second approval is refused EXEC_308."
+        }
+      ],
+      "section": "backend",
+      "title": "An approve_each proposal made by the MCP server can be approved from the API server / dashboard (UAT.md T5)",
+      "steps": "process A (MCP) proposes; process B (API) lists and confirms with the token; process C confirms again - same EXECUTION_DB_PATH and EXECUTION_SESSION_ID",
+      "expected": "B sees and confirms it; C is refused (single use)",
+      "observed": "B sees nothing and gets 'Unknown request_id' even with the right token: every process has a random session id, so the dashboard approval flow cannot work in any documented deployment (a documented known limitation and an open graduation gate in UAT.md)",
+      "result": "FAIL",
+      "severity": "high",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/BE-08.txt"
+      ],
+      "journey": "As an operator running approve_each, I see each proposal on the dashboard and approve or reject it so that nothing executes without me",
+      "notes": "",
+      "updated_at": "2026-09-24T17:09:29+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "ExecutionStore takes EXECUTION_SESSION_ID; with persistence the database is the source of truth (list/confirm/cancel read it; confirm and cancel are conditional UPDATEs); proposals record paper_mode and /api/approve-trade answers 409 EXEC_313 in the other mode",
+        "root_cause": "A random per-process session id made every proposal invisible to any other process",
+        "files": [
+          "execution_store.py",
+          "api_server.py",
+          "errors.py",
+          "app/tools/execution.py"
+        ],
+        "commit": "9e25268",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_proposals_cross_processes_that_share_a_session",
+        "at": "2026-09-24T17:43:23+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:48:36+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/BE-08-retest.txt"
+          ],
+          "observed": "process B (API) lists the MCP process's proposal and confirms it with the token; process C (a second API worker) is refused: already_confirmed (single use across processes)"
+        },
+        {
+          "at": "2026-09-24T19:41:01+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/BE-08-retest-2.txt"
+          ],
+          "observed": "Strengthened: a proposal made in one process is listed by the real uvicorn API server (auth on, shared EXECUTION_DB_PATH/SESSION_ID), approved with the admin JWT (paper fill at the live market price), and a second approval is refused EXEC_308."
+        }
+      ]
+    },
+    {
+      "id": "CF-02",
+      "created_at": "2026-09-24T17:09:47+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T17:09:47+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:43:24+00:00",
+          "event": "fix",
+          "commit": "9e25268",
+          "note": "env.example lists ONEINCH_API_KEY, LOG_LEVEL, CEX_* tuning, signing, OTEL, stores, EXECUTION_SESSION_ID, READYTRADER_DATA_DIR"
+        },
+        {
+          "at": "2026-09-24T17:48:36+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "only the READYTRADER_*_DB_PATH aliases (documented as a prefix rule in env.example) and OS proxy variables remain; CEX_<EXCHANGE>_* are built dynamically"
+        }
+      ],
+      "section": "config",
+      "title": "Every variable the code reads is in env.example",
+      "steps": "scan os.getenv/os.environ names in the Python sources vs env.example",
+      "expected": "all present (CEX_<EXCHANGE>_* are built dynamically; proxies are OS-level)",
+      "observed": "missing: ONEINCH_API_KEY (needed for any live swap), LOG_LEVEL, CEX_MARKET_TYPE, CEX_RETRY_*, COINBASE_WS_PRODUCTS, DISALLOW_SIGN_CONTRACT_CREATION, DEPLOYMENT_ENV, OTEL_*, PORTFOLIO_CHAINS/EXCHANGES, SENTINEL_AUTH_TOKEN, STORE_BACKEND/REDIS_URL/DATABASE_URL, READYTRADER_*_DB_PATH aliases",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/CF-02.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T17:09:47+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "env.example lists ONEINCH_API_KEY, LOG_LEVEL, CEX_* tuning, signing, OTEL, stores, EXECUTION_SESSION_ID, READYTRADER_DATA_DIR",
+        "root_cause": "Variables added to code without env.example",
+        "files": [
+          "env.example"
+        ],
+        "commit": "9e25268",
+        "regression_test": "",
+        "at": "2026-09-24T17:43:24+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:48:36+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/CF-02-retest.txt"
+          ],
+          "observed": "only the READYTRADER_*_DB_PATH aliases (documented as a prefix rule in env.example) and OS proxy variables remain; CEX_<EXCHANGE>_* are built dynamically"
+        }
+      ]
+    },
+    {
+      "id": "BE-09",
+      "created_at": "2026-09-24T17:47:22+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T17:47:22+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:47:22+00:00",
+          "event": "fix",
+          "commit": "84507d2",
+          "note": "Policy (validate_cex_order / validate_swap / validate_transfer_native), then the Risk Guardian, run before _maybe_propose and again when the approved call executes"
+        },
+        {
+          "at": "2026-09-24T17:47:44+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "symbol_not_allowed and order_amount_too_large before any proposal; 0 pending proposals"
+        }
+      ],
+      "section": "backend",
+      "title": "approve_each proposes only an order the live policy allows",
+      "steps": "live, approve_each, ALLOW_CEX_SYMBOLS=BTC/USDT, MAX_CEX_ORDER_AMOUNT=0.01: place_cex_order DOGE/USDT; place_cex_order BTC/USDT 5.0",
+      "expected": "symbol_not_allowed / order_amount_too_large; no proposal",
+      "observed": "both return a proposal (2 pending): the policy ran only after proposing, so the operator is asked to approve orders that are refused when they execute",
+      "result": "FAIL",
+      "severity": "medium",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/BE-09.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T17:47:22+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Policy (validate_cex_order / validate_swap / validate_transfer_native), then the Risk Guardian, run before _maybe_propose and again when the approved call executes",
+        "root_cause": "The policy check sat after the proposal step",
+        "files": [
+          "app/tools/execution.py"
+        ],
+        "commit": "84507d2",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_a_proposal_is_made_only_for_an_order_the_policy_allows",
+        "at": "2026-09-24T17:47:22+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T17:47:44+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/BE-09-retest.txt"
+          ],
+          "observed": "symbol_not_allowed and order_amount_too_large before any proposal; 0 pending proposals"
+        }
+      ]
+    },
+    {
+      "id": "CLI-01",
+      "created_at": "2026-09-24T17:56:38+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T17:56:38+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T17:57:36+00:00",
+          "event": "fix",
+          "commit": "46b42fb",
+          "note": "ask() treats a closed stdin as no; the key report shows SIGNER_TYPE (env_private_key called out as dev-only), needs no exchange key in paper mode, lists feed keys as optional; a 451 from Binance explains MARKETDATA_EXCHANGES"
+        },
+        {
+          "at": "2026-09-24T18:00:47+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "answering n explains paper needs no .env; the key report no longer calls anything MISSING in paper mode (feed keys optional, no exchange key needed) and calls out the env_private_key signer the old env.example set (CF-03 then changed that default); stdin closed exits 0; a Binance 451 is explained"
+        }
+      ],
+      "section": "cli",
+      "title": "tools/setup_wizard.py (docs/ERRORS.md: 'Run python tools/setup_wizard.py') guides a new paper user correctly",
+      "steps": "fresh copy, no .env: answer n; answer y then read the key report; stdin closed",
+      "expected": "paper needs no keys; nothing tells a user to put a raw private key in .env; a closed stdin does not crash",
+      "observed": "with the env.example .env it marks PRIVATE_KEY as a MISSING critical key (red) - SIGNER_TYPE=env_private_key is dev-only and forbidden for live, so this steers users to paste a raw key; optional CRYPTOPANIC_API_KEY is also red 'MISSING'; with stdin closed it dies with EOFError (exit 1)",
+      "result": "FAIL",
+      "severity": "medium",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/CLI-01.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T17:56:38+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "ask() treats a closed stdin as no; the key report shows SIGNER_TYPE (env_private_key called out as dev-only), needs no exchange key in paper mode, lists feed keys as optional; a 451 from Binance explains MARKETDATA_EXCHANGES",
+        "root_cause": "The key list predated the signer policy and treated optional keys as critical; input() without EOF handling",
+        "files": [
+          "tools/setup_wizard.py",
+          "tests/test_setup_wizard.py"
+        ],
+        "commit": "46b42fb",
+        "regression_test": "tests/test_setup_wizard.py",
+        "at": "2026-09-24T17:57:36+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T18:00:47+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/CLI-01-retest-2.txt"
+          ],
+          "observed": "answering n explains paper needs no .env; the key report no longer calls anything MISSING in paper mode (feed keys optional, no exchange key needed) and calls out the env_private_key signer the old env.example set (CF-03 then changed that default); stdin closed exits 0; a Binance 451 is explained"
+        }
+      ]
+    },
+    {
+      "id": "CF-03",
+      "created_at": "2026-09-24T17:59:19+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T17:59:19+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T18:00:40+00:00",
+          "event": "fix",
+          "commit": "d9a23b2",
+          "note": "env.example: SIGNER_TYPE=null with the live signers listed and env_private_key described as development-only"
+        },
+        {
+          "at": "2026-09-24T18:00:47+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "env.example now sets SIGNER_TYPE=null; with the live-but-halted switches the settings load (only the expected allowlist warning), no env_private_key refusal"
+        }
+      ],
+      "section": "config",
+      "title": "env.example's signer is safe to start from",
+      "steps": "read env.example's signer section; source it and make the README's live-but-halted switch",
+      "expected": "SIGNER_TYPE=null (the README quickstart value); env_private_key described as development only",
+      "observed": "env.example sets SIGNER_TYPE=env_private_key under a header saying the signer is 'required only for PAPER_MODE=false', yet env_private_key is refused whenever PAPER_MODE=false (SettingsValidationError); the template's own default is the one the project forbids for live",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/CF-03.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T17:59:19+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "env.example: SIGNER_TYPE=null with the live signers listed and env_private_key described as development-only",
+        "root_cause": "The template predated the env_private_key ban",
+        "files": [
+          "env.example",
+          "tests/test_uat_2026_09_24.py"
+        ],
+        "commit": "d9a23b2",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_env_example_starts_from_a_signer_the_live_profile_accepts",
+        "at": "2026-09-24T18:00:40+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T18:00:47+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/CF-03-retest.txt"
+          ],
+          "observed": "env.example now sets SIGNER_TYPE=null; with the live-but-halted switches the settings load (only the expected allowlist warning), no env_private_key refusal"
+        }
+      ]
+    },
+    {
+      "id": "DATA-03",
+      "created_at": "2026-09-24T18:01:32+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T18:01:32+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "data",
+      "title": "Paper account and orders survive a server restart; free text round-trips unchanged",
+      "steps": "process 1: deposit 10000 USDT, buy 0.004 BTC at market; process 2 (restart, same READYTRADER_DATA_DIR): get_cex_balance",
+      "expected": "",
+      "observed": "process 2 reads BTC 0.004 / USDT 9663.79 (filled at the market 84051.4); the insight text '<b>ETF inflows</b> \u2014 \u00fcn\u00efcode \u2713' comes back byte-for-byte",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/DATA-03.txt"
+      ],
+      "journey": "As an AI agent, I research BTC (price, candles, sentiment, news) and paper-trade it through the Risk Guardian so that I can practice with zero risk",
+      "notes": "",
+      "updated_at": "2026-09-24T18:01:32+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "MEM-01",
+      "created_at": "2026-09-24T18:01:32+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T18:01:32+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "memory",
+      "title": "Shared insight memory: write, recall across a restart, case-insensitive symbol, expiry",
+      "steps": "post a 1-hour insight and a 4-second one; restart; get_latest_insights('btc/usdt') 6 s later; get_latest_insights('ETH/USDT')",
+      "expected": "",
+      "observed": "after the restart the 1-hour insight is recalled with a lower-case symbol; the 4-second one has expired and is not returned anywhere; another symbol returns []",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/DATA-03.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T18:01:32+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "BE-10",
+      "created_at": "2026-09-24T18:02:09+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T18:02:09+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "backend",
+      "title": "Research journey and input validation over MCP (candles, regime, backtest, sandbox, Guardian, bad inputs)",
+      "steps": "fetch_ohlcv, get_market_regime, run_backtest_simulation (README RSI strategy, then one importing os), validate_trade_risk (valid, bad side), get_sentiment, unknown symbol, bad amount/order type",
+      "expected": "",
+      "observed": "numeric candles; regime VOLATILE_TRENDING/UP; RSI backtest pnl +360.45 on 10000; 'import os' refused (error_kind forbidden); a 3% buy allowed with the falling_knife block; bad side invalid_request; Fear & Greed 71; unknown symbol fetch_price_error; amount -1 invalid_amount; order_type stop invalid_order_type",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/BE-10.txt"
+      ],
+      "journey": "As a strategy developer, I backtest and stress-test a strategy in the sandbox so that I know how it behaves before it trades",
+      "notes": "",
+      "updated_at": "2026-09-24T18:02:09+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "BE-11",
+      "created_at": "2026-09-24T18:02:41+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T18:02:41+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "backend",
+      "title": "Approval/dashboard HTTP API: happy paths, auth, bad bodies, unknown id (real uvicorn server)",
+      "steps": "uvicorn api_server (paper, auth on): health; pending without token; bad login; pending with token; approve-trade {}; unknown request_id; portfolio; history; audit export with a bad token",
+      "expected": "",
+      "observed": "200 mode=paper; 401; 401 without a traceback; 200 {pending}; 422 with no stack trace or file path; 404 EXEC_309; 200; 200; 401 - all nine http_capture expectations passed",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/BE-11.txt"
+      ],
+      "journey": "As an operator running approve_each, I see each proposal on the dashboard and approve or reject it so that nothing executes without me",
+      "notes": "",
+      "updated_at": "2026-09-24T18:02:41+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "INT-02",
+      "created_at": "2026-09-24T18:02:53+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T18:02:53+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "integrations",
+      "title": "Public data sources answer for real (exchange market data, Fear & Greed, RSS)",
+      "steps": "live calls this run: get_crypto_price / fetch_ohlcv (ccxt public REST), get_sentiment (alternative.me), get_free_news (Cointelegraph/CoinDesk RSS)",
+      "expected": "",
+      "observed": "BTC/USDT 84237.6 from ccxt_rest; Fear & Greed 71 (Greed); Cointelegraph headlines; an unknown symbol is fetch_price_error, not a made-up price",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/INT-02.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T18:02:53+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "INT-03",
+      "created_at": "2026-09-24T18:02:53+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T18:02:53+00:00",
+          "event": "check",
+          "result": "BLOCKED",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "integrations",
+      "title": "Keyed news and social sources (NewsAPI, CryptoPanic, X, Reddit) with real keys",
+      "steps": "call get_financial_news / get_news / get_social_sentiment with keys set",
+      "expected": "",
+      "observed": "no NEWSAPI_KEY, CRYPTOPANIC_API_KEY, TWITTER_BEARER_TOKEN or REDDIT_CLIENT_ID/SECRET in this environment; without them each tool answers not_configured (INT-01 retest)",
+      "result": "BLOCKED",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/INT-02.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T18:02:53+00:00",
+      "status": "BLOCKED",
+      "blocked_on": "Bill supplies NEWSAPI_KEY, CRYPTOPANIC_API_KEY, TWITTER_BEARER_TOKEN, REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET (optional feeds)"
+    },
+    {
+      "id": "INT-04",
+      "created_at": "2026-09-24T18:02:53+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T18:02:53+00:00",
+          "event": "check",
+          "result": "BLOCKED",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "integrations",
+      "title": "Live exchange account, 1inch swaps and an EVM signer (read-only / sandbox)",
+      "steps": "get_cex_balance / list_cex_open_orders against an exchange sandbox; swap quote via 1inch; remote signer address",
+      "expected": "",
+      "observed": "no CEX_* keys, ONEINCH_API_KEY, SIGNER_REMOTE_URL / MPC_SIGNER_URL or RPC URLs here; live money paths are out of scope for this UAT (paper/sandbox only; Phase 4 needs Bill's written authorization). Order-path gates were verified against a recording client (BE-04..06, BE-09)",
+      "result": "BLOCKED",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/INT-02.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T18:02:53+00:00",
+      "status": "BLOCKED",
+      "blocked_on": "Bill supplies exchange sandbox/testnet keys (trade+read, no withdraw) and, for DEX, ONEINCH_API_KEY + a testnet RPC and signer; then run tests/integration/test_exchange_sandbox.py and a read-only get_cex_balance"
+    },
+    {
+      "id": "PRE-07",
+      "created_at": "2026-09-24T18:03:07+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T18:03:07+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "preflight",
+      "title": "Documented paper BTC harness (AGENTS.md Verification: python examples/paper_btc_uat.py)",
+      "steps": "",
+      "expected": "",
+      "observed": "20 paper trades ok, the 50% bet is refused by the Risk Guardian (risk_blocks 1), live execution not allowed by default",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/PRE-07.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T18:03:07+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "DOCK-01",
+      "created_at": "2026-09-24T18:10:29+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T18:10:29+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T18:12:38+00:00",
+          "event": "fix",
+          "commit": "cd6076b",
+          "note": "See commit cd6076b: MCP is the default image stage; .dockerignore excludes .env*, keys, data, envs, history, frontend; TRADING_HALTED=true in image and compose; compose defaults to SIGNER_TYPE=null, API auth on with API_JWT_SECRET required, explicit targets and a shared EXECUTION_SESSION_ID"
+        },
+        {
+          "at": "2026-09-24T18:23:36+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "docker build . now yields the MCP server: the README's docker run -i config lists 29 tools, deposits and reads the paper wallet"
+        }
+      ],
+      "section": "config",
+      "title": "README Docker path: docker build -t readytrader-crypto . ; docker run -i --rm readytrader-crypto serves MCP over stdio",
+      "steps": "build the base checkout the README's way (sandbox proxy-CA shim only), run it with the README's MCP client config (docker run -i --rm -e PAPER_MODE=true readytrader-crypto)",
+      "expected": "29 tools over stdio",
+      "observed": "the default build target is the API server (FROM api AS production, CMD uvicorn); with the image's DEV_MODE=false it refuses to start (RuntimeError: API_AUTH_REQUIRED must be true...) and the MCP client gets 'Connection closed'. Every Docker config in the README (standalone, Agent Zero, Claude Desktop) is affected",
+      "result": "FAIL",
+      "severity": "critical",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/DOCK-01.txt"
+      ],
+      "journey": "As an operator evaluating ReadyTrader-Crypto, I install it from the README and connect it to my MCP client (Claude Desktop / Agent Zero / Hermes) so that my agent can research and paper-trade BTC",
+      "notes": "",
+      "updated_at": "2026-09-24T18:10:29+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "See commit cd6076b: MCP is the default image stage; .dockerignore excludes .env*, keys, data, envs, history, frontend; TRADING_HALTED=true in image and compose; compose defaults to SIGNER_TYPE=null, API auth on with API_JWT_SECRET required, explicit targets and a shared EXECUTION_SESSION_ID",
+        "root_cause": "The Dockerfile's default stage, ignore file and compose defaults predated the fail-closed rules",
+        "files": [
+          "Dockerfile",
+          ".dockerignore",
+          "docker-compose.yml",
+          "Makefile",
+          "README.md"
+        ],
+        "commit": "cd6076b",
+        "regression_test": "",
+        "at": "2026-09-24T18:12:38+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T18:23:36+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/DOCK-01-retest.txt"
+          ],
+          "observed": "docker build . now yields the MCP server: the README's docker run -i config lists 29 tools, deposits and reads the paper wallet"
+        }
+      ]
+    },
+    {
+      "id": "DOCK-02",
+      "created_at": "2026-09-24T18:10:29+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T18:10:29+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T18:12:38+00:00",
+          "event": "fix",
+          "commit": "cd6076b",
+          "note": "See commit cd6076b: MCP is the default image stage; .dockerignore excludes .env*, keys, data, envs, history, frontend; TRADING_HALTED=true in image and compose; compose defaults to SIGNER_TYPE=null, API auth on with API_JWT_SECRET required, explicit targets and a shared EXECUTION_SESSION_ID"
+        },
+        {
+          "at": "2026-09-24T18:23:36+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "built from a working clone that has .env.live (canary), data/*.db, .venv, .git and uat/: none of them is in /app (/app/data is empty; 2.3M of app code)"
+        },
+        {
+          "at": "2026-09-24T19:41:01+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Strengthened: image built from the branch with canaries at the root and in subfolders (deploy/.env.live, configs/signer.pem, configs/tls.key, app/keystore-main.json) plus the local data/paper.db: none is in the image (0 canary files)."
+        }
+      ],
+      "section": "config",
+      "title": "The image carries no local secrets or local data",
+      "steps": "a checkout with a gitignored .env.live (canary value) and data/*.db, built as the README says; list /app inside the image",
+      "expected": "no .env* files and no data/*.db in the image",
+      "observed": "/app/.env.live (the canary) and /app/data/{insights,paper,strategies}.db are in the image: .dockerignore excludes only '.env', so a live-credentials file and a developer's databases are baked into image layers (and COPY . . also carries .git/.venv/node_modules in its layer before the later rm)",
+      "result": "FAIL",
+      "severity": "high",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/DOCK-01.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T18:10:29+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "See commit cd6076b: MCP is the default image stage; .dockerignore excludes .env*, keys, data, envs, history, frontend; TRADING_HALTED=true in image and compose; compose defaults to SIGNER_TYPE=null, API auth on with API_JWT_SECRET required, explicit targets and a shared EXECUTION_SESSION_ID",
+        "root_cause": "The Dockerfile's default stage, ignore file and compose defaults predated the fail-closed rules",
+        "files": [
+          "Dockerfile",
+          ".dockerignore",
+          "docker-compose.yml",
+          "Makefile",
+          "README.md"
+        ],
+        "commit": "cd6076b",
+        "regression_test": "",
+        "at": "2026-09-24T18:12:38+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T18:23:36+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/DOCK-01-retest.txt"
+          ],
+          "observed": "built from a working clone that has .env.live (canary), data/*.db, .venv, .git and uat/: none of them is in /app (/app/data is empty; 2.3M of app code)"
+        },
+        {
+          "at": "2026-09-24T19:41:01+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/DOCK-02-retest.txt"
+          ],
+          "observed": "Strengthened: image built from the branch with canaries at the root and in subfolders (deploy/.env.live, configs/signer.pem, configs/tls.key, app/keystore-main.json) plus the local data/paper.db: none is in the image (0 canary files)."
+        }
+      ]
+    },
+    {
+      "id": "DOCK-03",
+      "created_at": "2026-09-24T18:10:29+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T18:10:29+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T18:12:39+00:00",
+          "event": "fix",
+          "commit": "cd6076b",
+          "note": "See commit cd6076b: MCP is the default image stage; .dockerignore excludes .env*, keys, data, envs, history, frontend; TRADING_HALTED=true in image and compose; compose defaults to SIGNER_TYPE=null, API auth on with API_JWT_SECRET required, explicit targets and a shared EXECUTION_SESSION_ID"
+        },
+        {
+          "at": "2026-09-24T18:23:36+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "image env TRADING_HALTED=true (and compose defaults true: DOCK-04 retest)"
+        }
+      ],
+      "section": "config",
+      "title": "Containers keep the fail-closed kill-switch default",
+      "steps": "image ENV and docker-compose.yml effective config",
+      "expected": "TRADING_HALTED=true unless the operator sets false (the code default and the AGENTS.md rule)",
+      "observed": "Dockerfile sets ENV TRADING_HALTED=false and docker-compose.yml defaults both services to ${TRADING_HALTED:-false}",
+      "result": "FAIL",
+      "severity": "medium",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/DOCK-04.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T18:10:29+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "See commit cd6076b: MCP is the default image stage; .dockerignore excludes .env*, keys, data, envs, history, frontend; TRADING_HALTED=true in image and compose; compose defaults to SIGNER_TYPE=null, API auth on with API_JWT_SECRET required, explicit targets and a shared EXECUTION_SESSION_ID",
+        "root_cause": "The Dockerfile's default stage, ignore file and compose defaults predated the fail-closed rules",
+        "files": [
+          "Dockerfile",
+          ".dockerignore",
+          "docker-compose.yml",
+          "Makefile",
+          "README.md"
+        ],
+        "commit": "cd6076b",
+        "regression_test": "",
+        "at": "2026-09-24T18:12:39+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T18:23:36+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/DOCK-01-retest.txt"
+          ],
+          "observed": "image env TRADING_HALTED=true (and compose defaults true: DOCK-04 retest)"
+        }
+      ]
+    },
+    {
+      "id": "DOCK-04",
+      "created_at": "2026-09-24T18:10:29+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T18:10:29+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T18:12:39+00:00",
+          "event": "fix",
+          "commit": "cd6076b",
+          "note": "See commit cd6076b: MCP is the default image stage; .dockerignore excludes .env*, keys, data, envs, history, frontend; TRADING_HALTED=true in image and compose; compose defaults to SIGNER_TYPE=null, API auth on with API_JWT_SECRET required, explicit targets and a shared EXECUTION_SESSION_ID"
+        },
+        {
+          "at": "2026-09-24T18:23:36+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "without API_JWT_SECRET compose stops with a clear message; with the two secrets both services come up healthy, defaults are halted/null signer/auth on/shared session, /api/health answers, the admin logs in with the bcrypt hash, pending approvals need the token. (Found while retesting: an unquoted hash in .env is mangled by compose's $ expansion - the templates now say to single-quote it.)"
+        }
+      ],
+      "section": "config",
+      "title": "docker-compose up -d (compose header) starts the API and MCP services with the shipped defaults",
+      "steps": "no .env; docker compose up -d api mcp from images of the same checkout",
+      "expected": "both services up; /api/health answers",
+      "observed": "both crash-loop: SIGNER_TYPE defaults to env_private_key with no PRIVATE_KEY (ValueError); with that fixed the API would still refuse DEV_MODE=false + API_AUTH_REQUIRED=false; the header says 'Copy .env.example' (the file is env.example); no EXECUTION_SESSION_ID so the dashboard could not approve the MCP service's proposals",
+      "result": "FAIL",
+      "severity": "high",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/DOCK-04.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T18:10:29+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "See commit cd6076b: MCP is the default image stage; .dockerignore excludes .env*, keys, data, envs, history, frontend; TRADING_HALTED=true in image and compose; compose defaults to SIGNER_TYPE=null, API auth on with API_JWT_SECRET required, explicit targets and a shared EXECUTION_SESSION_ID",
+        "root_cause": "The Dockerfile's default stage, ignore file and compose defaults predated the fail-closed rules",
+        "files": [
+          "Dockerfile",
+          ".dockerignore",
+          "docker-compose.yml",
+          "Makefile",
+          "README.md"
+        ],
+        "commit": "cd6076b",
+        "regression_test": "",
+        "at": "2026-09-24T18:12:39+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T18:23:36+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/DOCK-04-retest-2.txt"
+          ],
+          "observed": "without API_JWT_SECRET compose stops with a clear message; with the two secrets both services come up healthy, defaults are halted/null signer/auth on/shared session, /api/health answers, the admin logs in with the bcrypt hash, pending approvals need the token. (Found while retesting: an unquoted hash in .env is mangled by compose's $ expansion - the templates now say to single-quote it.)"
+        }
+      ]
+    },
+    {
+      "id": "BE-12",
+      "created_at": "2026-09-24T18:15:01+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T18:15:01+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T18:21:37+00:00",
+          "event": "fix",
+          "commit": "d760186",
+          "note": "api_server uses bcrypt.checkpw/hashpw (72-byte limit handled; constant-time username and dev plaintext compares); PyJWT and bcrypt are runtime requirements; passlib removed; hash command updated in env.example, env.live.btc.example, docker-compose.yml"
+        },
+        {
+          "at": "2026-09-24T18:21:59+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "venv: right password 200 with a token, wrong 401; Docker API image: right password 200 with a token (was 500). (The probe's last line shows the old passlib generator still fails in a venv that has passlib; the documented command is now bcrypt.hashpw, which made the hash used here.)"
+        },
+        {
+          "at": "2026-09-24T19:41:01+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Strengthened: in the Docker API image (DEV_MODE=false, bcrypt hash) the right password gets a token; a wrong password and a wrong username get 401; no token -> 401."
+        }
+      ],
+      "section": "backend",
+      "title": "An operator can sign in to the dashboard API in production mode (DEV_MODE=false, bcrypt admin hash)",
+      "steps": "(a) pip install -r requirements-dev.txt: login with a correct bcrypt hash; the documented hash generator; (b) the Docker API image: the same login",
+      "expected": "200 with a token for the right password, 401 for a wrong one; the documented generator prints a hash",
+      "observed": "(a) the right password is refused 401 (passlib 1.7.4 cannot drive bcrypt 5.0.0, the pinned version) and the documented generator 'from passlib.hash import bcrypt; bcrypt.hash(...)' raises ValueError; (b) the image has no passlib (only in requirements-dev.txt): 500 'Password hashing not available'. Nobody can approve a trade from the dashboard in production; e2e passed only because its harness runs DEV_MODE=true with a plaintext password",
+      "result": "FAIL",
+      "severity": "critical",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/BE-12.txt"
+      ],
+      "journey": "As an operator running approve_each, I see each proposal on the dashboard and approve or reject it so that nothing executes without me",
+      "notes": "",
+      "updated_at": "2026-09-24T18:15:01+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "api_server uses bcrypt.checkpw/hashpw (72-byte limit handled; constant-time username and dev plaintext compares); PyJWT and bcrypt are runtime requirements; passlib removed; hash command updated in env.example, env.live.btc.example, docker-compose.yml",
+        "root_cause": "passlib 1.7.4 is incompatible with bcrypt >= 4.1, and the auth libraries were only dev requirements",
+        "files": [
+          "api_server.py",
+          "requirements.txt",
+          "requirements-dev.txt",
+          "requirements.lock.txt",
+          "env.example",
+          "env.live.btc.example",
+          "docker-compose.yml"
+        ],
+        "commit": "d760186",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_production_login_with_a_bcrypt_hash",
+        "at": "2026-09-24T18:21:37+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T18:21:59+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/BE-12-retest.txt"
+          ],
+          "observed": "venv: right password 200 with a token, wrong 401; Docker API image: right password 200 with a token (was 500). (The probe's last line shows the old passlib generator still fails in a venv that has passlib; the documented command is now bcrypt.hashpw, which made the hash used here.)"
+        },
+        {
+          "at": "2026-09-24T19:41:01+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/BE-12-retest-2.txt"
+          ],
+          "observed": "Strengthened: in the Docker API image (DEV_MODE=false, bcrypt hash) the right password gets a token; a wrong password and a wrong username get 401; no token -> 401."
+        }
+      ]
+    },
+    {
+      "id": "CF-04",
+      "created_at": "2026-09-24T18:24:18+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T18:24:18+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "config",
+      "title": "No credentials in the tree or its history",
+      "steps": "regex scan (AWS/GitHub/OpenAI/Google/Slack key shapes, PEM private keys, KEY/SECRET/PASSWORD= with a long literal) over every file of all 136 commits",
+      "expected": "",
+      "observed": "0 hits (the scanner's self-test matches a fake AWS key id); test fixtures use obvious dummies (PRIVATE_KEY=0x...01 in tests/conftest.py)",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/CF-04.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T18:24:18+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "DOCK-05",
+      "created_at": "2026-09-24T18:25:17+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T18:25:17+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T18:25:17+00:00",
+          "event": "fix",
+          "commit": "ccaa6c4",
+          "note": "Both live services get EXECUTION_DB_PATH=/app/data/execution.db and a required EXECUTION_SESSION_ID; env.live.btc.example sets EXECUTION_SESSION_ID=btc-live-desk-1"
+        },
+        {
+          "at": "2026-09-24T18:25:23+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "the ops pack's config check passes and both live services share EXECUTION_DB_PATH=/app/data/execution.db and EXECUTION_SESSION_ID=btc-live-desk-1, approve_each, halted"
+        }
+      ],
+      "section": "config",
+      "title": "The BTC-live compose stack (docs/OPS_BTC_PRODUCTION.md) lets the dashboard approve the MCP server's proposals",
+      "steps": "the ops pack's section 3 literally: cp env.live.btc.example .env.live; docker compose -f docker-compose.live.yml --env-file .env.live config; read both services' approval settings",
+      "expected": "api and mcp share EXECUTION_DB_PATH and EXECUTION_SESSION_ID (approve_each is mandated for live BTC)",
+      "observed": "both run approve_each, but neither sets EXECUTION_SESSION_ID (and the mcp service has no EXECUTION_DB_PATH): every proposal the agent makes is invisible to the dashboard, so the mandated live flow cannot be approved",
+      "result": "FAIL",
+      "severity": "high",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/DOCK-05.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T18:25:17+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Both live services get EXECUTION_DB_PATH=/app/data/execution.db and a required EXECUTION_SESSION_ID; env.live.btc.example sets EXECUTION_SESSION_ID=btc-live-desk-1",
+        "root_cause": "The live stack predated EXECUTION_SESSION_ID",
+        "files": [
+          "docker-compose.live.yml",
+          "env.live.btc.example"
+        ],
+        "commit": "ccaa6c4",
+        "regression_test": "",
+        "at": "2026-09-24T18:25:17+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T18:25:23+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/DOCK-05-retest.txt"
+          ],
+          "observed": "the ops pack's config check passes and both live services share EXECUTION_DB_PATH=/app/data/execution.db and EXECUTION_SESSION_ID=btc-live-desk-1, approve_each, halted"
+        }
+      ]
+    },
+    {
+      "id": "REG-01",
+      "created_at": "2026-09-24T18:37:29+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T18:37:29+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "preflight",
+      "title": "Regression sweep on the final branch: every fixed finding's probe again + make check + make security",
+      "steps": "",
+      "expected": "",
+      "observed": "18/18 finding probes PASS; make check exit 0 (685 passed, 5 skipped; ruff, format, bandit, pip-audit, verify_docs, mdformat); make security exit 0",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REG-01.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T18:37:29+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "REG-02",
+      "created_at": "2026-09-24T18:37:29+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T18:37:29+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "frontend",
+      "title": "Dashboard e2e suite on the final branch (after the auth and Guardian changes), documented command, no overrides",
+      "steps": "",
+      "expected": "",
+      "observed": "18 passed; lint clean afterwards",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REG-02.txt"
+      ],
+      "journey": "As an operator running approve_each, I see each proposal on the dashboard and approve or reject it so that nothing executes without me",
+      "notes": "",
+      "updated_at": "2026-09-24T18:37:29+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "REV-01",
+      "created_at": "2026-09-24T19:09:32+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:09:32+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T19:34:57+00:00",
+          "event": "fix",
+          "commit": "011fa78",
+          "note": "Orders are valued at the market-data price (a limit at max(limit, market)); no market price refuses an order that adds exposure; order_type passed from every path"
+        },
+        {
+          "at": "2026-09-24T19:36:35+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Market BUY 1 BTC with price=1, price=0.01, a futures limit SELL @1, a replace and an approve_each order are all valued at 84,000 (the market) and refused risk_blocked; no exchange call."
+        }
+      ],
+      "section": "backend",
+      "title": "Live Risk Guardian sizes an order at the market price, not the caller's",
+      "steps": "",
+      "expected": "",
+      "observed": "Live market BUY 1 BTC with price=1 (market 84,000) passes the 5% cap on a 100k account and is sent to the exchange; pre_trade_check(price=1) sizes it at 1 USD.",
+      "result": "FAIL",
+      "severity": "critical",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV-01.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:09:32+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Orders are valued at the market-data price (a limit at max(limit, market)); no market price refuses an order that adds exposure; order_type passed from every path",
+        "root_cause": "pre_trade_check took reference = the caller's price when one was given",
+        "files": [
+          "app/tools/trading.py",
+          "app/tools/execution.py"
+        ],
+        "commit": "011fa78",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_live_market_order_is_sized_at_the_market_not_the_callers_price",
+        "at": "2026-09-24T19:34:57+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T19:36:35+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV-01-retest.txt"
+          ],
+          "observed": "Market BUY 1 BTC with price=1, price=0.01, a futures limit SELL @1, a replace and an approve_each order are all valued at 84,000 (the market) and refused risk_blocked; no exchange call."
+        }
+      ]
+    },
+    {
+      "id": "REV-02",
+      "created_at": "2026-09-24T19:09:32+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:09:32+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T19:34:57+00:00",
+          "event": "fix",
+          "commit": "011fa78,6ef8957",
+          "note": "Reads and cancels pass allowed_while_halted=True; the emergency procedure is restart halted, cancel_all_cex_orders, revert to paper"
+        },
+        {
+          "at": "2026-09-24T19:36:35+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "With TRADING_HALTED=true, cancel_all_cex_orders, cancel_cex_order and list_cex_open_orders reach the (recording) exchange; LIVE_TESTING_PROTOCOL 4.5 and RUNBOOK now give the restart-halted + cancel_all_cex_orders procedure (the 404 route is no longer documented)."
+        }
+      ],
+      "section": "backend",
+      "title": "With the kill switch on, open orders can still be listed and cancelled",
+      "steps": "",
+      "expected": "",
+      "observed": "TRADING_HALTED=true refuses cancel_all_cex_orders, cancel_cex_order and list_cex_open_orders (trading_halted); the documented POST /api/emergency-cancel-all (LIVE_TESTING_PROTOCOL.md:352) returns 404.",
+      "result": "FAIL",
+      "severity": "high",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV-02.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:09:32+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Reads and cancels pass allowed_while_halted=True; the emergency procedure is restart halted, cancel_all_cex_orders, revert to paper",
+        "root_cause": "_require_live_allowed refused every live call while halted, including cancels; the doc named an endpoint that was never built",
+        "files": [
+          "app/tools/execution.py",
+          "docs/LIVE_TESTING_PROTOCOL.md",
+          "RUNBOOK.md",
+          "docs/TOOLS.md"
+        ],
+        "commit": "011fa78,6ef8957",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_kill_switch_stops_new_orders_but_not_cancels_or_reads",
+        "at": "2026-09-24T19:34:57+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T19:36:35+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV-02-retest.txt"
+          ],
+          "observed": "With TRADING_HALTED=true, cancel_all_cex_orders, cancel_cex_order and list_cex_open_orders reach the (recording) exchange; LIVE_TESTING_PROTOCOL 4.5 and RUNBOOK now give the restart-halted + cancel_all_cex_orders procedure (the 404 route is no longer documented)."
+        }
+      ]
+    },
+    {
+      "id": "REV-03",
+      "created_at": "2026-09-24T19:09:32+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:09:32+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T19:34:57+00:00",
+          "event": "fix",
+          "commit": "011fa78",
+          "note": "Snapshots record net deposits (valued when made); drawdown/daily loss read results net of deposits against the equity at the peak, with the current marked value appended; the Guardian marks prices before reading metrics"
+        },
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "After BTC halves the first BUY is refused (Max Drawdown 47.2%); after a 5,000 USDT deposit drawdown stays 47.25% and the BUY is still refused."
+        }
+      ],
+      "section": "data",
+      "title": "The paper drawdown halt reads current equity and a deposit does not clear it",
+      "steps": "",
+      "expected": "",
+      "observed": "After BTC halves, the first BUY is allowed (metrics are the last snapshot); after a 5,000 USDT deposit drawdown_pct reads 0.0 and BUYs pass again.",
+      "result": "FAIL",
+      "severity": "medium",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV-03.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:09:32+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Snapshots record net deposits (valued when made); drawdown/daily loss read results net of deposits against the equity at the peak, with the current marked value appended; the Guardian marks prices before reading metrics",
+        "root_cause": "drawdown measured raw equity (deposits counted as gains) and only up to the last snapshot",
+        "files": [
+          "paper_engine.py",
+          "app/tools/trading.py"
+        ],
+        "commit": "011fa78",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_a_deposit_does_not_end_a_drawdown_halt",
+        "at": "2026-09-24T19:34:57+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV-03-retest.txt"
+          ],
+          "observed": "After BTC halves the first BUY is refused (Max Drawdown 47.2%); after a 5,000 USDT deposit drawdown stays 47.25% and the BUY is still refused."
+        }
+      ]
+    },
+    {
+      "id": "REV-04",
+      "created_at": "2026-09-24T19:09:32+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:09:32+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T19:34:57+00:00",
+          "event": "fix",
+          "commit": "011fa78",
+          "note": "A SELL into a non-cash quote sizes the acquired quote (CASH_QUOTES = USD stables + major fiat)"
+        },
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "SELL 40 ETH/BTC sizes the acquired BTC at 100,000 USD and is refused risk_blocked; no BTC acquired."
+        }
+      ],
+      "section": "backend",
+      "title": "A SELL on a crypto-quoted pair sizes the asset it acquires",
+      "steps": "",
+      "expected": "",
+      "observed": "SELL 40 ETH on ETH/BTC is treated as an exit (exposure 0) and fills; the account then holds 1.19 BTC = 50% of equity against a 5% cap.",
+      "result": "FAIL",
+      "severity": "medium",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV-04.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:09:32+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "A SELL into a non-cash quote sizes the acquired quote (CASH_QUOTES = USD stables + major fiat)",
+        "root_cause": "exposure_added looked only at the base asset, so any SELL within holdings was an exit",
+        "files": [
+          "app/tools/trading.py"
+        ],
+        "commit": "011fa78",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_selling_into_a_crypto_quote_sizes_what_it_buys",
+        "at": "2026-09-24T19:34:57+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV-04-retest.txt"
+          ],
+          "observed": "SELL 40 ETH/BTC sizes the acquired BTC at 100,000 USD and is refused risk_blocked; no BTC acquired."
+        }
+      ]
+    },
+    {
+      "id": "REV-05",
+      "created_at": "2026-09-24T19:09:32+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:09:32+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T19:34:57+00:00",
+          "event": "fix",
+          "commit": "e858eb3",
+          "note": "Secret, key and database patterns are **/-prefixed"
+        },
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Same canary context: deploy/.env.live, deploy/.env, secrets/signer.pem, secrets/tls.key, secrets/keystore-main.json and the root .env.live are all excluded; only app/ok.py and .dockerignore reach the image."
+        }
+      ],
+      "section": "config",
+      "title": "The Docker build context excludes secrets in subfolders",
+      "steps": "",
+      "expected": "",
+      "observed": "The repo .dockerignore patterns (.env*, *.pem, *.key, keystore*.json) match only at the root: deploy/.env.live, secrets/signer.pem, secrets/tls.key and secrets/keystore-main.json were copied into the image.",
+      "result": "FAIL",
+      "severity": "medium",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV-05.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:09:32+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Secret, key and database patterns are **/-prefixed",
+        "root_cause": "Docker ignore patterns without **/ match only at the context root",
+        "files": [
+          ".dockerignore"
+        ],
+        "commit": "e858eb3",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_nested_secrets_stay_out_of_the_docker_build_context",
+        "at": "2026-09-24T19:34:57+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV-05-retest.txt"
+          ],
+          "observed": "Same canary context: deploy/.env.live, deploy/.env, secrets/signer.pem, secrets/tls.key, secrets/keystore-main.json and the root .env.live are all excluded; only app/ok.py and .dockerignore reach the image."
+        }
+      ]
+    },
+    {
+      "id": "REV-06",
+      "created_at": "2026-09-24T19:09:32+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:09:32+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T19:34:57+00:00",
+          "event": "fix",
+          "commit": "6ef8957",
+          "note": "Docs say the daily-loss and drawdown limits run on the paper account and are reported as inactive_rules live"
+        },
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Live pre_trade_check still lists inactive_rules [daily_loss_limit, max_drawdown]; README:77/594-595, TOOLS.md:72-75 and ERRORS.md now say those limits run on the paper account and are reported as inactive live."
+        }
+      ],
+      "section": "docs",
+      "title": "Docs say which Risk Guardian rules apply to live orders",
+      "steps": "",
+      "expected": "",
+      "observed": "Live pre_trade_check reports inactive_rules [daily_loss_limit, max_drawdown]; README:77 and 593 and docs/TOOLS.md:72 and 252-256 say those limits apply in both modes.",
+      "result": "FAIL",
+      "severity": "medium",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV-06.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:09:32+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Docs say the daily-loss and drawdown limits run on the paper account and are reported as inactive_rules live",
+        "root_cause": "docs written before live accounts were known to lack loss history",
+        "files": [
+          "README.md",
+          "docs/TOOLS.md",
+          "docs/ERRORS.md",
+          "docs/FALLING_KNIFE.md",
+          "docs/ARCHITECTURE.md"
+        ],
+        "commit": "6ef8957",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_live_order_that_cannot_be_sized_fails_closed",
+        "at": "2026-09-24T19:34:57+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV-06-retest.txt"
+          ],
+          "observed": "Live pre_trade_check still lists inactive_rules [daily_loss_limit, max_drawdown]; README:77/594-595, TOOLS.md:72-75 and ERRORS.md now say those limits run on the paper account and are reported as inactive live."
+        }
+      ]
+    },
+    {
+      "id": "REV-07",
+      "created_at": "2026-09-24T19:09:32+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:09:32+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T19:34:57+00:00",
+          "event": "fix",
+          "commit": "e858eb3",
+          "note": "Configs and README mount readytrader-crypto-data on /app/data"
+        },
+        {
+          "at": "2026-09-24T19:38:40+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Two client sessions with the documented config (now -v readytrader-crypto-data:/app/data), image rebuilt from the branch: the second deposit reports balance 200.0, so the paper account persists."
+        }
+      ],
+      "section": "docs",
+      "title": "The documented Docker MCP config keeps the paper account between sessions",
+      "steps": "",
+      "expected": "",
+      "observed": "Two client sessions with configs/claude_desktop.mcp-server-config.json args: each deposit of 100 USDT reports balance 100.0; no volume is mounted, so the paper account resets every session.",
+      "result": "FAIL",
+      "severity": "medium",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV-07.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:09:32+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Configs and README mount readytrader-crypto-data on /app/data",
+        "root_cause": "docker run --rm with no volume discards /app/data at exit",
+        "files": [
+          "configs/agent_zero.mcp.yaml",
+          "configs/claude_desktop.mcp-server-config.json",
+          "README.md"
+        ],
+        "commit": "e858eb3",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_docker_mcp_configs_keep_the_paper_account",
+        "at": "2026-09-24T19:34:57+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T19:38:40+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV-07-retest.txt"
+          ],
+          "observed": "Two client sessions with the documented config (now -v readytrader-crypto-data:/app/data), image rebuilt from the branch: the second deposit reports balance 200.0, so the paper account persists."
+        }
+      ]
+    },
+    {
+      "id": "REV-08",
+      "created_at": "2026-09-24T19:09:33+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:09:33+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T19:34:57+00:00",
+          "event": "fix",
+          "commit": "2d8f827",
+          "note": "Drawdown from peak + Max drawdown; stablecoin set matches the server"
+        },
+        {
+          "at": "2026-09-24T19:37:10+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "PortfolioSummary shows 'Drawdown from peak' (drawdown_pct) and 'Max drawdown' (max_drawdown_pct); the component test passes (2/2)."
+        }
+      ],
+      "section": "frontend",
+      "title": "The dashboard labels the current drawdown correctly",
+      "steps": "",
+      "expected": "",
+      "observed": "PortfolioSummary.tsx:39-40 labels metrics.drawdown_pct (the current fall from the peak) 'Max drawdown'; the API returns max_drawdown_pct separately.",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV-08.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:09:33+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Drawdown from peak + Max drawdown; stablecoin set matches the server",
+        "root_cause": "the label predates the split of drawdown_pct (current) and max_drawdown_pct (record)",
+        "files": [
+          "frontend/src/components/PortfolioSummary.tsx",
+          "frontend/src/lib/types.ts"
+        ],
+        "commit": "2d8f827",
+        "regression_test": "tests/test_uat_2026_09_24.py::frontend/src/components/PortfolioSummary.test.tsx",
+        "at": "2026-09-24T19:34:57+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T19:37:10+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV-08-retest.txt"
+          ],
+          "observed": "PortfolioSummary shows 'Drawdown from peak' (drawdown_pct) and 'Max drawdown' (max_drawdown_pct); the component test passes (2/2)."
+        }
+      ]
+    },
+    {
+      "id": "REV-09",
+      "created_at": "2026-09-24T19:09:33+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:09:33+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T19:34:58+00:00",
+          "event": "fix",
+          "commit": "011fa78",
+          "note": "Shared _order_args validation for place and replace; pre_trade_check refuses a non-positive or non-finite amount"
+        },
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "replace_cex_order(amount=nan) -> invalid_amount with no exchange call; pre_trade_check(amount=nan) -> allowed False."
+        }
+      ],
+      "section": "backend",
+      "title": "A NaN amount is refused on every order path",
+      "steps": "",
+      "expected": "",
+      "observed": "replace_cex_order(amount=nan) is sent to the exchange (replace_order amount nan); pre_trade_check(amount=nan) answers allowed with exposure nan.",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV-09.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:09:33+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Shared _order_args validation for place and replace; pre_trade_check refuses a non-positive or non-finite amount",
+        "root_cause": "replace_cex_order and pre_trade_check did not validate the amount",
+        "files": [
+          "app/tools/execution.py",
+          "app/tools/trading.py"
+        ],
+        "commit": "011fa78",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_nan_amounts_never_reach_the_exchange_or_a_proposal",
+        "at": "2026-09-24T19:34:58+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV-09-retest.txt"
+          ],
+          "observed": "replace_cex_order(amount=nan) -> invalid_amount with no exchange call; pre_trade_check(amount=nan) -> allowed False."
+        }
+      ]
+    },
+    {
+      "id": "REV-10",
+      "created_at": "2026-09-24T19:09:33+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:09:33+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T19:34:58+00:00",
+          "event": "fix",
+          "commit": "011fa78",
+          "note": "transfer_eth refuses a non-finite or non-positive amount with invalid_amount before policy or proposal"
+        },
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "transfer_eth(nan) and transfer_eth(-3.0) -> invalid_amount; no pending proposal."
+        }
+      ],
+      "section": "backend",
+      "title": "transfer_eth refuses a NaN or negative amount before proposing",
+      "steps": "",
+      "expected": "",
+      "observed": "Live approve_each: transfer_eth(nan) and transfer_eth(-3.0) each return ok with a pending proposal.",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV-10.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:09:33+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "transfer_eth refuses a non-finite or non-positive amount with invalid_amount before policy or proposal",
+        "root_cause": "transfer_eth proposed before validating the amount",
+        "files": [
+          "app/tools/execution.py"
+        ],
+        "commit": "011fa78",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_nan_amounts_never_reach_the_exchange_or_a_proposal",
+        "at": "2026-09-24T19:34:58+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV-10-retest.txt"
+          ],
+          "observed": "transfer_eth(nan) and transfer_eth(-3.0) -> invalid_amount; no pending proposal."
+        }
+      ]
+    },
+    {
+      "id": "REV-11",
+      "created_at": "2026-09-24T19:09:33+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:09:33+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T19:34:58+00:00",
+          "event": "fix",
+          "commit": "011fa78",
+          "note": "paper_engine.USD_STABLES is the one list; trading imports it"
+        },
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "1,000 each of USDT FDUSD TUSD USDP BUSD: paper portfolio value 5000.0."
+        }
+      ],
+      "section": "data",
+      "title": "The paper account values every USD stablecoin the Guardian knows at 1 USD",
+      "steps": "",
+      "expected": "",
+      "observed": "1,000 each of USDT FDUSD TUSD USDP BUSD: paper portfolio value 1000.0 (only USDT counted); paper_engine.py:147/372/444 list 4 stables vs the Guardian's 8.",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV-11.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:09:33+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "paper_engine.USD_STABLES is the one list; trading imports it",
+        "root_cause": "two stablecoin lists",
+        "files": [
+          "paper_engine.py",
+          "app/tools/trading.py"
+        ],
+        "commit": "011fa78",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_every_usd_stablecoin_counts_at_one_dollar_in_the_paper_account",
+        "at": "2026-09-24T19:34:58+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV-11-retest.txt"
+          ],
+          "observed": "1,000 each of USDT FDUSD TUSD USDP BUSD: paper portfolio value 5000.0."
+        }
+      ]
+    },
+    {
+      "id": "REV-12",
+      "created_at": "2026-09-24T19:09:33+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:09:33+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T19:34:58+00:00",
+          "event": "fix",
+          "commit": "e8290a8",
+          "note": "social_sentiment_report returns each source's state; all configured sources erroring answers source_unavailable"
+        },
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Same failing-X setup: get_social_sentiment ok=false code=source_unavailable."
+        }
+      ],
+      "section": "integrations",
+      "title": "get_social_sentiment says when a configured source fails",
+      "steps": "",
+      "expected": "",
+      "observed": "X configured with a failing token, Reddit unset: ok=true with 'Twitter Error: 401 Unauthorized' in the text.",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV-12.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:09:33+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "social_sentiment_report returns each source's state; all configured sources erroring answers source_unavailable",
+        "root_cause": "the tool checked only 'configured', not whether a configured source answered",
+        "files": [
+          "intelligence/core.py",
+          "app/tools/research.py",
+          "docs/TOOLS.md"
+        ],
+        "commit": "e8290a8",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_social_sentiment_says_when_every_configured_source_failed",
+        "at": "2026-09-24T19:34:58+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV-12-retest.txt"
+          ],
+          "observed": "Same failing-X setup: get_social_sentiment ok=false code=source_unavailable."
+        }
+      ]
+    },
+    {
+      "id": "REV-13",
+      "created_at": "2026-09-24T19:09:33+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:09:33+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T19:34:58+00:00",
+          "event": "fix",
+          "commit": "e8290a8",
+          "note": "The password check runs for every username; both must pass"
+        },
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Wrong username 282.0 ms vs wrong password 289.1 ms median: both run the bcrypt check."
+        }
+      ],
+      "section": "backend",
+      "title": "Login takes the same time for an unknown username as for a wrong password",
+      "steps": "",
+      "expected": "",
+      "observed": "Median 3.5 ms for a wrong username vs 286.6 ms for the right username with a wrong password: username validity is visible by timing.",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV-13.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:09:33+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "The password check runs for every username; both must pass",
+        "root_cause": "the username check returned before the bcrypt check",
+        "files": [
+          "api_server.py"
+        ],
+        "commit": "e8290a8",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_login_checks_the_password_whatever_the_username",
+        "at": "2026-09-24T19:34:58+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV-13-retest.txt"
+          ],
+          "observed": "Wrong username 282.0 ms vs wrong password 289.1 ms median: both run the bcrypt check."
+        }
+      ]
+    },
+    {
+      "id": "REV-14",
+      "created_at": "2026-09-24T19:09:33+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:09:33+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T19:34:58+00:00",
+          "event": "fix",
+          "commit": "e8290a8",
+          "note": "request_id_middleware sets a per-request id (per connection on /ws); logs use _ctx(); X-Request-ID header"
+        },
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Two login requests log two distinct request_ids."
+        }
+      ],
+      "section": "backend",
+      "title": "API log lines carry a per-request request_id",
+      "steps": "",
+      "expected": "",
+      "observed": "Two separate login requests log the same request_id; API_CTX is built once at import (api_server.py:48).",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV-14.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:09:33+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "request_id_middleware sets a per-request id (per connection on /ws); logs use _ctx(); X-Request-ID header",
+        "root_cause": "API_CTX (with its request_id) was built once at import",
+        "files": [
+          "api_server.py"
+        ],
+        "commit": "e8290a8",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_each_api_request_logs_its_own_request_id",
+        "at": "2026-09-24T19:34:58+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T19:36:36+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV-14-retest.txt"
+          ],
+          "observed": "Two login requests log two distinct request_ids."
+        }
+      ]
+    },
+    {
+      "id": "REV-15",
+      "created_at": "2026-09-24T19:09:33+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:09:33+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T19:34:58+00:00",
+          "event": "fix",
+          "commit": "e858eb3",
+          "note": "Documented as reserved and not applied; removed from the smithery config schema and the Hermes sample"
+        },
+        {
+          "at": "2026-09-24T19:37:10+00:00",
+          "event": "fix",
+          "commit": "e858eb3,3b58fa4",
+          "note": "Documented as reserved and not applied; removed from the smithery config schema and both Hermes samples"
+        },
+        {
+          "at": "2026-09-24T19:37:10+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "RISK_PROFILE appears only in the README row that says it is reserved and not applied; smithery.yaml and the Hermes guide no longer offer it."
+        }
+      ],
+      "section": "docs",
+      "title": "RISK_PROFILE does what the docs say",
+      "steps": "",
+      "expected": "",
+      "observed": "RISK_PROFILE is documented (README:179 'Presets for sizing and safety limits', smithery.yaml, compose, env templates) but only settings.risk_config reads it and nothing uses that; the Guardian limits are fixed.",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV-15.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:09:33+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Documented as reserved and not applied; removed from the smithery config schema and both Hermes samples",
+        "root_cause": "RISK_PROFILE presets were never wired to the Guardian",
+        "files": [
+          "README.md",
+          "smithery.yaml",
+          "docs/HERMES_INTEGRATION.md"
+        ],
+        "commit": "e858eb3,3b58fa4",
+        "regression_test": "none (docs)",
+        "at": "2026-09-24T19:37:10+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T19:37:10+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV-15-retest-2.txt"
+          ],
+          "observed": "RISK_PROFILE appears only in the README row that says it is reserved and not applied; smithery.yaml and the Hermes guide no longer offer it."
+        }
+      ]
+    },
+    {
+      "id": "REV-16",
+      "created_at": "2026-09-24T19:09:33+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:09:33+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T19:34:58+00:00",
+          "event": "fix",
+          "commit": "e858eb3",
+          "note": "Hermes guide, smithery description and README compose line match the server"
+        },
+        {
+          "at": "2026-09-24T19:37:10+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Hermes guide: paper orders at the market, account tools answer paper_mode_not_supported; smithery describes 1inch swaps and live-only approve_each; README names --profile with-frontend; no stale Aave/every-trade/authenticated-in-paper claims remain (README:76 says the DeFi helpers are not exposed)."
+        }
+      ],
+      "section": "docs",
+      "title": "Hermes guide, smithery manifest and README match the server",
+      "steps": "",
+      "expected": "",
+      "observed": "HERMES_INTEGRATION.md:126-131 says account tools make authenticated calls in paper mode (they now refuse); smithery.yaml advertises DeFi (Aave, Uniswap) and approval of every trade; README:117 says compose runs the dashboard (it needs --profile with-frontend).",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV-16.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:09:33+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Hermes guide, smithery description and README compose line match the server",
+        "root_cause": "docs not updated with the paper-isolation and fill changes",
+        "files": [
+          "docs/HERMES_INTEGRATION.md",
+          "smithery.yaml",
+          "README.md"
+        ],
+        "commit": "e858eb3",
+        "regression_test": "tests/test_uat_2026_09_24.py::none (docs)",
+        "at": "2026-09-24T19:34:58+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T19:37:10+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV-16-retest.txt"
+          ],
+          "observed": "Hermes guide: paper orders at the market, account tools answer paper_mode_not_supported; smithery describes 1inch swaps and live-only approve_each; README names --profile with-frontend; no stale Aave/every-trade/authenticated-in-paper claims remain (README:76 says the DeFi helpers are not exposed)."
+        }
+      ]
+    },
+    {
+      "id": "REV-17",
+      "created_at": "2026-09-24T19:09:33+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:09:33+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T19:34:58+00:00",
+          "event": "fix",
+          "commit": "e858eb3",
+          "note": "readytrader builds target api with the API's required settings"
+        },
+        {
+          "at": "2026-09-24T19:38:40+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "docker-compose.sentinel.yml up: readytrader builds target api and stays Up (healthy) next to sentinel; GET /api/health from inside the stack returns status ok, trading_halted true."
+        }
+      ],
+      "section": "config",
+      "title": "docker-compose.sentinel.yml keeps the readytrader service running",
+      "steps": "",
+      "expected": "",
+      "observed": "readytrader has build: . with no target, so it gets the default MCP stage; with no stdin it exits (Exited (0)) while sentinel stays healthy.",
+      "result": "FAIL",
+      "severity": "medium",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV-17.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:09:33+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "readytrader builds target api with the API's required settings",
+        "root_cause": "the Dockerfile's default stage changed to MCP; the sentinel stack relied on the old default",
+        "files": [
+          "docker-compose.sentinel.yml"
+        ],
+        "commit": "e858eb3",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_sentinel_stack_runs_the_api_server",
+        "at": "2026-09-24T19:34:58+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T19:38:40+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV-17-retest.txt"
+          ],
+          "observed": "docker-compose.sentinel.yml up: readytrader builds target api and stays Up (healthy) next to sentinel; GET /api/health from inside the stack returns status ok, trading_halted true."
+        }
+      ]
+    },
+    {
+      "id": "FK-01",
+      "created_at": "2026-09-24T19:42:01+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:42:01+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T19:42:09+00:00",
+          "event": "fix",
+          "commit": "5506954",
+          "note": "README says only the v2 scoring scripts check the hash and that git history cannot show freeze-before-score; FALLING_KNIFE.md says the same"
+        },
+        {
+          "at": "2026-09-24T19:42:17+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Hashes still match and the result still fails the criterion; the research README now says only the v2 scripts check the hash and that git history does not show freeze-before-score (README:50-57); FALLING_KNIFE.md says the same."
+        },
+        {
+          "at": "2026-09-24T19:42:25+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Hashes still match and the result still fails the criterion; the research README now says only the v2 scripts check the hash (line 40) and that git history does not show freeze-before-score (line 44); FALLING_KNIFE.md:56 says the same."
+        }
+      ],
+      "section": "docs",
+      "title": "The crypto no-price-rule decision is reproducible as described",
+      "steps": "",
+      "expected": "",
+      "observed": "All three FROZEN files match their SHA-256 and the v2 scoring scripts assert it; the fresh-coin result fails the pre-registered criterion (lift 1.21 < 1.5); the price rule is inactive in code. But research/falling_knife/README.md says the scoring scripts refuse to run if the frozen file changed, and v1's heldout.py has no such check; and the frozen files and scored results were committed together (FOREX 19e21754), so git history cannot show the freeze preceded scoring. The docs do not say so.",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/FK-01.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:42:01+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "README says only the v2 scoring scripts check the hash and that git history cannot show freeze-before-score; FALLING_KNIFE.md says the same",
+        "root_cause": "the README described v2's hash check as universal and did not state the commit ordering",
+        "files": [
+          "research/falling_knife/README.md",
+          "docs/FALLING_KNIFE.md"
+        ],
+        "commit": "5506954",
+        "regression_test": "none (docs)",
+        "at": "2026-09-24T19:42:09+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T19:42:17+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/FK-01-retest-2.txt"
+          ],
+          "observed": "Hashes still match and the result still fails the criterion; the research README now says only the v2 scripts check the hash and that git history does not show freeze-before-score (README:50-57); FALLING_KNIFE.md says the same."
+        },
+        {
+          "at": "2026-09-24T19:42:25+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/FK-01-retest-2.txt"
+          ],
+          "observed": "Hashes still match and the result still fails the criterion; the research README now says only the v2 scripts check the hash (line 40) and that git history does not show freeze-before-score (line 44); FALLING_KNIFE.md:56 says the same."
+        }
+      ]
+    },
+    {
+      "id": "PRE-06",
+      "created_at": "2026-09-24T19:43:44+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:43:44+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "preflight",
+      "title": "Dashboard's documented scripts run (npm ci, lint, typecheck, test, build)",
+      "steps": "",
+      "expected": "",
+      "observed": "On the final branch: npm ci, lint, typecheck exit 0; vitest 61/61 passed (incl. the new PortfolioSummary test); next build compiles and generates the static pages.",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/PRE-06-3.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:43:44+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "REG-03",
+      "created_at": "2026-09-24T19:51:42+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:51:42+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "preflight",
+      "title": "Regression sweep after the review round: every fixed finding's probe again, then the quality gate",
+      "steps": "",
+      "expected": "",
+      "observed": "34/34 probe verdicts PASS on the final branch (BE-01..09, BE-12, DATA-01/02, CF-01/03, INT-01, CLI-01, DOC-01, DOCK-05, REV-01..07, 09..14, 17, FK-01); make check exit 0 (ruff, 700 passed / 5 skipped, bandit, pip-audit clean, verify_docs, mdformat - extract in REG-03-2.txt); make security exit 0 (bandit 0 issues, pip-audit and npm audit 0 vulnerabilities).",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REG-03.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:51:42+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "REG-04",
+      "created_at": "2026-09-24T19:53:01+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T19:53:01+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "frontend",
+      "title": "Dashboard e2e suite on the final branch (after the review-round API and dashboard changes)",
+      "steps": "",
+      "expected": "",
+      "observed": "The documented Playwright command: 18 passed (auth, approvals, smoke, mobile, API-down); ESLint afterwards exit 0.",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REG-04.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T19:53:01+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "REV2-01",
+      "created_at": "2026-09-24T20:15:58+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T20:15:58+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T20:21:23+00:00",
+          "event": "fix",
+          "commit": "839bcb4",
+          "note": "Contract symbols never read a spot position; _order_args refuses a contract symbol with market_type=spot"
+        },
+        {
+          "at": "2026-09-24T20:22:43+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Contract symbol with market_type=spot: pre_trade_check position_units None (no spot exit); four place_cex_order SELLs refused, 0 orders sent (invalid_symbol: pass market_type swap/future)."
+        }
+      ],
+      "section": "backend",
+      "title": "A contract symbol cannot be traded as spot to dodge the position check",
+      "steps": "",
+      "expected": "",
+      "observed": "Live, market_type=spot: SELL 0.5 BTC/USDT:USDT is sized as an exit of the 0.5 BTC spot balance (exposure 0) and four in a row are sent; ccxt routes a contract symbol to the USD-M futures endpoint (fapiPrivatePostOrder) whatever market_type says, so each opens a 0.5 BTC short.",
+      "result": "FAIL",
+      "severity": "high",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV2-01.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T20:15:58+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Contract symbols never read a spot position; _order_args refuses a contract symbol with market_type=spot",
+        "root_cause": "split_symbol dropped the :SETTLE suffix and _account_state read the spot balance whenever market_type=spot",
+        "files": [
+          "app/tools/trading.py",
+          "app/tools/execution.py"
+        ],
+        "commit": "839bcb4",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_contract_symbol_is_never_a_spot_exit",
+        "at": "2026-09-24T20:21:23+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T20:22:43+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV2-01-retest.txt"
+          ],
+          "observed": "Contract symbol with market_type=spot: pre_trade_check position_units None (no spot exit); four place_cex_order SELLs refused, 0 orders sent (invalid_symbol: pass market_type swap/future)."
+        }
+      ]
+    },
+    {
+      "id": "REV2-02",
+      "created_at": "2026-09-24T20:15:58+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T20:15:58+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T20:21:23+00:00",
+          "event": "fix",
+          "commit": "839bcb4",
+          "note": "Baseline = previous UTC day's last snapshot, else the day-open mark (mark_day_open at the first risk check)"
+        },
+        {
+          "at": "2026-09-24T20:22:43+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Same week-old snapshot and -6% drift: daily_pnl_pct 0.0 on 09-24/25/26 and the 0.3% BUY passes each day (the drawdown still reads 5.9%)."
+        }
+      ],
+      "section": "data",
+      "title": "The daily-loss rule measures today's loss",
+      "steps": "",
+      "expected": "",
+      "observed": "The last snapshot a week old and BTC 6% lower since, no move today: daily_pnl_pct -5.9% on 09-24, 09-25 and 09-26 and every BUY is refused 'Daily Loss Limit Hit'; the baseline is the last snapshot before today however old.",
+      "result": "FAIL",
+      "severity": "medium",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV2-02.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T20:15:58+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Baseline = previous UTC day's last snapshot, else the day-open mark (mark_day_open at the first risk check)",
+        "root_cause": "the daily baseline was the last snapshot before today, however old",
+        "files": [
+          "paper_engine.py",
+          "app/tools/trading.py"
+        ],
+        "commit": "839bcb4",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_daily_loss_is_measured_from_the_start_of_the_day",
+        "at": "2026-09-24T20:21:23+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T20:22:43+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV2-02-retest.txt"
+          ],
+          "observed": "Same week-old snapshot and -6% drift: daily_pnl_pct 0.0 on 09-24/25/26 and the 0.3% BUY passes each day (the drawdown still reads 5.9%)."
+        }
+      ]
+    },
+    {
+      "id": "REV2-03",
+      "created_at": "2026-09-24T20:15:58+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T20:15:58+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T20:21:23+00:00",
+          "event": "fix",
+          "commit": "839bcb4",
+          "note": "Time-weighted performance index: each period's return excludes deposits; drawdown and daily loss read the index"
+        },
+        {
+          "at": "2026-09-24T20:22:43+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Same top-up scenario: daily -0.1% and drawdown 0.1% (same day and next day); the small BUY passes."
+        }
+      ],
+      "section": "data",
+      "title": "Loss limits measure losses against the capital now in the account",
+      "steps": "",
+      "expected": "",
+      "observed": "1,000 USDT account, 0.2% dip, then a 100,000 top-up and a 101 USD loss (0.1% of equity): same day 'Daily Loss Limit Hit (-10.1%)'; next day 'Max Drawdown Limit Hit (10.1%)' - both divide by the equity at the peak or start of day, before the top-up.",
+      "result": "FAIL",
+      "severity": "medium",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV2-03.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T20:15:58+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Time-weighted performance index: each period's return excludes deposits; drawdown and daily loss read the index",
+        "root_cause": "drawdown divided by equity at the peak and daily loss by equity at day start, ignoring later deposits",
+        "files": [
+          "paper_engine.py"
+        ],
+        "commit": "839bcb4",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_loss_limits_measure_against_the_capital_in_the_account_now",
+        "at": "2026-09-24T20:21:23+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T20:22:43+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV2-03-retest.txt"
+          ],
+          "observed": "Same top-up scenario: daily -0.1% and drawdown 0.1% (same day and next day); the small BUY passes."
+        }
+      ]
+    },
+    {
+      "id": "REV2-04",
+      "created_at": "2026-09-24T20:15:58+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T20:15:58+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T20:21:23+00:00",
+          "event": "fix",
+          "commit": "2f4795e",
+          "note": "Docs say derivatives positions are unknown and closing orders are sized; contract symbols need market_type swap/future"
+        },
+        {
+          "at": "2026-09-24T20:22:43+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "TOOLS.md and ERRORS.md now say that on a futures/swap account the position cannot be read, so closing orders are sized (the behaviour the probe still shows)."
+        }
+      ],
+      "section": "docs",
+      "title": "Docs say which exits the Guardian treats as exits",
+      "steps": "",
+      "expected": "",
+      "observed": "Live futures: SELL 0.5 BTC (closing) is refused 'Position size too large (20%)' because derivatives positions are unknown; TOOLS.md:262 and ERRORS.md:42 say selling what is held into cash is never refused.",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV2-04.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T20:15:58+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Docs say derivatives positions are unknown and closing orders are sized; contract symbols need market_type swap/future",
+        "root_cause": "docs described spot behaviour as universal",
+        "files": [
+          "docs/TOOLS.md",
+          "docs/ERRORS.md"
+        ],
+        "commit": "2f4795e",
+        "regression_test": "none (docs)",
+        "at": "2026-09-24T20:21:23+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T20:22:43+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV2-04-retest.txt"
+          ],
+          "observed": "TOOLS.md and ERRORS.md now say that on a futures/swap account the position cannot be read, so closing orders are sized (the behaviour the probe still shows)."
+        }
+      ]
+    },
+    {
+      "id": "REV2-05",
+      "created_at": "2026-09-24T20:15:58+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T20:15:58+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T20:21:23+00:00",
+          "event": "fix",
+          "commit": "839bcb4",
+          "note": "deposit_paper_funds refuses a non-stable asset it cannot price (paper_price_required); the engine comment says what direct callers get"
+        },
+        {
+          "at": "2026-09-24T20:22:43+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "deposit_paper_funds('ETH', 10) with no ETH price is refused; the BUY after prices return stays halted (drawdown 15%)."
+        }
+      ],
+      "section": "data",
+      "title": "A paper deposit cannot end a drawdown halt",
+      "steps": "",
+      "expected": "",
+      "observed": "During a 15% drawdown, deposit_paper_funds('ETH', 10) while ETH/USDT has no price is booked at 0 USD; once the price returns the deposit reads as a +220% gain and the BUY passes (drawdown 0.0).",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV2-05.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T20:15:58+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "deposit_paper_funds refuses a non-stable asset it cannot price (paper_price_required); the engine comment says what direct callers get",
+        "root_cause": "an unpriced deposit was valued at 0 USD",
+        "files": [
+          "app/tools/trading.py",
+          "paper_engine.py"
+        ],
+        "commit": "839bcb4",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_a_paper_deposit_that_cannot_be_valued_is_refused",
+        "at": "2026-09-24T20:21:23+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T20:22:43+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV2-05-retest.txt"
+          ],
+          "observed": "deposit_paper_funds('ETH', 10) with no ETH price is refused; the BUY after prices return stays halted (drawdown 15%)."
+        }
+      ]
+    },
+    {
+      "id": "REV2-06",
+      "created_at": "2026-09-24T20:15:59+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T20:15:59+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T20:21:23+00:00",
+          "event": "fix",
+          "commit": "839bcb4",
+          "note": "On a crypto-quoted SELL the quote's sentiment is checked as a BUY of the quote; risk.sentiment_asset names it"
+        },
+        {
+          "at": "2026-09-24T20:22:43+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "With BTC sentiment -0.9, SELL 1 ETH/BTC is refused by the Falling Knife rule like swap ETH->BTC and BUY BTC/USDT; no BTC acquired."
+        }
+      ],
+      "section": "backend",
+      "title": "The Falling Knife rule applies to what an order buys",
+      "steps": "",
+      "expected": "",
+      "observed": "BTC sentiment -0.9: swap_check ETH->BTC is blocked, but place_cex_order SELL 1 ETH/BTC (which buys 0.05 BTC) passes - the rule read ETH's sentiment and applies only to side=buy.",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV2-06.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T20:15:59+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "On a crypto-quoted SELL the quote's sentiment is checked as a BUY of the quote; risk.sentiment_asset names it",
+        "root_cause": "sentiment was read for the symbol's base and the rule applied only to side=buy",
+        "files": [
+          "app/tools/trading.py"
+        ],
+        "commit": "839bcb4",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_falling_knife_judges_the_asset_a_crypto_quoted_sell_buys",
+        "at": "2026-09-24T20:21:23+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T20:22:43+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV2-06-retest.txt"
+          ],
+          "observed": "With BTC sentiment -0.9, SELL 1 ETH/BTC is refused by the Falling Knife rule like swap ETH->BTC and BUY BTC/USDT; no BTC acquired."
+        }
+      ]
+    },
+    {
+      "id": "REV2-07",
+      "created_at": "2026-09-24T20:15:59+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T20:15:59+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T20:21:24+00:00",
+          "event": "fix",
+          "commit": "839bcb4",
+          "note": "Paper ledger refuses contract symbols; policy, proposal, exchange and summary get the normalised side/order_type"
+        },
+        {
+          "at": "2026-09-24T20:22:44+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "Paper SELL BTC/USDT:USDT refused invalid_symbol (no phantom balance); live side ' SELL ' / 'LIMIT' reach the exchange as 'sell' / 'limit'."
+        }
+      ],
+      "section": "backend",
+      "title": "Paper orders refuse contract symbols; the exchange gets the normalised order",
+      "steps": "",
+      "expected": "",
+      "observed": "Paper SELL 0.01 BTC/USDT:USDT fills into a phantom 'USDT:USDT' balance that equity ignores (500 USD lost); live, side ' SELL ' and order_type 'LIMIT' pass validation but reach the exchange un-normalised.",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV2-07.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T20:15:59+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Paper ledger refuses contract symbols; policy, proposal, exchange and summary get the normalised side/order_type",
+        "root_cause": "_validate_order accepted ':' in the quote; the live path passed raw side/order_type",
+        "files": [
+          "paper_engine.py",
+          "app/tools/execution.py"
+        ],
+        "commit": "839bcb4",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_paper_refuses_contract_symbols_and_live_sends_normalised_orders",
+        "at": "2026-09-24T20:21:24+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T20:22:44+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV2-07-retest.txt"
+          ],
+          "observed": "Paper SELL BTC/USDT:USDT refused invalid_symbol (no phantom balance); live side ' SELL ' / 'LIMIT' reach the exchange as 'sell' / 'limit'."
+        }
+      ]
+    },
+    {
+      "id": "REV2-08",
+      "created_at": "2026-09-24T20:15:59+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T20:15:59+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T20:21:24+00:00",
+          "event": "fix",
+          "commit": "839bcb4",
+          "note": "request_id_middleware catches, logs with the request id, answers JSON SYS_803 with security headers and X-Request-ID"
+        },
+        {
+          "at": "2026-09-24T20:22:44+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "A raising route returns 500 with X-Request-ID and X-Frame-Options DENY, and the api_unhandled_error log line carries the same request_id; 429s unchanged."
+        }
+      ],
+      "section": "backend",
+      "title": "An unhandled API error still carries the request id and security headers",
+      "steps": "",
+      "expected": "",
+      "observed": "A route that raises returns 500 with no X-Request-ID, no X-Frame-Options, and no log line carrying a request_id (a 429 does carry both).",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV2-08.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T20:15:59+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "request_id_middleware catches, logs with the request id, answers JSON SYS_803 with security headers and X-Request-ID",
+        "root_cause": "unhandled exceptions went to Starlette's outer ServerErrorMiddleware, past the app's middlewares",
+        "files": [
+          "api_server.py"
+        ],
+        "commit": "839bcb4",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_an_unhandled_api_error_keeps_its_request_id_and_headers",
+        "at": "2026-09-24T20:21:24+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T20:22:44+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV2-08-retest.txt"
+          ],
+          "observed": "A raising route returns 500 with X-Request-ID and X-Frame-Options DENY, and the api_unhandled_error log line carries the same request_id; 429s unchanged."
+        }
+      ]
+    },
+    {
+      "id": "REV2-09",
+      "created_at": "2026-09-24T20:15:59+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T20:15:59+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T20:21:24+00:00",
+          "event": "fix",
+          "commit": "2f4795e",
+          "note": "Default true; halting is a restart with TRADING_HALTED=true; README says reads and cancels still work"
+        },
+        {
+          "at": "2026-09-24T20:22:44+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "ARCHITECTURE.md:540 default true; CUSTODY.md says restart with TRADING_HALTED=true/false; the testing protocol's emergency stop is a restart; README says reads and cancels still work; no 'halt all live actions' remains."
+        }
+      ],
+      "section": "docs",
+      "title": "Docs give the kill switch's default and how to use it",
+      "steps": "",
+      "expected": "",
+      "observed": "ARCHITECTURE.md:540 lists TRADING_HALTED default false (code: true); CUSTODY.md:157-165 and 222-228 say 'export TRADING_HALTED=true' then check /api/health (a running server reads settings at start-up); README says the kill switch halts all live actions (reads and cancels still work).",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV2-09.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T20:15:59+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Default true; halting is a restart with TRADING_HALTED=true; README says reads and cancels still work",
+        "root_cause": "docs predate the fail-closed default and the read/cancel exemption",
+        "files": [
+          "docs/ARCHITECTURE.md",
+          "docs/CUSTODY.md",
+          "docs/LIVE_TESTING_PROTOCOL.md",
+          "README.md"
+        ],
+        "commit": "2f4795e",
+        "regression_test": "none (docs)",
+        "at": "2026-09-24T20:21:24+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T20:22:44+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV2-09-retest.txt"
+          ],
+          "observed": "ARCHITECTURE.md:540 default true; CUSTODY.md says restart with TRADING_HALTED=true/false; the testing protocol's emergency stop is a restart; README says reads and cancels still work; no 'halt all live actions' remains."
+        }
+      ]
+    },
+    {
+      "id": "REV2-10",
+      "created_at": "2026-09-24T20:15:59+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T20:15:59+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-24T20:21:24+00:00",
+          "event": "fix",
+          "commit": "2f4795e",
+          "note": "startCommand.configSchema lists the optional keys; commandFunction always sets the paper profile and passes the keys"
+        },
+        {
+          "at": "2026-09-24T20:22:44+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "smithery.yaml's commandFunction, evaluated with node, returns python app/main.py with PAPER_MODE/TRADING_HALTED/SIGNER_TYPE forced to the paper profile and the given key passed through (PAPER_MODE='false' ignored); the server started with that env lists 29 tools and takes a paper deposit."
+        }
+      ],
+      "section": "config",
+      "title": "smithery.yaml passes its settings to the server",
+      "steps": "",
+      "expected": "",
+      "observed": "configSchema sits at the top level and startCommand has no commandFunction, so no setting reaches the process; its PAPER_MODE='false' option stops the server at start-up (SettingsValidationError).",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REV2-10.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T20:15:59+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "startCommand.configSchema lists the optional keys; commandFunction always sets the paper profile and passes the keys",
+        "root_cause": "configSchema outside startCommand and no commandFunction",
+        "files": [
+          "smithery.yaml"
+        ],
+        "commit": "2f4795e",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_smithery_listing_passes_its_settings_and_stays_paper",
+        "at": "2026-09-24T20:21:24+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-24T20:22:44+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/REV2-10-retest.txt"
+          ],
+          "observed": "smithery.yaml's commandFunction, evaluated with node, returns python app/main.py with PAPER_MODE/TRADING_HALTED/SIGNER_TYPE forced to the paper profile and the given key passed through (PAPER_MODE='false' ignored); the server started with that env lists 29 tools and takes a paper deposit."
+        }
+      ]
+    },
+    {
+      "id": "REG-05",
+      "created_at": "2026-09-24T20:33:08+00:00",
+      "history": [
+        {
+          "at": "2026-09-24T20:33:08+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "preflight",
+      "title": "Final regression sweep after both review rounds: every fixed finding's probe, the dashboard scripts and e2e, then the quality gate",
+      "steps": "",
+      "expected": "",
+      "observed": "44/44 verdicts PASS on the final branch (images rebuilt from it): BE-01..09, BE-12, DATA-01/02, CF-01/03, INT-01, CLI-01, DOC-01, DOCK-05, REV-01..07/09..14/17, FK-01, REV2-01..03/05..08/10, dashboard npm ci/lint/typecheck/61 vitest/build, Playwright 18 passed; make check exit 0 (708 passed, 5 skipped; bandit, pip-audit clean, verify_docs, mdformat - REG-05-2.txt); make security exit 0.",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REG-05.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-24T20:33:08+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "AR-01",
+      "created_at": "2026-09-25T12:16:12+00:00",
+      "history": [
+        {
+          "at": "2026-09-25T12:16:12+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-25T12:16:12+00:00",
+          "event": "fix",
+          "commit": "fdbdcd4",
+          "note": "Every numeric tool parameter is typed Number or Integer (a validator refuses booleans first)."
+        },
+        {
+          "at": "2026-09-25T12:16:39+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "All 18 numeric MCP parameters refuse true ('a number is required, not true/false')."
+        }
+      ],
+      "section": "backend",
+      "title": "Every numeric tool parameter refuses true",
+      "steps": "",
+      "expected": "true/false for a numeric MCP parameter is refused, not converted to 1/0.",
+      "observed": "At 4a03c09 all 18 numeric MCP parameters accepted true as 1: deposit_paper_funds deposited 1 USD, validate_trade_risk judged 1 USD, post_market_insight stored confidence 1.0, place_cex_order/swap_tokens took amount 1.",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/AR-01.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-25T12:16:12+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "Every numeric tool parameter is typed Number or Integer (a validator refuses booleans first).",
+        "root_cause": "pydantic's lax mode converts bool to float/int before the tools' own checks run.",
+        "files": [
+          "app/tools/params.py",
+          "app/tools/execution.py",
+          "app/tools/trading.py",
+          "app/tools/market_data.py",
+          "app/tools/research.py",
+          "tests/test_tool_docs.py"
+        ],
+        "commit": "fdbdcd4",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_every_numeric_tool_parameter_refuses_true",
+        "at": "2026-09-25T12:16:12+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-25T12:16:39+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/AR-01-retest.txt"
+          ],
+          "observed": "All 18 numeric MCP parameters refuse true ('a number is required, not true/false')."
+        }
+      ]
+    },
+    {
+      "id": "AR-02",
+      "created_at": "2026-09-25T12:16:12+00:00",
+      "history": [
+        {
+          "at": "2026-09-25T12:16:12+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-25T12:16:12+00:00",
+          "event": "fix",
+          "commit": "fdbdcd4",
+          "note": "CORS is added after them and wraps every answer."
+        },
+        {
+          "at": "2026-09-25T12:16:39+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "CORS is outermost: the 429s and the JSON 500 carry Access-Control-Allow-Origin for http://localhost:3000."
+        }
+      ],
+      "section": "frontend",
+      "title": "The API's own 429 and 500 answers carry CORS headers",
+      "steps": "",
+      "expected": "Every answer the dashboard's browser gets carries Access-Control-Allow-Origin for its origin.",
+      "observed": "CORSMiddleware was innermost: 200s carried the header, but the rate-limit 429 and the JSON 500 (written by the outer http middlewares) had none, so the dashboard saw a network error instead.",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/AR-02.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-25T12:16:12+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "CORS is added after them and wraps every answer.",
+        "root_cause": "CORSMiddleware was added before the @app.middleware functions, so it sat inside them.",
+        "files": [
+          "api_server.py"
+        ],
+        "commit": "fdbdcd4",
+        "regression_test": "tests/test_uat_2026_09_24.py::test_the_outer_middlewares_answers_carry_cors_headers",
+        "at": "2026-09-25T12:16:12+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-25T12:16:39+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/AR-02-retest.txt"
+          ],
+          "observed": "CORS is outermost: the 429s and the JSON 500 carry Access-Control-Allow-Origin for http://localhost:3000."
+        }
+      ]
+    },
+    {
+      "id": "AR-03",
+      "created_at": "2026-09-25T12:16:12+00:00",
+      "history": [
+        {
+          "at": "2026-09-25T12:16:12+00:00",
+          "event": "check",
+          "result": "FAIL",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        },
+        {
+          "at": "2026-09-25T12:16:12+00:00",
+          "event": "fix",
+          "commit": "fdbdcd4",
+          "note": "TOOLS.md gives the baseline and that it errs toward halting."
+        },
+        {
+          "at": "2026-09-25T12:16:39+00:00",
+          "event": "retest",
+          "result": "PASS",
+          "note": "TOOLS.md:72-76 gives the daily baseline (the previous UTC day's last recorded value, else today's first) and that a late move errs toward halting."
+        }
+      ],
+      "section": "docs",
+      "title": "The docs say how the daily-loss baseline is taken",
+      "steps": "",
+      "expected": "docs/TOOLS.md describes the daily baseline as the code computes it.",
+      "observed": "TOOLS.md:72 and ARCHITECTURE.md say '5% daily loss' / '5% loss today' without the baseline (the previous UTC day's last recorded value, else today's first), so a late move a day never recorded counts toward the next day too.",
+      "result": "FAIL",
+      "severity": "low",
+      "evidence": [
+        "uat/evidence/2026-09-24-01/AR-03.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-25T12:16:12+00:00",
+      "status": "VERIFIED",
+      "fix": {
+        "description": "TOOLS.md gives the baseline and that it errs toward halting.",
+        "root_cause": "The docs described the rule, not its baseline.",
+        "files": [
+          "docs/TOOLS.md"
+        ],
+        "commit": "fdbdcd4",
+        "regression_test": "evidence only (docs)",
+        "at": "2026-09-25T12:16:12+00:00"
+      },
+      "retests": [
+        {
+          "at": "2026-09-25T12:16:39+00:00",
+          "result": "PASS",
+          "evidence": [
+            "uat/evidence/2026-09-24-01/AR-03-retest.txt"
+          ],
+          "observed": "TOOLS.md:72-76 gives the daily baseline (the previous UTC day's last recorded value, else today's first) and that a late move errs toward halting."
+        }
+      ]
+    },
+    {
+      "id": "REG-06",
+      "created_at": "2026-09-25T12:33:05+00:00",
+      "history": [
+        {
+          "at": "2026-09-25T12:33:05+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "regression",
+      "title": "The quality gate passes on the final tree",
+      "steps": "",
+      "expected": "make check and make security pass on HEAD.",
+      "observed": "HEAD fdbdcd4: make check exit 0 (ruff, format, 710 passed, bandit, pip-audit, docs checks, mdformat); make security exit 0 (bandit no issues, pip-audit and npm audit clean).",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REG-06.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-25T12:33:05+00:00",
+      "status": "N/A"
+    },
+    {
+      "id": "REG-07",
+      "created_at": "2026-09-25T12:33:05+00:00",
+      "history": [
+        {
+          "at": "2026-09-25T12:33:05+00:00",
+          "event": "check",
+          "result": "PASS",
+          "from": {
+            "result": null,
+            "status": null
+          },
+          "note": ""
+        }
+      ],
+      "section": "regression",
+      "title": "Regression sweep after the cross-check fixes: every fixed finding's probe again",
+      "steps": "",
+      "expected": "Every earlier fixed finding still holds after AR-01..AR-03.",
+      "observed": "44 of 44 probes pass on fdbdcd4 (BE, REV, REV2, smithery, dashboard build, the 18-step e2e), then make check and make security exit 0.",
+      "result": "PASS",
+      "severity": null,
+      "evidence": [
+        "uat/evidence/2026-09-24-01/REG-07.txt"
+      ],
+      "journey": "",
+      "notes": "",
+      "updated_at": "2026-09-25T12:33:05+00:00",
+      "status": "N/A"
+    }
+  ],
+  "notes": [
+    {
+      "at": "2026-09-24T20:33:18+00:00",
+      "text": "Adversarial review round 1 (independent agent, cold start from the rendered log): 17 findings REV-01..17 (1 critical: live Guardian sized at the caller's price; 1 high: kill switch blocked cancels; the rest medium/low), all fixed with regression tests and fresh retests. Round 2 (second independent agent, focused on the round-1 fixes): 10 findings REV2-01..10 (1 high: contract symbols traded as spot dodged the position check), all fixed and retested. Weak retests strengthened: BE-01 (live path + allowed control), BE-02 (held BTC, invented sell price), BE-08 (real uvicorn API server), BE-12 (Docker wrong password/username), DOCK-02 (nested canaries). FK-01 records what the Falling Knife study's files can and cannot prove."
+    }
+  ]
+}
