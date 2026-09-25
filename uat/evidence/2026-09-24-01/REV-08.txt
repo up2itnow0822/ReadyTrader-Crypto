@@ -1,0 +1,15 @@
+$ sed -n 38,41p frontend/src/components/PortfolioSummary.tsx; grep -n 'drawdown_pct\|max_drawdown_pct' paper_engine.py | head -5
+# at 2026-09-24T19:08:20+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+            <div className="stat">
+              <span className="stat__label">Max drawdown</span>
+              <span className="stat__value">{formatPercent(portfolio?.metrics.drawdown_pct)}</span>
+            </div>
+470:        Returns: { 'daily_pnl_pct', 'drawdown_pct', 'max_drawdown_pct' } (fractions, e.g. 0.10).
+472:        `drawdown_pct` is the CURRENT fall from the best value so far: what the Risk Guardian's
+473:        drawdown rule reads. `max_drawdown_pct` is the deepest fall on record. Reporting the record
+486:            return {"daily_pnl_pct": 0.0, "drawdown_pct": 0.0, "max_drawdown_pct": 0.0}
+513:        return {"daily_pnl_pct": float(daily_pct), "drawdown_pct": float(current_drawdown), "max_drawdown_pct": float(trough_drawdown)}
+
+
+exit=0

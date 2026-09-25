@@ -1,0 +1,16 @@
+$ sed -n 126,131p docs/HERMES_INTEGRATION.md; sed -n 7,11p smithery.yaml; sed -n 22,26p smithery.yaml; sed -n 117,119p README.md; grep -n 'profiles:' -B2 docker-compose.yml | head -4; grep -n 'Aave' docs/SUPPORT_POLICY.md
+# at 2026-09-24T19:08:39+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+
+Not usable in the paper profile — authenticated exchange calls even when `PAPER_MODE=true`:
+`get_cex_balance`, `get_cex_order`, `list_cex_open_orders`, `list_cex_orders`,
+`get_cex_my_trades`, `wait_for_cex_order`, `cancel_cex_order`, `cancel_all_cex_orders`,
+`replace_cex_order`. Return `paper_mode_not_supported`: `start_cex_private_ws`,
+`stop_cex_private_ws`, `list_cex_private_updates`, `transfer_eth`. Out of scope for a
+description: >-
+  A specialized bridge that turns your AI Agent into a professional crypto trading operator.
+  Features specific "Intelligence vs. Execution" separation of powers, a "Risk Guardian" safety layer,
+  and deep DeFi integrations (Aave, Uniswap).
+
+
+exit=0

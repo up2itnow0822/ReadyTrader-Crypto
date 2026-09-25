@@ -1,0 +1,11 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev/run.sh probe_transfer
+# at 2026-09-24T19:35:59+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+live approve_each, MAX_TRANSFER_NATIVE=0.5
+transfer_eth(amount=5.0) -> ok=False code=transfer_amount_too_large proposal=False
+transfer_eth(amount=nan) -> ok=False code=invalid_amount proposal=False
+transfer_eth(amount=-3.0) -> ok=False code=invalid_amount proposal=False
+pending proposals: []
+
+
+exit=0
