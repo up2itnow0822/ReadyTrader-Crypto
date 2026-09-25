@@ -120,6 +120,11 @@ Full log: [`uat/UAT-LOG.md`](uat/UAT-LOG.md) · captures under `uat/evidence/202
 - `frontend/AGENTS.md`: the e2e harness's Python and fixed prices (earlier in this run).
 - `uat/AGENTS.md`: created by the UAT tooling.
 
+### Branch parity
+`git push` was not available to the session that ran this UAT, so this branch was written through the GitHub
+connector. Every file on it is byte-identical to the tested local branch (checked with `git hash-object`
+against the fetched branch), the run ledger `uat/runs/2026-09-24-01/findings.json` included.
+
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
 https://claude.ai/code/session_01JoGpymL6LG3N8Mx7Btuxp5
