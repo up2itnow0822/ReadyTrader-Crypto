@@ -1,0 +1,382 @@
+$ REPO=/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_toolsdoc.sh; echo '--- roster test:'; .venv/bin/pytest -q -p no:cacheprovider tests/test_docs_tool_roster.py 2>&1 | tail -1; echo '--- TOOLS.md sections for the news tools:'; grep -n 'NEWSAPI_KEY\|simulated\|analyst_commentary\|Bitcoin Magazine' docs/TOOLS.md | head
+# at 2026-09-24T17:48:36+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+480:the server does not register, or misses one it does). `python tools/generate_tool_docs.py` prints
+# ReadyTrader-Crypto MCP Tool Catalog
+
+Generated from the tools `server.py` registers: the descriptions agents see.
+
+> [!TIP]
+> AI agents can use these tools to gather intelligence, assess risk, and execute trades.
+
+## Trading & risk
+
+| Tool Name                                     | Description                                                                                  |
+| :-------------------------------------------- | :------------------------------------------------------------------------------------------- |
+| [`deposit_paper_funds`](#deposit-paper-funds) | [PAPER MODE] Deposit fake funds into the paper trading wallet.                               |
+| [`validate_trade_risk`](#validate-trade-risk) | [GUARDIAN] Ask the Risk Guardian about a trade before placing it (the same rules also run on |
+
+### `deposit_paper_funds`
+
+**Signature:** `deposit_paper_funds(asset, amount)`
+
+```text
+[PAPER MODE] Deposit fake funds into the paper trading wallet.
+```
+
+### `validate_trade_risk`
+
+**Signature:** `validate_trade_risk(side, symbol, amount_usd, portfolio_value)`
+
+```text
+[GUARDIAN] Ask the Risk Guardian about a trade before placing it (the same rules also run on
+every order: place_cex_order and swap_tokens refuse a trade they would refuse).
+
+Rules: the part of a trade that adds exposure may be at most 5% of the portfolio; after a 5%
+daily loss or a 10% drawdown only trades that reduce exposure pass; a measured sentiment below
+-0.5 blocks BUYs (Falling Knife). There is no price-based Falling Knife rule for crypto
+(`falling_knife` says why; docs/FALLING_KNIFE.md).
+
+Returns `result` ({allowed, reason}) and `sentiment`, the data the Falling Knife rule used:
+{score, status, texts, bullish, bearish, age_seconds}. status "ok" is a measured score;
+"no_data" / "not_configured" / "insufficient_data" mean a neutral 0.0 that the rule cannot
+act on (a "hint" says why) - call get_social_sentiment(symbol) first. This tool never
+fetches; it only reads the cached score.
+```
+
+## Execution (DEX/CEX)
+
+| Tool Name                                               | Description                                                                   |
+| :------------------------------------------------------- | :----------------------------------------------------------------------------- |
+| [`cancel_all_cex_orders`](#cancel-all-cex-orders)       | Cancel all open orders on a centralized exchange.                             |
+| [`cancel_cex_order`](#cancel-cex-order)                 | Cancel an open order on a centralized exchange.                               |
+| [`get_cex_balance`](#get-cex-balance)                   | Fetch account balance from a centralized exchange.                            |
+| [`get_cex_capabilities`](#get-cex-capabilities)         | Query exchange capabilities and market information.                           |
+| [`get_cex_my_trades`](#get-cex-my-trades)               | Fetch executed trades (fills) from a centralized exchange.                    |
+| [`get_cex_order`](#get-cex-order)                       | Fetch details of a specific order from a centralized exchange.                |
+| [`list_cex_open_orders`](#list-cex-open-orders)         | List all currently open (unfilled) orders on a centralized exchange.          |
+| [`list_cex_orders`](#list-cex-orders)                   | List recent orders (open, filled, and cancelled) from a centralized exchange. |
+| [`list_cex_private_updates`](#list-cex-private-updates) | List recent private updates (order fills, status changes) from exchange.      |
+| [`place_cex_order`](#place-cex-order)                   | Place an order on a CEX using CCXT authenticated credentials.                 |
+| [`replace_cex_order`](#replace-cex-order)               | Replace (edit) an existing order on a centralized exchange.                   |
+| [`start_cex_private_ws`](#start-cex-private-ws)         | Start a private WebSocket stream for real-time order/execution updates.       |
+| [`stop_cex_private_ws`](#stop-cex-private-ws)           | Stop a private WebSocket stream for order/execution updates.                  |
+| [`swap_tokens`](#swap-tokens)                           | Swap tokens on a DEX (paper mode or live).                                    |
+| [`transfer_eth`](#transfer-eth)                         | Transfer native currency (ETH/BASE/ARB/OP native token).                      |
+| [`wait_for_cex_order`](#wait-for-cex-order)             | Wait for an order to reach a terminal state (filled, cancelled, rejected).    |
+
+### `cancel_all_cex_orders`
+
+**Signature:** `cancel_all_cex_orders(exchange='binance', symbol='', market_type='spot')`
+
+```text
+Cancel all open orders on a centralized exchange.
+
+Emergency function to cancel all pending orders. Can be filtered by symbol.
+Useful for risk management and rapid position unwinding.
+Note: not all exchanges support this operation.
+```
+
+### `cancel_cex_order`
+
+**Signature:** `cancel_cex_order(order_id, symbol='', exchange='binance', market_type='spot')`
+
+```text
+Cancel an open order on a centralized exchange.
+
+Attempts to cancel an unfilled or partially filled order. Returns the
+cancellation result. Note: orders may fill before cancellation completes.
+```
+
+### `get_cex_balance`
+
+**Signature:** `get_cex_balance(exchange='binance', market_type='spot')`
+
+```text
+Fetch account balance from a centralized exchange.
+
+In paper mode, returns the paper wallet's balances and does not require CEX
+credentials. Live mode requires CEX credentials configured via environment
+variables (CEX_API_KEY, CEX_API_SECRET).
+```
+
+### `get_cex_capabilities`
+
+**Signature:** `get_cex_capabilities(exchange='binance', symbol='', market_type='spot')`
+
+```text
+Query exchange capabilities and market information.
+
+Returns supported features, order types, timeframes, and market metadata
+for the specified exchange. Useful for determining available functionality
+before placing orders. Does not require authentication.
+```
+
+### `get_cex_my_trades`
+
+**Signature:** `get_cex_my_trades(exchange='binance', symbol='', market_type='spot', limit=100)`
+
+```text
+Fetch executed trades (fills) from a centralized exchange.
+
+Returns actual trade executions with price, quantity, and fee information.
+Useful for P&L calculation, tax reporting, and execution analysis.
+```
+
+### `get_cex_order`
+
+**Signature:** `get_cex_order(order_id, symbol='', exchange='binance', market_type='spot')`
+
+```text
+Fetch details of a specific order from a centralized exchange.
+
+Retrieves the current state of an order including fill status, executed
+quantity, and average price. Useful for tracking order execution.
+```
+
+### `list_cex_open_orders`
+
+**Signature:** `list_cex_open_orders(exchange='binance', symbol='', market_type='spot', limit=100)`
+
+```text
+List all currently open (unfilled) orders on a centralized exchange.
+
+Returns orders that are pending execution. Can be filtered by symbol.
+Useful for monitoring active positions and managing order book exposure.
+```
+
+### `list_cex_orders`
+
+**Signature:** `list_cex_orders(exchange='binance', symbol='', market_type='spot', limit=100)`
+
+```text
+List recent orders (open, filled, and cancelled) from a centralized exchange.
+
+Returns order history including both active and completed orders. Useful
+for reviewing trading activity and reconciling execution history.
+```
+
+### `list_cex_private_updates`
+
+**Signature:** `list_cex_private_updates(exchange='binance', market_type='spot', limit=100)`
+
+```text
+List recent private updates (order fills, status changes) from exchange.
+
+Returns buffered events from the active private update stream.
+Events include order executions, status changes, and account updates.
+Requires start_cex_private_ws to be called first.
+```
+
+### `place_cex_order`
+
+**Signature:** `place_cex_order(symbol, side, amount, order_type='market', price=None, exchange='binance', market_type='spot', idempotency_key='')`
+
+```text
+Place an order on a CEX using CCXT authenticated credentials.
+
+In paper mode, this routes to the paper engine and does NOT require CEX credentials.
+```
+
+### `replace_cex_order`
+
+**Signature:** `replace_cex_order(exchange, order_id, symbol, side, amount, order_type='limit', price=None, market_type='spot')`
+
+```text
+Replace (edit) an existing order on a centralized exchange.
+
+Atomically cancels the existing order and places a new one with updated
+parameters. Useful for adjusting limit prices without losing queue position.
+Note: not all exchanges support this operation.
+```
+
+### `start_cex_private_ws`
+
+**Signature:** `start_cex_private_ws(exchange='binance', market_type='spot')`
+
+```text
+Start a private WebSocket stream for real-time order/execution updates.
+Requires live execution to be allowed (LIVE_TRADING_ENABLED=true, TRADING_HALTED=false).
+
+Supports native WebSocket for: Binance, Kraken, Coinbase.
+For other exchanges, falls back to REST polling.
+Provides real-time notifications of order fills and status changes.
+```
+
+### `stop_cex_private_ws`
+
+**Signature:** `stop_cex_private_ws(exchange='binance', market_type='spot')`
+
+```text
+Stop a private WebSocket stream for order/execution updates.
+
+Cleanly disconnects from the exchange's private update channel.
+Should be called when monitoring is no longer needed.
+```
+
+### `swap_tokens`
+
+**Signature:** `swap_tokens(from_token, to_token, amount, chain='ethereum', rationale='', idempotency_key='')`
+
+```text
+Swap tokens on a DEX (paper mode or live).
+
+Live mode:
+- builds a swap transaction using 1inch
+- signs with configured signer (supports remote signer)
+- broadcasts via JSON-RPC
+```
+
+### `transfer_eth`
+
+**Signature:** `transfer_eth(to_address, amount, chain='ethereum', idempotency_key='')`
+
+```text
+Transfer native currency (ETH/BASE/ARB/OP native token).
+Live mode signs and broadcasts via JSON-RPC.
+```
+
+### `wait_for_cex_order`
+
+**Signature:** `wait_for_cex_order(exchange, order_id, symbol='', market_type='spot', timeout_sec=30, poll_interval_sec=2.0)`
+
+```text
+Wait for an order to reach a terminal state (filled, cancelled, rejected).
+
+Polls the exchange at regular intervals until the order completes or
+the timeout is reached. Useful for synchronous execution flows.
+Returns the final order state.
+```
+
+## Market data
+
+| Tool Name                               | Description                                                                |
+| :-------------------------------------- | :------------------------------------------------------------------------- |
+| [`fetch_ohlcv`](#fetch-ohlcv)           | Fetch historical OHLCV data.                                               |
+| [`get_crypto_price`](#get-crypto-price) | Get the current price of a cryptocurrency.                                 |
+| [`get_news`](#get-news)                 | Hot crypto market news from CryptoPanic (needs CRYPTOPANIC_API_KEY).       |
+| [`get_sentiment`](#get-sentiment)       | Get the current Crypto Fear & Greed Index (alternative.me; no key needed). |
+
+### `fetch_ohlcv`
+
+**Signature:** `fetch_ohlcv(symbol, timeframe='1h', limit=24)`
+
+```text
+Fetch historical OHLCV data.
+```
+
+### `get_crypto_price`
+
+**Signature:** `get_crypto_price(symbol, exchange='binance')`
+
+```text
+Get the current price of a cryptocurrency.
+```
+
+### `get_news`
+
+**Signature:** `get_news()`
+
+```text
+Hot crypto market news from CryptoPanic (needs CRYPTOPANIC_API_KEY).
+```
+
+### `get_sentiment`
+
+**Signature:** `get_sentiment()`
+
+```text
+Get the current Crypto Fear & Greed Index (alternative.me; no key needed).
+```
+
+## Research & intelligence
+
+| Tool Name                                             | Description                                                                                              |
+| :---------------------------------------------------- | :--------------------------------------------------------------------------------------------------------|
+| [`get_financial_news`](#get-financial-news)           | Headlines about the symbol from NewsAPI (needs NEWSAPI_KEY).                                             |
+| [`get_free_news`](#get-free-news)                     | Get free market news from RSS feeds (CoinDesk, Cointelegraph); no key needed.                            |
+| [`get_latest_insights`](#get-latest-insights)         | [PHASE 3] Get the most recent high-signal insights.                                                      |
+| [`get_market_regime`](#get-market-regime)             | Detect the current market regime (TRENDING, RANGING, VOLATILE).                                          |
+| [`get_social_sentiment`](#get-social-sentiment)       | Score recent X/Reddit text for the symbol (-1 bearish .. +1 bullish) and cache it for the Risk Guardian. |
+| [`post_market_insight`](#post-market-insight)         | [PHASE 3] Share a market insight with other agents.                                                      |
+| [`run_backtest_simulation`](#run-backtest-simulation) | Run a strategy simulation against historical data.                                                       |
+
+### `get_financial_news`
+
+**Signature:** `get_financial_news(symbol)`
+
+```text
+Headlines about the symbol from NewsAPI (needs NEWSAPI_KEY).
+```
+
+### `get_free_news`
+
+**Signature:** `get_free_news(symbol='')`
+
+```text
+Get free market news from RSS feeds (CoinDesk, Cointelegraph); no key needed.
+```
+
+### `get_latest_insights`
+
+**Signature:** `get_latest_insights(symbol='')`
+
+```text
+[PHASE 3] Get the most recent high-signal insights.
+```
+
+### `get_market_regime`
+
+**Signature:** `get_market_regime(symbol, timeframe='1d')`
+
+```text
+Detect the current market regime (TRENDING, RANGING, VOLATILE).
+```
+
+### `get_social_sentiment`
+
+**Signature:** `get_social_sentiment(symbol)`
+
+```text
+Score recent X/Reddit text for the symbol (-1 bearish .. +1 bullish) and cache it for the Risk Guardian.
+Answers not_configured when neither TWITTER_BEARER_TOKEN nor REDDIT_CLIENT_ID/SECRET is set.
+```
+
+### `post_market_insight`
+
+**Signature:** `post_market_insight(symbol, agent_id, signal, confidence, reasoning, ttl_seconds=3600)`
+
+```text
+[PHASE 3] Share a market insight with other agents.
+```
+
+### `run_backtest_simulation`
+
+**Signature:** `run_backtest_simulation(strategy_code, symbol, timeframe='1h')`
+
+```text
+Run a strategy simulation against historical data.
+```
+--- deposit_paper_funds section after regeneration:
+### `deposit_paper_funds`
+
+**Signature:** `deposit_paper_funds(asset: str, amount: float) -> str`
+
+```text
+[PAPER MODE] Deposit fake funds into the paper trading wallet.
+
+Use this tool to initialize or top-up your paper trading balance for testing
+strategies without risking real funds. Only works when PAPER_MODE=true.
+
+Parameters:
+- asset: The asset symbol to deposit (e.g., "USDC", "ETH", "BTC"). Upper-cased before it is
+--- roster test:
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+--- TOOLS.md sections for the news tools:
+869:| [`get_financial_news`](#get_financial_news)           | Get NewsAPI headlines for a symbol (needs NEWSAPI_KEY).                     |
+913:Headlines about the symbol from NewsAPI (needs NEWSAPI_KEY).
+925:  found."` when nothing matched. Not an array, and no `analyst_commentary` or `price_targets`
+929:- not_configured: NEWSAPI_KEY is not set (see https://newsapi.org/)
+
+
+exit=0

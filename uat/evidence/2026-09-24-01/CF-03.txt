@@ -1,0 +1,12 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_envsigner.sh
+# at 2026-09-24T17:59:09+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+82:# --- Signer configuration (required only for PAPER_MODE=false + on-chain execution) ---
+83:# SIGNER_TYPE=env_private_key | keystore | remote
+84:SIGNER_TYPE=env_private_key
+95:# SIGNER_TYPE=cb_mpc_2pc
+--- env.example as .env, then the documented Live-but-halted switch (PAPER_MODE=false, LIVE_TRADING_ENABLED=true, TRADING_HALTED=true):
+app.core.settings.SettingsValidationError: Invalid configuration for MULTIPLE=None: SIGNER_TYPE=env_private_key is forbidden when PAPER_MODE=false or LIVE_TRADING_ENABLED=true; use keystore, remote, or cb_mpc_2pc
+
+
+exit=0
