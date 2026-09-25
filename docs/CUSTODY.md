@@ -16,10 +16,10 @@ ______________________________________________________________________
 ### Per-Exchange Configuration
 
 | Exchange | Recommended Permissions       | IP Restriction | Rotation Frequency |
-| -------- | ----------------------------- | -------------- | ------------------- |
-| Binance  | Spot trading only, no futures | Yes            | 90 days             |
-| Kraken   | Create/cancel orders only     | Yes            | 90 days             |
-| Coinbase | Trade permission only         | Limited        | 90 days             |
+| -------- | ----------------------------- | -------------- | ------------------ |
+| Binance  | Spot trading only, no futures | Yes            | 90 days            |
+| Kraken   | Create/cancel orders only     | Yes            | 90 days            |
+| Coinbase | Trade permission only         | Limited        | 90 days            |
 
 ### Environment Variables
 
@@ -143,13 +143,13 @@ ______________________________________________________________________
 ### Rotation Schedule
 
 | Credential Type         | Standard Rotation | Emergency Rotation Trigger              |
-| ------------------------ | ------------------ | ---------------------------------------- |
-| CEX API Keys            | 90 days            | Suspicious activity, employee departure |
-| Keystore Password       | 180 days           | Suspected compromise                    |
-| Remote Signer TLS Certs | 365 days           | Certificate compromise                  |
-| MPC Keyshares           | 180 days           | Party compromise, infrastructure change |
-| JWT Secrets             | 90 days            | Token leak, admin departure             |
-| Webhook Secrets         | 180 days           | Endpoint compromise                     |
+| ----------------------- | ----------------- | --------------------------------------- |
+| CEX API Keys            | 90 days           | Suspicious activity, employee departure |
+| Keystore Password       | 180 days          | Suspected compromise                    |
+| Remote Signer TLS Certs | 365 days          | Certificate compromise                  |
+| MPC Keyshares           | 180 days          | Party compromise, infrastructure change |
+| JWT Secrets             | 90 days           | Token leak, admin departure             |
+| Webhook Secrets         | 180 days          | Endpoint compromise                     |
 
 ### Standard Rotation Procedure
 
@@ -255,7 +255,7 @@ ______________________________________________________________________
 ### Backup Strategy
 
 | Component        | Backup Location        | Encryption | Access Control   |
-| ----------------- | ----------------------- | ----------- | ----------------- |
+| ---------------- | ---------------------- | ---------- | ---------------- |
 | Party 0 Keyshare | HSM/secure enclave     | AES-256    | 2-person rule    |
 | Party 1 Keyshare | Separate HSM/enclave   | AES-256    | 2-person rule    |
 | Recovery Seed    | Cold storage (offline) | Shamir 3/5 | Geographic split |
@@ -298,7 +298,7 @@ ______________________________________________________________________
 ### What to Log
 
 | Event                   | Log Level | Retention |
-| ------------------------ | --------- | --------- |
+| ----------------------- | --------- | --------- |
 | Credential rotation     | INFO      | 2 years   |
 | Failed authentication   | WARN      | 1 year    |
 | Signing requests        | INFO      | 1 year    |
