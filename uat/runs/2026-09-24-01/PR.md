@@ -109,7 +109,7 @@ did apply, and are fixed with regression tests that fail on the code before them
 - **Kill switch:** `TRADING_HALTED=true` now lets reads and cancels through (REV-02). The emergency procedure changed (restart halted, then `cancel_all_cex_orders`).
 - **Auth / API:** login uses `bcrypt` directly and runs the password check for every username (BE-12, REV-13); per-request `X-Request-ID`, including on 500s (REV-14, REV2-08).
 - **Approvals:** proposals record their mode and cross processes via `EXECUTION_SESSION_ID` with single-use approval (BE-08); the policy runs before a proposal is made (BE-09).
-- **Docker/config:** `docker build .` is the MCP server; the image starts halted; `.dockerignore` is `**/`-prefixed (REV-05); compose defaults changed (DOCK-04/05); the Smithery manifest always starts the paper profile (REV2-10).
+- **Docker/config:** `docker build .` is the MCP server; the image starts halted; `.dockerignore` is `**/` (REV-05); compose defaults changed (DOCK-04/05); the Smithery manifest always starts the paper profile (REV2-10).
 
 ### Evidence
 Full log: [`uat/UAT-LOG.md`](uat/UAT-LOG.md) · captures under `uat/evidence/2026-09-24-01/` · regression tests in `tests/test_uat_2026_09_24.py` (one per code finding; each fails on the code before its fix).
