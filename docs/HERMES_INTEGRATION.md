@@ -6,8 +6,10 @@ server**. Do not add ReadyTrader tools to Hermes core; capability stays at the M
 the optional skill package
 ([readytrader-crypto-hermes](https://github.com/up2itnow0822/readytrader-crypto-hermes)).
 
-Everything below was verified against ReadyTrader-Crypto `main` and the hermes-agent source
-(`tools/mcp_tool.py`, `tools/skills_hub.py`).
+Everything below was verified on 2026-09-25 against ReadyTrader-Crypto with PR #20 (the Risk
+Guardian in every order path) and the hermes-agent source (`tools/mcp_tool.py`,
+`tools/skills_hub.py`), by running the Hermes CLI and Hermes's own MCP tool layer against the
+server.
 
 ## Prerequisites
 
@@ -92,9 +94,38 @@ is a double underscore (`mcp__readytrader_crypto__get_crypto_price`).
 
 ### Docker alternative
 
-If the MCP process should run inside the paper compose stack instead of host Python, point
-`command` at a wrapper script that runs `docker compose exec -T <service> python server.py`
-and keep `cwd` at the clone. Host stdio is simpler for local UAT.
+From ReadyTrader-Crypto PR #20 the image's default command serves MCP over stdio. Build it
+once in the clone (`docker build -t readytrader-crypto .`) and let Hermes start one container
+per session. Hermes hands its `env:` block to the `docker` command, so name each variable with
+`-e` to pass it into the container, and mount a named volume so the paper account survives
+between sessions:
+
+```yaml
+mcp_servers:
+  readytrader-crypto:
+    command: docker
+    args: [run, -i, --rm,
+           -e, PAPER_MODE, -e, LIVE_TRADING_ENABLED, -e, TRADING_HALTED, -e, DEV_MODE,
+           -e, EXECUTION_MODE, -e, EXECUTION_APPROVAL_MODE,
+           -e, ALLOW_EXCHANGES, -e, ALLOW_CEX_SYMBOLS, -e, ALLOW_CEX_MARKET_TYPES,
+           -v, "readytrader-crypto-data:/app/data", readytrader-crypto]
+    timeout: 120
+    connect_timeout: 60
+    env:
+      PAPER_MODE: "true"
+      LIVE_TRADING_ENABLED: "false"
+      TRADING_HALTED: "true"
+      DEV_MODE: "false"
+      EXECUTION_MODE: "cex"
+      EXECUTION_APPROVAL_MODE: "approve_each"
+      ALLOW_EXCHANGES: "binance,kraken,coinbase"
+      ALLOW_CEX_SYMBOLS: "btc/usdt,btc/usd"
+      ALLOW_CEX_MARKET_TYPES: "spot"
+```
+
+Do not wrap `docker compose exec` instead: an exec'd process takes the container's
+environment, not the one Hermes passes, so the paper-profile flags would silently not apply.
+Host stdio (above) is simpler for local use.
 
 ## Optional skill
 
@@ -115,12 +146,15 @@ ReadyTrader registers 29 tools. Paper-safe without credentials:
 | Tool                                                                                         | Use                                                            |
 | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | `get_crypto_price`, `fetch_ohlcv`                                                            | BTC market data                                                |
-| `get_sentiment`, `get_news`, `get_social_sentiment`, `get_financial_news`, `get_free_news`   | Read-only context (provider keys optional)                     |
+| `get_sentiment`, `get_news`, `get_social_sentiment`, `get_financial_news`, `get_free_news`   | Read-only context (the keyed sources need provider keys)       |
 | `get_market_regime`, `run_backtest_simulation`, `post_market_insight`, `get_latest_insights` | Analysis and shared insights                                   |
 | `deposit_paper_funds`                                                                        | Seed the paper wallet (response includes balance)              |
 | `validate_trade_risk`                                                                        | Risk Guardian check                                            |
 | `place_cex_order`                                                                            | Paper order at the market price (a limit only when marketable) |
 | `get_cex_capabilities`                                                                       | Public exchange metadata, no auth                              |
+
+Without provider keys `get_news`, `get_social_sentiment` and `get_financial_news` answer
+`not_configured` (`ok: false`): no data, not an outage.
 
 `get_cex_balance` shows the paper wallet in paper mode. The live-account tools answer
 `paper_mode_not_supported` when `PAPER_MODE=true` (paper orders fill at once and never rest on an
@@ -128,6 +162,12 @@ exchange): `get_cex_order`, `list_cex_open_orders`, `list_cex_orders`, `get_cex_
 `wait_for_cex_order`, `cancel_cex_order`, `cancel_all_cex_orders`, `replace_cex_order`,
 `start_cex_private_ws`, `stop_cex_private_ws`, `list_cex_private_updates`, `transfer_eth`. Out of scope for a
 BTC/CEX profile: `swap_tokens` (DEX; its paper branch does route to the paper engine).
+
+Older revisions (before ReadyTrader-Crypto PR #20) differ: the keyed news tools answer `ok: true`
+with an "Unavailable … not configured" sentence, a paper market order fills at any `price` it is
+given and a paper limit fills at its own price, the order reads and writes above fail with
+`cex_error` instead of `paper_mode_not_supported`, and `docker build .` builds the HTTP API
+rather than the stdio MCP server.
 
 Note that `ALLOW_EXCHANGES`, `ALLOW_CEX_SYMBOLS`, and `ALLOW_CEX_MARKET_TYPES` are enforced by
 the policy engine on the **live** order path only; paper orders are not filtered by them.
@@ -153,14 +193,14 @@ auth and non-wildcard CORS. The MCP paper path does not use the HTTP API and nee
 
 ## Smoke checklist
 
-1. A fresh Hermes session lists `mcp__readytrader_crypto__*` tools (29 of them).
-1. `get_crypto_price(symbol="BTC/USDT")` returns `ok: true` with a `result` string of the form
-   `The current price of BTC/USDT is <price> (Source: …)`; `fetch_ohlcv(symbol="BTC/USDT", timeframe="1m", limit=1)`
-   returns one candle record whose `close` is the numeric price.
+1. A fresh Hermes session lists `mcp__readytrader_crypto__*` tools: the server's 29, plus the four
+   resource and prompt helpers Hermes adds because the server advertises those capabilities.
+1. `get_crypto_price(symbol="BTC/USDT")` returns `ok: true` with the numeric price in `data.price`
+   (and the sentence `The current price of BTC/USDT is <price> (Source: …)` in `data.result`).
 1. `deposit_paper_funds(asset="USDT", amount=10000)` returns the updated balance.
 1. `validate_trade_risk(side="buy", symbol="BTC/USDT", amount_usd=100, portfolio_value=10000)` returns a verdict.
-1. `place_cex_order(symbol="BTC/USDT", side="buy", amount=0.001, order_type="market", price=<step 2 price>)`
-   returns `"mode": "paper"`.
+1. `place_cex_order(symbol="BTC/USDT", side="buy", amount=0.001, order_type="market")` (no `price`)
+   returns `"mode": "paper"` and a fill at the market price.
 1. `~/.hermes/config.yaml` still shows `PAPER_MODE: "true"`, `LIVE_TRADING_ENABLED: "false"`,
    `TRADING_HALTED: "true"`.
 
