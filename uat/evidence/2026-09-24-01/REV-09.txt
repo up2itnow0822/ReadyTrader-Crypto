@@ -1,0 +1,14 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev/run.sh probe_replace_nan
+# at 2026-09-24T19:03:50+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+MAX_CEX_ORDER_AMOUNT=0.1, account 100,000 USDT
+replace -> limit BUY amount=nan @84000: ok=True code=None guardian_ref_price=None exposure_usd=None
+   exchange calls: [('replace_order', {'order_id': '1', 'symbol': 'BTC/USDT', 'side': 'buy', 'amount': nan, 'order_type': 'limit', 'price': 84000.0, 'params': None})]
+replace -> limit BUY amount=5  @84000: ok=False code=order_amount_too_large guardian_ref_price=None exposure_usd=None
+   exchange calls: []
+place   -> limit BUY amount=nan @84000: ok=False code=invalid_amount guardian_ref_price=None exposure_usd=None
+   exchange calls: []
+pre_trade_check(amount=nan): {'allowed': True, 'reason': 'Trade looks safe.', 'exposure_added_units': nan, 'exposure_added_usd': nan}
+
+
+exit=0

@@ -1,0 +1,8 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev/run.sh probe_xsource
+# at 2026-09-24T19:08:24+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+get_social_sentiment(BTC) ok= True code= None
+  text: Twitter Error: 401 Unauthorized | Reddit: API Keys missing. | Sentiment score: 0.00 (not a measurement - only 0 distinct texts, need 5)
+
+
+exit=0

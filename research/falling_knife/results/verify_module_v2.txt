@@ -1,0 +1,6 @@
+$ python3 verify_module_v2.py equity    (ReadyTrader-Stocks core/market_guard.py)
+equity: days 267387, knife agree 267387 (100.0000%), research fires 1699, module fires 1699
+equity_fresh: days 334147, knife agree 334147 (100.0000%), research fires 1617, module fires 1617
+$ python3 verify_module_v2.py fx        (ReadyTrader-FOREX core/market_guard.py)
+fx: days 226536, knife agree 226536 (100.0000%), research fires 596, module fires 596, halt agree 226536/226536, halts 1954
+fx_fresh: days 291008, knife agree 291008 (100.0000%), research fires 483, module fires 483, halt agree 291008/291008, halts 2916

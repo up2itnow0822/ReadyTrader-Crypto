@@ -1,0 +1,13 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev2.sh 'test_probe_colon.py::test_C1_live_colon_symbol_details'; bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev2.sh 'test_probe_guardian.py::test_P1_colon_symbol_spot_sell_treated_as_exit'
+# at 2026-09-24T20:21:24+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+C1 pre_trade_check SELL 0.5 BTC/USDT:USDT market_type=spot: {'allowed': False, 'reason': 'No market price for BTC/USDT:USDT: the Risk Guardian values orders at the market, so an order that adds exposure waits for market data.', 'position_units': None, 'exposure_added_units': 0.5, 'exposure_added_usd': None, 'market_price': None}
+C1 four successive SELL 0.5 BTC/USDT:USDT: [False, False, False, False] orders sent: 0
+C1 same order with market_type=swap: False No market price for BTC/USDT:USDT: the Risk Guardian values orders at the market, so an order that adds exposure waits for market data.
+.
+P1 colon-symbol sell: {"ok": false, "risk": {"code": "invalid_symbol", "data": {"symbol": "BTC/USDT:USDT"}, "message": "BTC/USDT:USDT is a contract (perpetual/futures) symbol: pass market_type='swap' or 'future', or use the spot pair."}}
+P1 exchange calls: []
+.
+
+
+exit=0

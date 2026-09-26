@@ -1,0 +1,10 @@
+$ REPO=/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_xproc.sh
+# at 2026-09-24T17:48:07+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+process A (MCP server) proposed: {"request_id": "6ba34cb78f9a8e52d20c44d4...
+process B (API server) pending: ['6ba34cb78f9a8e52d20c44d4']
+process B confirm: confirmed
+process C (second API worker) confirm again: already_confirmed
+
+
+exit=0

@@ -1,0 +1,11 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev2.sh 'test_probe_colon.py::test_C2_paper_colon_symbol'; bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev2.sh 'test_probe_guardian.py::test_P7_side_whitespace_passed_raw'
+# at 2026-09-24T20:22:05+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+C2 paper SELL 0.01 BTC/USDT:USDT: False BTC/USDT:USDT is a contract (perpetual/futures) symbol: pass market_type='swap' or 'future', or use the spot pair.
+C2 balances: {'BTC': 0.01, 'USDT': 10000.0} equity 10500.0
+.
+P7 side ' SELL ': True None [('place_order', {'symbol': 'BTC/USDT', 'side': 'sell', 'amount': 0.5, 'order_type': 'limit', 'price': 50000.0, 'params': None})]
+.
+
+
+exit=0

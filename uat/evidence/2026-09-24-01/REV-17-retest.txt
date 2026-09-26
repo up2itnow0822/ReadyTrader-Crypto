@@ -1,0 +1,18 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev/sentinel.sh
+# at 2026-09-24T19:38:04+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+readytrader build target: api
+up exit=0
+rt-sentinel-readytrader-1	Up 25 seconds (healthy)
+rt-sentinel-sentinel-1	Up 25 seconds (healthy)
+--- readytrader logs (tail):
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:33038 - "GET /api/health HTTP/1.1" 200 OK
+--- readytrader API health from inside the stack:
+b'{"status":"ok","mode":"paper","timestamp":"2026-09-24T19:38:31.051324+00:00","version":"0.2.0","trading_halted":true,"li'
+down
+
+
+exit=0

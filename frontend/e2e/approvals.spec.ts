@@ -49,7 +49,9 @@ test.describe("Approvals queue", () => {
     // would match both.
     const outcome = card.getByText(/Executed:/);
     await expect(outcome).toBeVisible();
-    await expect(outcome).toContainText("1,100");
+    // A marketable limit fills at the market, as on an exchange: 0.02 at the harness's 50,000
+    // is 1,000 USDT (not 0.02 x the 55,000 limit).
+    await expect(outcome).toContainText("1,000");
 
     // The card stays up for a grace period so the operator can read the outcome above,
     // then drops off once that elapses (see OUTCOME_GRACE_MS in useApprovals.ts).
@@ -60,7 +62,7 @@ test.describe("Approvals queue", () => {
     await expect(page.locator("table")).toContainText("0.02");
   });
 
-  test("an order the engine refuses shows a 422 message, not a crash", async ({ page }) => {
+  test("an order the Risk Guardian refuses shows a 422 message, not a crash", async ({ page }) => {
     await loginAsAdmin(page);
     const sentence = "Buy 50 BTC/USDT at 60,000 (limit) on binance spot";
     await seedProposal(page, {
@@ -74,7 +76,9 @@ test.describe("Approvals queue", () => {
     await page.getByRole("dialog").getByRole("button", { name: "Approve and execute" }).click();
 
     await expect(card.getByText(/refused/i)).toBeVisible();
-    await expect(card.getByText(/insufficient fund/i)).toBeVisible();
+    // 50 BTC at the harness's 50,000 is 2,500,000 USDT against a 100,000 USDT wallet: the
+    // Risk Guardian's position-size rule refuses it before the paper engine is reached.
+    await expect(card.getByText(/position size too large/i)).toBeVisible();
     // The app kept rendering normally -- the dashboard heading is still there.
     await expect(page.getByRole("heading", { name: "Pending approvals" })).toBeVisible();
   });

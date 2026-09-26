@@ -344,17 +344,14 @@ curl http://localhost:8000/metrics
 
 If any issues detected:
 
-```bash
-# IMMEDIATE: Enable kill switch
-export TRADING_HALTED=true
-
-# Cancel all open orders
-curl -X POST http://localhost:8000/api/emergency-cancel-all
-
-# Revert to paper mode
-export PAPER_MODE=true
-export LIVE_TRADING_ENABLED=false
-```
+1. **Kill switch:** restart the MCP server (and the API server) with `TRADING_HALTED=true`.
+   Settings are read at start-up, so an `export` in another shell does nothing to a running
+   server. From then on every new order, swap and transfer is refused with `trading_halted`.
+1. **Cancel resting orders:** from the MCP client, `cancel_all_cex_orders(exchange="binance")`
+   (per market type, e.g. also `market_type="future"`), then `list_cex_open_orders(...)` to confirm
+   nothing is left. Reads and cancels still work while halted. The exchange's own web/app UI is
+   the fallback. There is no HTTP cancel endpoint.
+1. **Revert to paper:** restart with `PAPER_MODE=true` and `LIVE_TRADING_ENABLED=false`.
 
 ______________________________________________________________________
 
@@ -455,8 +452,8 @@ ______________________________________________________________________
 # Enable paper mode (safe)
 export PAPER_MODE=true && export LIVE_TRADING_ENABLED=false
 
-# Emergency stop
-export TRADING_HALTED=true
+# Emergency stop: restart the servers with TRADING_HALTED=true, then cancel_all_cex_orders (section 4.5)
+TRADING_HALTED=true python app/main.py
 
 # Check current mode
 python -c "from app.core.config import settings; print(f'Paper: {settings.PAPER_MODE}, Live: {settings.LIVE_TRADING_ENABLED}, Halted: {settings.TRADING_HALTED}')"

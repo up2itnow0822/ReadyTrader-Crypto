@@ -1,0 +1,23 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev/nested_ignore.sh; grep -n 'env\|pem\|key\|db' .dockerignore
+# at 2026-09-24T19:35:50+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+context files: ./.env.live ./app/ok.py ./deploy/.env ./deploy/.env.live ./secrets/keystore-main.json ./secrets/signer.pem ./secrets/tls.key 
+/ctxcheck/.dockerignore
+/ctxcheck/app/ok.py
+10:# Local secrets / env: every .env* file (.env, .env.live, .env.*.local, ...) and key file, in any
+11:# folder (a bare pattern matches only at the context root). env.example and env.live.btc.example
+13:**/.env*
+14:**/*.pem
+15:**/*.key
+16:**/keystore*.json
+18:# Local data, environments and history: never baked into an image layer
+20:**/data/*.db
+21:.venv/
+22:venv/
+23:env/
+39:**/*.db
+40:**/*.db-shm
+41:**/*.db-wal
+
+
+exit=0

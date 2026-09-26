@@ -1,0 +1,20 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_toolsdoc.sh
+# at 2026-09-24T17:08:22+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+474:`python tools/generate_tool_docs.py` to regenerate it from the live registry — a test,
+Wrote docs/TOOLS.md (29 tools)
+ docs/TOOLS.md | 923 +++++++++-------------------------------------------------
+ 1 file changed, 140 insertions(+), 783 deletions(-)
+--- deposit_paper_funds section after regeneration:
+### `deposit_paper_funds`
+
+**Signature:** `deposit_paper_funds(asset, amount)`
+
+```text
+[PAPER MODE] Deposit fake funds into the paper trading wallet.
+```
+
+### `validate_trade_risk`
+
+
+exit=0

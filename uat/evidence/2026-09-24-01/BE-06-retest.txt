@@ -1,0 +1,13 @@
+$ .venv/bin/python /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_live_errors.py
+# at 2026-09-24T17:44:09+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+TRADING_HALTED=true: place_cex_order(ETH/USDT buy 0.05) -> {"error": {"code": "trading_halted", "data": {}, "message": "TRADING_HALTED=true (live execution is halted)"}, "ok": false}
+not allowlisted: place_cex_order(BTC/USDT buy 0.01) -> {"error": {"code": "symbol_not_allowed", "data": {"allow_cex_symbols": ["eth/usdt"], "symbol": "BTC/USDT"}, "message": "Symbol 'BTC/USDT' is not allowlisted for CEX."}, "ok": false}
+over MAX_CEX_ORDER_AMOUNT: place_cex_order(ETH/USDT buy 0.5) -> {"error": {"code": "order_amount_too_large", "data": {"amount": 0.5, "max_cex_order_amount": 0.1}, "message": "Order amount 0.5 exceeds MAX_CEX_ORDER_AMOUNT=0.1."}, "ok": false}
+allowed: place_cex_order(ETH/USDT buy 0.05) -> {"data": {"amount": 0.05, "exchange": "binance", "market_type": "spot", "mode": "live", "order": {"id": "stub-1", "status": "open"}, "order_type": "limit", "price": 2500.0, "side": "buy", "symbol": "ETH/USDT", "venue": "cex"}, "ok": true}
+
+--- stderr ---
+<string>:83: UserWarning: SIGNER_POLICY_ENABLED=false: No signer-side guardrails. Enable for defense-in-depth in live trading.
+
+
+exit=0

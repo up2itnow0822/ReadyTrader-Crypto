@@ -1,0 +1,52 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_e2e2.sh
+# at 2026-09-24T19:51:48+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+PW_PYTHON_PATH=<unset>
+[1A[2K[14/18] [chromium] › e2e/smoke.spec.ts:36:7 › Navigation and manifest › the Docs link points at the GitHub README (not fetched -- external site)
+[1A[2K[2m[WebServer] [22m{"data": {"user": "admin"}, "event": "auth_success", "level": "INFO", "request_id": "c71c120a-f80d-4269-8ca5-ab0f34f87a3d", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279554637}
+[1A[2K[2m[WebServer] [22m
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 1}, "event": "api_client_connected", "level": "INFO", "request_id": "493d16b9-141b-4cee-bfbf-855dddf242e1", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279554708}
+[1A[2K[2m[WebServer] [22m
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 0}, "event": "api_client_disconnected", "level": "INFO", "request_id": "493d16b9-141b-4cee-bfbf-855dddf242e1", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279555039}
+[1A[2K[15/18] [chromium] › e2e/smoke.spec.ts:43:7 › Navigation and manifest › nav links removed for pages that do not exist
+[1A[2K[2m[WebServer] [22m{"data": {"user": "admin"}, "event": "auth_success", "level": "INFO", "request_id": "d9e8e319-273a-4f65-90bf-d7aa6a2fc566", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279555526}
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 1}, "event": "api_client_connected", "level": "INFO", "request_id": "9a5dd1ff-56a4-4bf8-85ed-79ea588991af", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279555616}
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 0}, "event": "api_client_disconnected", "level": "INFO", "request_id": "9a5dd1ff-56a4-4bf8-85ed-79ea588991af", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279555951}
+[1A[2K[2m[WebServer] [22m
+[1A[2K[16/18] [chromium] › e2e/smoke.spec.ts:54:7 › Mobile viewport (390x844) › hamburger opens and closes the sidebar; every route has no horizontal scroll
+[1A[2K[2m[WebServer] [22m{"data": {"user": "admin"}, "event": "auth_success", "level": "INFO", "request_id": "5f75b74a-97bd-498f-bbad-4d3c4eeaaec1", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279556446}
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 1}, "event": "api_client_connected", "level": "INFO", "request_id": "dc3235dd-cd39-4498-9326-4888b3280a6e", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279556517}
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 0}, "event": "api_client_disconnected", "level": "INFO", "request_id": "dc3235dd-cd39-4498-9326-4888b3280a6e", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279557634}
+[1A[2K[2m[WebServer] [22m
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 1}, "event": "api_client_connected", "level": "INFO", "request_id": "870908e0-5ff7-41b7-948d-672ef6a42ed0", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279557778}
+[1A[2K[2m[WebServer] [22m
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 0}, "event": "api_client_disconnected", "level": "INFO", "request_id": "870908e0-5ff7-41b7-948d-672ef6a42ed0", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279557925}
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 1}, "event": "api_client_connected", "level": "INFO", "request_id": "36658526-9725-47b8-be43-cf4ece6f01a5", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279558004}
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 0}, "event": "api_client_disconnected", "level": "INFO", "request_id": "36658526-9725-47b8-be43-cf4ece6f01a5", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279558112}
+[1A[2K[2m[WebServer] [22m
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 1}, "event": "api_client_connected", "level": "INFO", "request_id": "cc40da56-080f-4b39-bfde-59a3b1fe1af2", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279558241}
+[1A[2K[2m[WebServer] [22m
+[1A[2K[17/18] [chromium] › e2e/smoke.spec.ts:74:7 › Mobile viewport (390x844) › Esc closes the sidebar
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 0}, "event": "api_client_disconnected", "level": "INFO", "request_id": "cc40da56-080f-4b39-bfde-59a3b1fe1af2", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279558821}
+[1A[2K[2m[WebServer] [22m{"data": {"user": "admin"}, "event": "auth_success", "level": "INFO", "request_id": "08092d4f-f4fb-4507-bcbd-5a17fcf9d09b", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279558963}
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 1}, "event": "api_client_connected", "level": "INFO", "request_id": "7eacf593-d110-44f3-a351-cf12b1be3793", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279559059}
+[1A[2K[2m[WebServer] [22m
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 0}, "event": "api_client_disconnected", "level": "INFO", "request_id": "7eacf593-d110-44f3-a351-cf12b1be3793", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279559673}
+[1A[2K[18/18] [chromium] › e2e/z-resilience.spec.ts:12:7 › API resilience › unreachable API shows the banner + Mode unknown, and recovers once it restarts
+[1A[2K[2m[WebServer] [22m{"data": {"user": "admin"}, "event": "auth_success", "level": "INFO", "request_id": "6785bf71-ad44-4c92-8f6a-24fe88ed7234", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279560277}
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 1}, "event": "api_client_connected", "level": "INFO", "request_id": "93d70241-33eb-4c4f-bcab-e297c6c8fcc8", "service": "readytrader", "tool": "api_server", "ts_ms": 1790279560373}
+[1A[2K[2m[WebServer] [22m
+[1A[2K[2m[WebServer] [22mKilled
+[1A[2K  18 passed (53.4s)
+To open last HTML report run:
+[36m[39m
+[36m  npx playwright show-report[39m
+[36m[39m
+E2E_EXIT=0
+--- npm run lint after the e2e run:
+> eslint
+
+LINT_EXIT=0
+
+
+exit=0

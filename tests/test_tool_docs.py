@@ -25,7 +25,9 @@ def test_public_tool_registry_preserves_callable_metadata() -> None:
     ]
     assert signature.parameters["symbol"].annotation == "str"
     assert signature.parameters["side"].annotation == "str"
-    assert signature.parameters["amount"].annotation == "float"
+    # A float that refuses true/false (app/tools/params.py); the published schema stays "number".
+    assert signature.parameters["amount"].annotation == "Number"
+    assert tool.parameters["properties"]["amount"]["type"] == "number"
     assert signature.parameters["order_type"].default == "market"
     assert signature.parameters["price"].default is None
     assert signature.parameters["exchange"].default == "binance"

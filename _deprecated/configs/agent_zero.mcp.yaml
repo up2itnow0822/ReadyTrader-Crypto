@@ -5,6 +5,8 @@ mcp_servers:
       - "run"
       - "-i"
       - "--rm"
+      - "-v"
+      - "readytrader-crypto-data:/app/data"
       - "-e"
       - "PAPER_MODE=true"
       - "readytrader-crypto"

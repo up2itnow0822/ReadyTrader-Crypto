@@ -1,0 +1,39 @@
+$ REPO=/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_wizard.sh
+# at 2026-09-24T17:58:33+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+== answer 'n' to creating .env
+
+Checking Network Connectivity...
+  [?] Binance API returned 451: not available from this network. List exchanges you can reach in MARKETDATA_EXCHANGES.
+  [✓] CoinDesk RSS reachable.
+  [✓] Fear & Greed Index reachable.
+
+Checking keys in .env...
+
+Setup Scan Complete!
+Next steps:
+1. Open .env and configure your SIGNER_TYPE and exchange keys.
+2. Read docs/SENTIMENT.md for intelligence feed setup.
+3. Run python server.py to start the MCP server.
+
+exit=0
+== answer 'y' (creates .env from env.example), then read the key report
+Checking keys in .env...
+  [✓] PAPER_MODE=true, LIVE_TRADING_ENABLED=false
+  [!] SIGNER_TYPE=env_private_key keeps a raw key in .env: development only, refused for live trading (use keystore, remote or cb_mpc_2pc).
+  [-] No exchange API key (not needed: paper orders fill in the paper account).
+  [-] NEWSAPI_KEY not set (optional: get_financial_news answers not_configured without it).
+  [-] CRYPTOPANIC_API_KEY not set (optional: get_news answers not_configured without it).
+  [-] TWITTER_BEARER_TOKEN not set (optional: get_social_sentiment (X) answers not_configured without it).
+  [-] REDDIT_CLIENT_ID not set (optional: get_social_sentiment (Reddit) answers not_configured without it).
+
+Setup Scan Complete!
+== stdin closed
+1. Open .env and configure your SIGNER_TYPE and exchange keys.
+2. Read docs/SENTIMENT.md for intelligence feed setup.
+3. Run python server.py to start the MCP server.
+
+exit=0
+
+
+exit=0

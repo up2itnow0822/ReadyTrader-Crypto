@@ -1,0 +1,28 @@
+$ sed -n 538,541p docs/ARCHITECTURE.md; sed -n 157,165p docs/CUSTODY.md; sed -n 222,228p docs/CUSTODY.md; grep -n 'halt all live actions' README.md; cd /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/cr_head && env TRADING_HALTED= /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/.venv/bin/python -c 'from app.core.settings import Settings; print("Settings().TRADING_HALTED =", Settings().TRADING_HALTED)' 2>/dev/null
+# at 2026-09-24T20:14:31+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+| Mode     | `PAPER_MODE`              | `true`            | Paper vs live trading           |
+| Safety   | `LIVE_TRADING_ENABLED`    | `false`           | Enable live execution           |
+| Safety   | `TRADING_HALTED`          | `false`           | Emergency kill switch           |
+| Safety   | `EXECUTION_APPROVAL_MODE` | `auto`            | `auto` or `approve_each`        |
+
+```bash
+# Set trading halted to prevent new executions
+export TRADING_HALTED=true
+
+# Verify halt is active
+curl -s http://localhost:8000/api/health | jq '.trading_halted'
+# Should return: true
+```
+```bash
+# Only after validation passes
+export TRADING_HALTED=false
+
+# Verify trading is enabled
+curl -s http://localhost:8000/api/health | jq '.trading_halted'
+# Should return: false
+143:| `TRADING_HALTED`          | `true`  | Global kill switch to halt all live actions. Set `false` to trade live.   |
+Settings().TRADING_HALTED = True
+
+
+exit=0

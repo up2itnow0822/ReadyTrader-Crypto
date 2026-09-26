@@ -1,0 +1,21 @@
+$ echo '--- README Option A (Agent Zero):'; grep -n 'Option A\|Settings\*\* ->\|Settings → MCP\|agent.yaml\|Restart Agent Zero\|Args\*\*' README.md; echo '--- Agent Zero v2.13: the settings page is "External MCP Servers" (MCP/A2A), a JSON field; agent.yaml is agent-profile metadata:'; grep -n 'section-title' /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/a0rt/app/webui/components/settings/mcp/mcp_client.html; grep -n 'mcp_servers=get_default_value' /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/a0rt/app/helpers/settings.py; sed -n 33,34p /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/a0rt/app/skills/a0-create-agent/SKILL.md; echo '--- the README block given to Agent Zero MCP parser:'; cd /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/a0rt/app && /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/a0rt/venv/bin/python /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/a0_readme_mcp.py /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/readme_a0_block_crypto.yaml 2>&1 | grep -v -i warn | tail -2
+# at 2026-09-26T02:08:53+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+--- README Option A (Agent Zero):
+376:### Option A: Agent Zero (Recommended)
+378:To give Agent Zero these powers, add the following to your **Agent Zero Settings** (or `agent.yaml`).
+385:1. Go to **Settings** -> **MCP Servers**.
+390:   - **Args**: `run`, `-i`, `--rm`, `-e`, `PAPER_MODE=true`, `readytrader-crypto`
+392:**Via `agent.yaml`:**
+408:*Restart Agent Zero after saving.*
+--- Agent Zero v2.13: the settings page is "External MCP Servers" (MCP/A2A), a JSON field; agent.yaml is agent-profile metadata:
+10:          <div class="section-title">External MCP Servers</div>
+618:        mcp_servers=get_default_value("mcp_servers", '{\n    "mcpServers": {}\n}'),
+1. `agent.yaml` is tiny metadata for discovery and delegation:
+   - `title`
+--- the README block given to Agent Zero MCP parser:
+--- MCPConfig.parse_config_string -> []
+servers Agent Zero can start: none
+
+
+exit=0

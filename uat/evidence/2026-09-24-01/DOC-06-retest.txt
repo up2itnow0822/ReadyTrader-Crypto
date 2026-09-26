@@ -1,0 +1,14 @@
+$ git log --oneline -1; echo '--- the README Agent Zero JSON block given to Agent Zero v2.13 MCP parser:'; python3 -c "import re; s=open('README.md').read(); sec=s[s.index('### Option A: Agent Zero'):s.index('### Option B')]; open('/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/readme_a0_json_crypto.json','w').write(re.search(r'\`\`\`json\n(.*?)\`\`\`', sec, re.S).group(1))"; cd /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/a0rt/app && /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/a0rt/venv/bin/python /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/a0_readme_mcp.py /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/readme_a0_json_crypto.json 2>&1 | grep -v -i warn | tail -2; cd /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto; echo '--- identical to configs/agent_zero.mcp.json:'; python3 -c "import json; print(json.load(open('/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/readme_a0_json_crypto.json')) == json.load(open('configs/agent_zero.mcp.json')))"; echo '--- the regression test:'; .venv/bin/python -m pytest -q -p no:cacheprovider -p no:warnings tests/test_uat_2026_09_24.py -k agent_zero_config 2>&1 | tail -1
+# at 2026-09-26T02:15:54+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+b37d32f uat(docs): DOC-06 the Agent Zero integration works in current Agent Zero
+--- the README Agent Zero JSON block given to Agent Zero v2.13 MCP parser:
+--- MCPConfig.parse_config_string -> [{"type": "stdio", "command": "docker", "args": ["run", "-i", "--rm", "-v", "readytrader-crypto-data:/app/data", "-e", "PAPER_MODE=true", "readytrader-crypto"], "name": "readytrader_crypto"}]
+servers Agent Zero can start: ['readytrader_crypto']
+--- identical to configs/agent_zero.mcp.json:
+True
+--- the regression test:
+.                                                                        [100%]
+
+
+exit=0

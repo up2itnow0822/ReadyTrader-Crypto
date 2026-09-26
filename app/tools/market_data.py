@@ -6,22 +6,29 @@ from fastmcp import FastMCP
 from app.core.container import global_container
 from app.core.jsonio import json_err as _json_err
 from app.core.jsonio import json_ok as _json_ok
+from app.tools.params import Integer
 
 
 def register_market_tools(mcp: FastMCP):
     @mcp.tool()
     def get_sentiment() -> str:
-        """Get the current Crypto Fear & Greed Index."""
-        from intelligence import get_fear_greed_index
+        """Get the current Crypto Fear & Greed Index (alternative.me; no key needed)."""
+        from intelligence import SourceError, fear_greed_index
 
-        return _json_ok({"sentiment": get_fear_greed_index()})
+        try:
+            return _json_ok({"sentiment": fear_greed_index()})
+        except SourceError as e:
+            return _json_err(e.code, e.message)
 
     @mcp.tool()
     def get_news() -> str:
-        """Get aggregated crypto market news."""
-        from intelligence import get_market_news
+        """Hot crypto market news from CryptoPanic (needs CRYPTOPANIC_API_KEY)."""
+        from intelligence import SourceError, market_news
 
-        return _json_ok({"news": get_market_news()})
+        try:
+            return _json_ok({"news": market_news()})
+        except SourceError as e:
+            return _json_err(e.code, e.message)
 
     @mcp.tool()
     def get_crypto_price(symbol: str, exchange: str = "binance") -> str:
@@ -48,7 +55,7 @@ def register_market_tools(mcp: FastMCP):
             return _json_err("fetch_price_error", str(e), {"symbol": symbol})
 
     @mcp.tool()
-    def fetch_ohlcv(symbol: str, timeframe: str = "1h", limit: int = 24) -> str:
+    def fetch_ohlcv(symbol: str, timeframe: str = "1h", limit: Integer = 24) -> str:
         """
         Fetch historical OHLCV data.
         """

@@ -1,0 +1,12 @@
+$ grep -n 'TRADING_HALTED' docs/ARCHITECTURE.md | head -3; grep -n 'Restart the MCP server\|restart both servers' docs/CUSTODY.md; grep -n 'Emergency stop' docs/LIVE_TESTING_PROTOCOL.md; grep -n 'Kill switch: refuses' README.md; grep -rn 'halt all live actions' README.md docs || echo '(no stale claim)'
+# at 2026-09-24T20:22:19+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+540:| Safety   | `TRADING_HALTED`          | `true`            | Emergency kill switch           |
+158:Restart the MCP server and the API server with `TRADING_HALTED=true` (settings are read at
+222:Only after validation passes, restart both servers with `TRADING_HALTED=false`, then:
+455:# Emergency stop: restart the servers with TRADING_HALTED=true, then cancel_all_cex_orders (section 4.5)
+143:| `TRADING_HALTED`          | `true`  | Kill switch: refuses new live orders, swaps and transfers (reads and cancels still work). Set `false` to trade live. |
+(no stale claim)
+
+
+exit=0

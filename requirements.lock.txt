@@ -104,7 +104,6 @@ packageurl-python==0.17.6
 packaging==26.3
 pandas==2.3.3
 parsimonious==0.10.0
-passlib==1.7.4
 pathable==0.6.0
 pip-requirements-parser==32.0.1
 pip_api==0.0.35

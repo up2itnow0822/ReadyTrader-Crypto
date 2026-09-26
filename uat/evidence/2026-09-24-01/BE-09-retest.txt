@@ -1,0 +1,12 @@
+$ .venv/bin/python /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_propose_policy.py
+# at 2026-09-24T17:47:22+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+DOGE/USDT (not allowlisted) -> {"error": {"code": "symbol_not_allowed", "data": {"allow_cex_symbols": ["btc/usdt"], "symbol": "DOGE/USDT"}, "message": "Symbol 'DOGE/USDT' is not allowlisted for CEX."}, "ok": false}
+BTC/USDT 5.0 (over MAX_CEX_ORDER_AMOUNT=0.01) -> {"error": {"code": "order_amount_too_large", "data": {"amount": 5.0, "max_cex_order_amount": 0.01}, "message": "Order amount 5.0 exceeds MAX_CEX_ORDER_AMOUNT=0.01."}, "ok": false}
+pending proposals an operator would be asked to approve: 0
+
+--- stderr ---
+<string>:83: UserWarning: SIGNER_POLICY_ENABLED=false: No signer-side guardrails. Enable for defense-in-depth in live trading.
+
+
+exit=0

@@ -1,0 +1,13 @@
+$ echo 'README Without Docker: command = the checkout venv python, args = [<checkout>/server.py], settings in env'; bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/a0_manual_entry.sh paths2-readytrader_crypto readytrader_crypto /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto server.py get_crypto_price '{"symbol": "BTC/USDT"}'
+# at 2026-09-26T02:17:08+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+README Without Docker: command = the checkout venv python, args = [<checkout>/server.py], settings in env
+External MCP Servers entry: {"readytrader_crypto": {"type": "stdio", "command": "/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/.venv/bin/python", "args": ["/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/server.py"], "env": {"PAPER_MODE": "true", "READYTRADER_DATA_DIR": "<set>", "HTTPS_PROXY": "<set>", "NO_PROXY": "<set>", "SSL_CERT_FILE": "<set>", "REQUESTS_CA_BUNDLE": "<set>"}}}
+server: {'name': 'readytrader_crypto', 'connected': True, 'error': '', 'tool_count': 29}
+29 tools from readytrader_crypto: ['readytrader_crypto.cancel_all_cex_orders', 'readytrader_crypto.cancel_cex_order', 'readytrader_crypto.deposit_paper_funds', 'readytrader_crypto.fetch_ohlcv', 'readytrader_crypto.get_cex_balance', 'readytrader_crypto.get_cex_capabilities'] ...
+CALL readytrader_crypto.get_crypto_price {"symbol": "BTC/USDT"} -> isError=False {
+    "price": 84099.3,
+  "ok": true
+
+
+exit=0

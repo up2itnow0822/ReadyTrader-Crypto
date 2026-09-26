@@ -366,6 +366,11 @@ class ProposalStateError(ExecutionError):
         "cancelled": ("EXEC_311", 409, "This proposal was rejected earlier and cannot be revived."),
         "already_confirmed": ("EXEC_311", 409, "This proposal was already approved; approvals are single-use."),
         "malformed": ("EXEC_312", 422, "The proposal payload is incomplete; ask the agent to propose again."),
+        "mode_mismatch": (
+            "EXEC_313",
+            409,
+            "The proposal was made in the other trading mode (paper/live); approve it from an API server running in that mode.",
+        ),
     }
 
     def __init__(self, reason: str, request_id: str, message: str | None = None):

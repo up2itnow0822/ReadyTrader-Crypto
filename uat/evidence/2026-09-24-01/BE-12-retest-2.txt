@@ -1,0 +1,16 @@
+$ REPO=/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto IMG=readytrader-crypto:uat-fixed-api bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_login.sh
+# at 2026-09-24T19:40:36+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+== (a) venv
+bcrypt package 5.0.0 | hash made with bcrypt.hashpw: $2b$12$...
+right password -> 200 {"access_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImlhdC
+wrong password -> 401 {"detail":"Invalid credentials"}
+passlib bcrypt.hash (the documented generator) -> ValueError password cannot be longer than 72 bytes, truncate manually if necessary (e.g. my_password[:72])
+== (b) Docker API image readytrader-crypto:uat-fixed-api
+right password -> {"access_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTc5MDI3ODg0NiwiZXhwIjoxNzkwMzY1MjQ2LC
+wrong password -> {"detail":"Invalid credentials"} 401
+wrong username -> {"detail":"Invalid credentials"} 401
+no token, pending approvals -> 401
+
+
+exit=0

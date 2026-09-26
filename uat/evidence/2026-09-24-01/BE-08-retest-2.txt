@@ -1,0 +1,17 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_xproc_api.sh
+# at 2026-09-24T19:40:29+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+paper wallet: Deposited 100000.0 USDT. New Balance: 100000.0
+process A proposed 075b27a70c12af7ea2caab79
+API server (process B) GET /api/pending-approvals:
+['075b27a70c12af7ea2caab79']
+approve (admin JWT):
+{"data":{"fill":{"amount":0.001,"price":84496.9,"quote":"USDT","side":"buy","symbol":"BTC/USDT","total_value":84.4969},"mode":"paper","result":"Paper Trade Executed: BUY 0.001 BTC/USDT @ 84496.9. Value: 84.4969 USDT. Rationale: cex_order_paper","risk":{"acquir
+
+approve again:
+{"ok":false,"error":{"code":"EXEC_308","message":"Proposal 075b27a70c12af7ea2caab79 cannot be approved (executed)","category":"execution","severity":"low","data":{"request_id":"075b27a70c12af7ea2caab7
+
+paper wallet after: {'BTC': 0.001, 'USDT': 99915.5031}
+
+
+exit=0

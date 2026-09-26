@@ -1,0 +1,34 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_docker.sh
+# at 2026-09-24T18:07:29+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+context has: .env.live  data: . .. insights.db paper.db strategies.db 
+sha256:88408e64aead3833ce34d69e3559d9cd88939290c7657001b4d39cb4ed1311f3
+BUILD_EXIT=0
+--- inside the image:
+-rwxr-xr-x 1 readytrader readytrader   46 Sep 24 18:04 /app/.env.live
+
+/app/data:
+total 108
+drwx------ 1 readytrader readytrader  4096 Sep 24 17:06 .
+drwxr-xr-x 1 root        root         4096 Sep 24 18:06 ..
+-rwx------ 1 readytrader readytrader 20480 Sep 24 16:52 insights.db
+-rwx------ 1 readytrader readytrader 32768 Sep 24 17:06 paper.db
+-rwx------ 1 readytrader readytrader 49152 Sep 24 16:52 strategies.db
+env TRADING_HALTED=false PAPER_MODE=true
+2.5M	/app
+ls: cannot access '/app/.venv': No such file or directory
+ls: cannot access '/app/.git': No such file or directory
+ls: cannot access '/app/uat': No such file or directory
+ls: cannot access '/app/frontend/node_modules': No such file or directory
+--- image size:
+225 MB
+--- MCP over stdio, README's docker config:
+    raise RuntimeError("API_AUTH_REQUIRED must be true when DEV_MODE=false. Set DEV_MODE=true for local development, or enable JWT auth for production.")
+RuntimeError: API_AUTH_REQUIRED must be true when DEV_MODE=false. Set DEV_MODE=true for local development, or enable JWT auth for production.
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+    | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+      |     raise McpError(response_or_error.error)
+      | mcp.shared.exceptions.McpError: Connection closed
+
+
+exit=0

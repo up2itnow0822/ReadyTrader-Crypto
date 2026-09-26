@@ -1,0 +1,13 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_login.sh
+# at 2026-09-24T18:14:44+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+== (a) venv
+bcrypt package 5.0.0 | hash made with bcrypt.hashpw: $2b$12$...
+right password -> 401 {"detail":"Invalid credentials"}
+wrong password -> 401 {"detail":"Invalid credentials"}
+passlib bcrypt.hash (the documented generator) -> ValueError password cannot be longer than 72 bytes, truncate manually if necessary (e.g. my_password[:72])
+== (b) Docker API image readytrader-crypto:uat-base
+right password -> {"detail":"Password hashing not available. Install passlib[bcrypt]."} 500
+
+
+exit=0

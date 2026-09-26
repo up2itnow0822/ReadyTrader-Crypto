@@ -37,13 +37,13 @@ help:
 	@echo "  make security       Run security scans"
 	@echo ""
 	@echo "Docker:"
-	@echo "  make docker-build   Build production image"
-	@echo "  make docker-run     Run container (paper mode)"
+	@echo "  make docker-build   Build the MCP image and the API image"
+	@echo "  make docker-run     Run the MCP server over stdio (paper mode)"
 	@echo "  make docker-test    Test container"
 	@echo ""
 	@echo "Utilities:"
 	@echo "  make clean          Remove generated files"
-	@echo "  make docs           Generate documentation"
+	@echo "  make docs           Check the docs against the registered tools"
 
 # =============================================================================
 # Setup
@@ -120,21 +120,21 @@ security:
 # =============================================================================
 docker-build:
 	docker build -t readytrader-crypto:latest .
+	docker build --target api -t readytrader-crypto:api .
 
+# The MCP server over stdio (what an MCP client runs).
 docker-run:
-	docker run --rm -it \
+	docker run --rm -i \
 		-e PAPER_MODE=true \
-		-e DEV_MODE=true \
-		-p 8000:8000 \
 		readytrader-crypto:latest
 
+# The approval/dashboard API server (DEV_MODE=true: no JWT, local use only).
 docker-run-api:
 	docker run --rm -it \
 		-e PAPER_MODE=true \
 		-e DEV_MODE=true \
 		-p 8000:8000 \
-		readytrader-crypto:latest \
-		python -m uvicorn api_server:app --host 0.0.0.0 --port 8000
+		readytrader-crypto:api
 
 docker-test:
 	docker run --rm \
@@ -147,8 +147,8 @@ docker-test:
 # Documentation
 # =============================================================================
 docs:
-	python tools/generate_tool_docs.py
 	python tools/verify_docs.py
+	pytest -q tests/test_docs_tool_roster.py
 
 docs-format:
 	mdformat docs README.md RUNBOOK.md SECURITY.md CONTRIBUTING.md CHANGELOG.md

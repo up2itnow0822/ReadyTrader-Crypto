@@ -1,0 +1,26 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_compose.sh
+# at 2026-09-24T18:09:17+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+== effective defaults (docker compose config):
+      1       API_AUTH_REQUIRED: "false"
+      2       DEV_MODE: "false"
+      2       SIGNER_TYPE: env_private_key
+      2       TRADING_HALTED: "false"
+up exit=0
+ Container readytrader-mcp Starting 
+ Container readytrader-mcp Started 
+ Container readytrader-api Started 
+== containers:
+readytrader-api	Up 3 seconds (health: starting)
+readytrader-mcp	Up 3 seconds (health: starting)
+== api logs:
+== mcp logs:
+ValueError: PRIVATE_KEY environment variable not set
+    raise ValueError(f"{env_var} environment variable not set")
+ValueError: PRIVATE_KEY environment variable not set
+== api health from the host:
+(no answer)
+down
+
+
+exit=0

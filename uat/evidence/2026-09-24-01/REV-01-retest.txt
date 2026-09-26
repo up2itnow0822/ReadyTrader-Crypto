@@ -1,0 +1,20 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev/run.sh probe_live_price
+# at 2026-09-24T19:35:30+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+market BTC/USDT = 84000.0 | account 100,000 USDT | 5% cap = 5,000 USD
+A live market BUY 1 BTC, no price     : ok=False code=risk_blocked guardian_ref_price=84000.0 exposure_usd=84000.0
+   exchange calls: []
+B live market BUY 1 BTC, price=1      : ok=False code=risk_blocked guardian_ref_price=84000.0 exposure_usd=84000.0
+   exchange calls: []
+C live market BUY 50 BTC, price=0.01  : ok=False code=risk_blocked guardian_ref_price=84000.0 exposure_usd=4200000.0
+   exchange calls: []
+D live futures limit SELL 10 BTC @1   : ok=False code=risk_blocked guardian_ref_price=84000.0 exposure_usd=840000.0
+   exchange calls: []
+E live replace -> market BUY 5 BTC p=1: ok=False code=risk_blocked guardian_ref_price=84000.0 exposure_usd=420000.0
+   exchange calls: []
+F approve_each market BUY 1 BTC price=1 -> False None risk_blocked
+G pre_trade_check market BUY 1 BTC price=None: allowed=False reference_price=84000.0 exposure_added_usd=84000.0 equity=100000.0 reason='Position size too large (84.0%). Max allowed is 5%.'
+G pre_trade_check market BUY 1 BTC price=1: allowed=False reference_price=84000.0 exposure_added_usd=84000.0 equity=100000.0 reason='Position size too large (84.0%). Max allowed is 5%.'
+
+
+exit=0

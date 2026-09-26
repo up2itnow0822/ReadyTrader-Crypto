@@ -1,0 +1,18 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev/run.sh probe_drawdown
+# at 2026-09-24T19:01:19+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+settings PAPER_MODE = True | paper db = /tmp/tmp.Ql8ydKFqJS/paper.db
+Deposited 10000.0 USDT. New Balance: 10000.0
+holdings: {'BTC': 0.18900000000000003, 'USDT': 550.0} equity 10000.0 metrics {'daily_pnl_pct': 1.8189894035458566e-16, 'drawdown_pct': 0.0, 'max_drawdown_pct': 1.8189894035458566e-16}
+--- BTC falls 50000 -> 25000
+metrics the Guardian reads (last snapshot, before any trade): {'daily_pnl_pct': 1.8189894035458566e-16, 'drawdown_pct': 0.0, 'max_drawdown_pct': 1.8189894035458566e-16}
+1st BUY after the crash (0.001 BTC): ok=True Paper Trade Executed: BUY 0.001 BTC/USDT @ 25000.0. Value: 25.0 USDT. Rationale: cex_order_paper
+metrics now: {'daily_pnl_pct': -0.4724999999999999, 'drawdown_pct': 0.47250000000000003, 'max_drawdown_pct': 0.47250000000000003}
+2nd BUY after the crash (0.001 BTC): ok=False risk_blocked: Max Drawdown Limit Hit (47.2%). Orders that add exposure are halted; orders that reduce or
+--- agent tops the paper wallet up (deposit_paper_funds is an MCP tool the agent itself can call)
+Deposited 5000.0 USDT. New Balance: 5525.0
+metrics now: {'daily_pnl_pct': 0.0275, 'drawdown_pct': 0.0, 'max_drawdown_pct': 0.47250000000000003}
+BUY after the deposit (0.001 BTC): ok=True Paper Trade Executed: BUY 0.001 BTC/USDT @ 25000.0. Value: 25.0 USDT. Rationale: cex_order_paper
+
+
+exit=0

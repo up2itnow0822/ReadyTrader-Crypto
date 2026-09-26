@@ -1,0 +1,35 @@
+{
+  "frozen_at_utc": "2026-09-24T05:45:57Z",
+  "supersedes": "FROZEN.json (high-based drawdown, TR volatility ratio). Reason: Yahoo FX daily bars carry bad high/low prints (0.24% of bars have highs >3% above the open-close body), which make a high-based drawdown fire on phantom spikes. v2 uses closes only for every rule input.",
+  "selection_rule": "Unchanged from FROZEN.json, applied to the dev split only: highest lift in P(further severe drop within H days) among configs firing on 0.3%-1.0% of instrument-days; ties within 0.2 lift -> simplest. Volatility-halt threshold: the round value closest to the dev frequency of the v1 rule (TR > 3.0x fired on 0.75% of dev FX days; close-based 4.5x fires on 0.80%).",
+  "disclosure": "The v1 held-out years were scored once for the high-based rule, so they are not pristine for v2. v2 is therefore ALSO scored on instruments never downloaded before v2 was frozen (data/equity_fresh, data/fx_fresh).",
+  "rule_definition": "Window = latest daily close and the 3 closes before it. drop = (max close in window - latest close) / max close in window. Fires when drop >= dmin AND latest close <= every earlier close in the window.",
+  "equity": {
+    "K": 3,
+    "dmin": 0.15,
+    "measure": "close",
+    "still": "lowest",
+    "H": 10,
+    "severe": 0.1,
+    "split": "2020-01-01",
+    "dev_result": "fire 0.59%, lift 4.09, P(severe) 54.9% vs 13.4%"
+  },
+  "fx": {
+    "K": 3,
+    "dmin": 0.05,
+    "measure": "close",
+    "still": "lowest",
+    "H": 10,
+    "severe": 0.03,
+    "split": "2017-01-01",
+    "dev_result": "fire 0.36%, lift 2.82, P(severe) 47.8% vs 16.9%",
+    "volatility_halt": {
+      "ratio": 4.5,
+      "N": 20,
+      "definition": "|ln(close_t / close_t-1)| / mean of the 20 prior |ln(close_i / close_i-1)|",
+      "evaluation": "P(max |close_t+k / close_t - 1| over k=1..5 >= 3%) on halt days vs all days; reported, not used for selection"
+    }
+  },
+  "crypto": "not shipped: v1 crypto rule failed held-out (see FROZEN.json / heldout_results.json)",
+  "data_notes": "Same loaders as v1: Yahoo daily split-adjusted equities (index ETFs excluded), Yahoo FX with every pair also scored inverted, USDCNY/USDARS/USDRUB excluded, single-bar spikes >8% reversing >6% removed."
+}
