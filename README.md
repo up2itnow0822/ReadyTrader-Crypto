@@ -375,37 +375,44 @@ ______________________________________________________________________
 
 ### Option A: Agent Zero (Recommended)
 
-To give Agent Zero these powers, add the following to your **Agent Zero Settings** (or `agent.yaml`).
-The MCP server key/name is arbitrary; we use `readytrader_crypto` in examples.
+**With the Agent Zero plugin:** install [a0-readytrader-crypto-plugin](https://github.com/up2itnow0822/a0-readytrader-crypto-plugin)
+(2.0.0 or later) from Agent Zero's **Plugins** page (Git URL or ZIP). It installs this server into
+the plugin's folder, registers it with Agent Zero's MCP client in paper mode, and adds a paper-trading
+skill.
 
-Quick copy/paste file: `configs/agent_zero.mcp.yaml`.
+**By hand:** in Agent Zero, open **Settings → MCP/A2A → External MCP Servers** and add the server to
+the JSON there. Copy/paste file: `configs/agent_zero.mcp.json`.
 
-**Via User Interface:**
-
-1. Go to **Settings** -> **MCP Servers**.
-1. Add a new server:
-   - **Name**: `readytrader_crypto`
-   - **Type**: `stdio`
-   - **Command**: `docker`
-   - **Args**: `run`, `-i`, `--rm`, `-e`, `PAPER_MODE=true`, `readytrader-crypto`
-
-**Via `agent.yaml`:**
-
-```yaml
-mcp_servers:
-  readytrader_crypto:
-    command: "docker"
-    args: 
-      - "run"
-      - "-i" 
-      - "--rm"
-      - "-e"
-      - "PAPER_MODE=true"
-      - "readytrader-crypto"
+```json
+{
+  "mcpServers": {
+    "readytrader_crypto": {
+      "type": "stdio",
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-v",
+        "readytrader-crypto-data:/app/data",
+        "-e",
+        "PAPER_MODE=true",
+        "readytrader-crypto"
+      ]
+    }
+  }
+}
 ```
 
-Prebuilt config: `configs/agent_zero.mcp.yaml`.
-*Restart Agent Zero after saving.*
+- The agent sees the tools as `readytrader_crypto.<tool>` (Agent Zero lowercases the server name and turns
+  other characters into `_`). Saving the settings reloads Agent Zero's MCP servers.
+- Agent Zero starts the server afresh for every call, so the `-v` volume is what keeps the paper
+  account between calls. Agent Zero must be able to run `docker` where it runs.
+- **Without Docker:** set `"command"` to the Python 3.12 interpreter of a ReadyTrader-Crypto checkout
+  with its requirements installed (e.g. `/path/to/ReadyTrader-Crypto/.venv/bin/python`) and `"args"` to
+  `["/path/to/ReadyTrader-Crypto/server.py"]`, paths Agent Zero can reach. Agent Zero passes the server
+  only a minimal environment, so put settings in the entry's `"env"` (for example
+  `{"PAPER_MODE": "true"}`) or in the checkout's `.env`.
 
 ### Option B: Generic MCP Client (Claude Desktop, etc.)
 
