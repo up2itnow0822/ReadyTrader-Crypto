@@ -6,10 +6,10 @@
 ## Run 2026-09-24-01 — ReadyTrader-Crypto
 
 - Branch: `uat/2026-09-24-crypto`  |  Base: `main@67fd39c`
-- Started: 2026-09-24T16:18:30+00:00  |  Updated: 2026-09-25T12:33:05+00:00
+- Started: 2026-09-24T16:18:30+00:00  |  Updated: 2026-09-26T02:18:16+00:00
 - Scope: In: MCP server (stdio), FastAPI approval API, Next.js dashboard, CLI/examples, config, docs, registry manifest, the Falling Knife decision for crypto. Money paths paper only; no live orders, no dust trades (Phase 4 needs Bill's authorization); signer paths with test keys only.
 - Verdict: **CLEAN with BLOCKED items**
-- Totals: 82 checks · 21 pass · 59 fail (59 verified fixed, 0 open, 0 fixed-unverified, 0 regressed, 0 wontfix) · 2 blocked
+- Totals: 83 checks · 21 pass · 60 fail (60 verified fixed, 0 open, 0 fixed-unverified, 0 regressed, 0 wontfix) · 2 blocked
 
 ### User journeys exercised
 
@@ -32,10 +32,10 @@
 | integrations | 1 | 2 | 2 | 2 |
 | cli | 0 | 1 | 1 | 0 |
 | config | 1 | 11 | 11 | 0 |
-| docs | 0 | 13 | 13 | 0 |
+| docs | 0 | 14 | 14 | 0 |
 | regression | 2 | 0 | 0 | 0 |
 
-### Findings (61)
+### Findings (62)
 
 #### BE-01 — Risk Guardian runs in the order path (README: every request is filtered; a 50% bet is blocked automatically)  [FAIL · critical · **VERIFIED**]
 
@@ -337,6 +337,20 @@
   - Files: `README.md`
   - Commit: `e152134`
 - Retest 1 (2026-09-24T17:49:40+00:00): **PASS** — the feature grep no longer finds Deep DeFi / Strategy Marketplace / Mobile Guard / simulated news; the feature list says what ships (defi/ is a library not exposed as tools; no push notifications; strategy research = backtest + stress lab). (The defi import scan also walked this clone's .venv - noise, not repo code.) · evidence: [DOC-02-retest.txt](evidence/2026-09-24-01/DOC-02-retest.txt)
+
+#### DOC-06 — The README's Agent Zero integration works in current Agent Zero  [FAIL · medium · **VERIFIED**]
+
+- Section: `docs`
+- Steps: follow README Option A (Agent Zero) in Agent Zero v2.13; give its block to Agent Zero's MCP settings parser
+- Expected: a server entry Agent Zero starts
+- Observed: Option A points to 'Settings -> MCP Servers' and an 'agent.yaml' mcp_servers block. Agent Zero v2.13 keeps MCP servers in Settings -> MCP/A2A -> External MCP Servers as JSON ({"mcpServers": {...}}); agent.yaml is agent-profile metadata. The README's block yields no server in Agent Zero's parser (parse_config_string -> []), and configs/agent_zero.mcp.yaml has the same shape. The Agent Zero plugin, the supported path, is not mentioned. Its UI and agent.yaml examples also drop the data volume that configs/agent_zero.mcp.yaml and the Docker section use, so with --rm every call (Agent Zero starts the server afresh for each) would start an empty paper wallet.
+- Evidence: [DOC-06.txt](evidence/2026-09-24-01/DOC-06.txt)
+- Fix: README Option A points to the Agent Zero plugin first; the hand-made entry is the {"mcpServers": ...} JSON for Settings -> MCP/A2A -> External MCP Servers (configs/agent_zero.mcp.json, data volume included); the YAML moved to _deprecated/configs/
+  - Root cause: the Agent Zero section was written for an older Agent Zero (MCP servers in agent.yaml / a settings page that no longer exists)
+  - Files: `README.md`, `configs/agent_zero.mcp.json`, `_deprecated/configs/agent_zero.mcp.yaml`, `CHANGELOG.md`, `AGENTS.md`, `tests/test_uat_2026_09_24.py`
+  - Commit: `b37d32f`
+  - Regression test: tests/test_uat_2026_09_24.py::test_the_agent_zero_config_is_what_agent_zero_reads
+- Retest 1 (2026-09-26T02:18:16+00:00): **PASS** — the README's Agent Zero JSON block (identical to configs/agent_zero.mcp.json) parses in Agent Zero v2.13 to one server, readytrader_crypto (DOC-06-retest.txt); the README's without-Docker form, written into External MCP Servers of a real Agent Zero tree, connects with 29 tools and answers a price through Agent Zero's MCP client (this capture); the Docker form was not run (no Docker daemon here) · evidence: [DOC-06-retest-nodocker.txt](evidence/2026-09-24-01/DOC-06-retest-nodocker.txt)
 
 #### DOCK-03 — Containers keep the fail-closed kill-switch default  [FAIL · medium · **VERIFIED**]
 
