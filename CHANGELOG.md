@@ -41,6 +41,13 @@ boundary. **No git tag or GitHub Release exists for 0.2.0 yet** (`git tag -l` an
 
 - **Public-release UAT, 2026-09-24** (`uat/UAT-LOG.md`, run `2026-09-24-01`):
 
+  - **The Agent Zero integration works in current Agent Zero** (DOC-06, found by the Agent Zero
+    plugin's UAT): the README's Agent Zero section pointed to a "Settings -> MCP Servers" page and an
+    `agent.yaml` block that Agent Zero v2.13 does not read (its MCP parser found no server in it), and
+    its example had no data volume, so every call would start an empty paper wallet. The section
+    now points to the Agent Zero plugin first, and the hand-made entry is the JSON for Settings ->
+    MCP/A2A -> External MCP Servers (`configs/agent_zero.mcp.json`, with the volume). The YAML file
+    moved to `_deprecated/configs/`.
   - **Hermes guide synced with readytrader-crypto-hermes 1.2.0** (`docs/HERMES_INTEGRATION.md`,
     found by that repo's UAT): paper market orders are placed without a price, `get_crypto_price`
     gives the numeric `data.price`, the keyless news answer is `not_configured`, the Docker
