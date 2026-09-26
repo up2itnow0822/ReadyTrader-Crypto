@@ -14,8 +14,8 @@ held-out validation (`docs/FALLING_KNIFE.md`, `research/falling_knife/`); the se
 Two independent adversarial reviews ran against the finished log (REV-*: 17 findings, REV2-*: 10);
 every finding was fixed, regression-tested and retested here.
 
-**Totals:** 82 checks · 21 pass · 59 fail (59 fixed & verified) · 2 blocked · `make check` exit 0
-(710 passed, 5 skipped; ruff, bandit, pip-audit, docs verify, mdformat) · `make security` exit 0 ·
+**Totals:** 83 checks · 21 pass · 60 fail (60 fixed & verified) · 2 blocked · `make check` exit 0
+(711 passed, 5 skipped; ruff, bandit, pip-audit, docs verify, mdformat) · `make security` exit 0 ·
 dashboard lint/typecheck/61 unit tests/build pass · Playwright 18/18.
 
 | Section | Pass | Fail | Verified fixed | Blocked |
@@ -28,7 +28,7 @@ dashboard lint/typecheck/61 unit tests/build pass · Playwright 18/18.
 | integrations | 1 | 2 | 2 | 2 |
 | cli | 0 | 1 | 1 | 0 |
 | config | 1 | 11 | 11 | 0 |
-| docs | 0 | 13 | 13 | 0 |
+| docs | 0 | 14 | 14 | 0 |
 | regression | 2 | 0 | 0 | 0 |
 
 ### What was broken and is now fixed
@@ -54,6 +54,7 @@ dashboard lint/typecheck/61 unit tests/build pass · Playwright 18/18.
 - **medium** DATA-02 — Asset codes are case-insensitive in the paper ledger → The paper ledger upper-cases asset codes (orders, deposits, lookups) (`9e25268`)
 - **medium** DOC-03 — README configuration defaults match the code → README corrected (see commit) (`e152134`)
 - **medium** DOC-04 — README feature list describes what ships → README corrected (see commit) (`e152134`)
+- **medium** DOC-06 — The README's Agent Zero integration works in current Agent Zero → Option A pointed to a "Settings -> MCP Servers" page and an `agent.yaml` block that Agent Zero v2.13 does not read (its MCP parser found no server), without the data volume; it now points to the Agent Zero plugin first and gives the JSON for Settings -> MCP/A2A -> External MCP Servers (`configs/agent_zero.mcp.json`), verified in a real Agent Zero tree. Found by the Agent Zero plugin's UAT (`b37d32f`)
 - **medium** DOCK-03 — Containers keep the fail-closed kill-switch default → See commit cd6076b: MCP is the default image stage; .dockerignore excludes .env*, keys, data, envs, history, frontend; TRADING_HALTED=true in image and compose; compose defaults to SIGNER_TYPE=null, API auth on with API_JWT_SECRET required, explicit targets and a shared EXECUTION_SESSION_ID (`cd6076b`)
 - **medium** FE-01 — Documented dashboard e2e command (UAT.md T6) runs on a fresh clone → e2e/constants.ts HARNESS_PYTHON (repo .venv, else python3, PW_PYTHON_PATH overrides) is used by playwright.config.ts and apiControl.ts; report in frontend/playwright-report; ESLint ignores playwright-report/ and test-results/ (`ce047ec`)
 - **medium** INT-01 — A news/sentiment source that cannot answer is an error, not a result → News and sentiment sources raise intelligence.SourceError; get_financial_news, get_news, get_social_sentiment, get_free_news and get_sentiment return not_configured / source_unavailable (`9e25268`)
