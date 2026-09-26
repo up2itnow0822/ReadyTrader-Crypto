@@ -1,6 +1,6 @@
 # UAT run 2026-09-24-01 — ReadyTrader-Crypto: CLEAN with BLOCKED items
 
-82 checks · 21 pass · 59 fail (59 fixed & verified, 0 open, 0 fixed-unverified, 0 regressed) · 2 blocked
+83 checks · 21 pass · 60 fail (60 fixed & verified, 0 open, 0 fixed-unverified, 0 regressed) · 2 blocked
 
 Scope: In: MCP server (stdio), FastAPI approval API, Next.js dashboard, CLI/examples, config, docs, registry manifest, the Falling Knife decision for crypto. Money paths paper only; no live orders, no dust trades (Phase 4 needs Bill's authorization); signer paths with test keys only.
 
@@ -28,6 +28,7 @@ Scope: In: MCP server (stdio), FastAPI approval API, Next.js dashboard, CLI/exam
 - **medium** DATA-02 — Asset codes are case-insensitive in the paper ledger → The paper ledger upper-cases asset codes (orders, deposits, lookups) (`9e25268`) · **VERIFIED**
 - **medium** DOC-03 — README configuration defaults match the code → README corrected (see commit) (`e152134`) · **VERIFIED**
 - **medium** DOC-04 — README feature list describes what ships → README corrected (see commit) (`e152134`) · **VERIFIED**
+- **medium** DOC-06 — The README's Agent Zero integration works in current Agent Zero → README Option A points to the Agent Zero plugin first; the hand-made entry is the {"mcpServers": ...} JSON for Settings -> MCP/A2A -> External MCP Servers (configs/agent_zero.mcp.json, data volume included); the YAML moved to _deprecated/configs/ (`b37d32f`) · **VERIFIED**
 - **medium** DOCK-03 — Containers keep the fail-closed kill-switch default → See commit cd6076b: MCP is the default image stage; .dockerignore excludes .env*, keys, data, envs, history, frontend; TRADING_HALTED=true in image and compose; compose defaults to SIGNER_TYPE=null, API auth on with API_JWT_SECRET required, explicit targets and a shared EXECUTION_SESSION_ID (`cd6076b`) · **VERIFIED**
 - **medium** FE-01 — Documented dashboard e2e command (UAT.md T6) runs on a fresh clone → e2e/constants.ts HARNESS_PYTHON (repo .venv, else python3, PW_PYTHON_PATH overrides) is used by playwright.config.ts and apiControl.ts; report in frontend/playwright-report; ESLint ignores playwright-report/ and test-results/ (`ce047ec`) · **VERIFIED**
 - **medium** INT-01 — A news/sentiment source that cannot answer is an error, not a result → News and sentiment sources raise intelligence.SourceError; get_financial_news, get_news, get_social_sentiment, get_free_news and get_sentiment return not_configured / source_unavailable (`9e25268`) · **VERIFIED**
@@ -83,7 +84,7 @@ Scope: In: MCP server (stdio), FastAPI approval API, Next.js dashboard, CLI/exam
 | integrations | 5 | covered |
 | cli | 1 | covered |
 | config | 12 | covered |
-| docs | 13 | covered |
+| docs | 14 | covered |
 | journeys | 6 | recorded |
 
 ## Delivery
