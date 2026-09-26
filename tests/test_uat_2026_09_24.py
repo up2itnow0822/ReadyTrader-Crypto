@@ -579,13 +579,27 @@ def test_nested_secrets_stay_out_of_the_docker_build_context():
 
 def test_docker_mcp_configs_keep_the_paper_account():
     # REV-07: without a volume every MCP session started from an empty paper wallet.
-    import yaml
-
     desktop = json.loads((REPO_ROOT / "configs/claude_desktop.mcp-server-config.json").read_text())
-    agent_zero = yaml.safe_load((REPO_ROOT / "configs/agent_zero.mcp.yaml").read_text())
-    for args in (desktop["mcpServers"]["readytrader_crypto"]["args"], agent_zero["mcp_servers"]["readytrader_crypto"]["args"]):
+    agent_zero = json.loads((REPO_ROOT / "configs/agent_zero.mcp.json").read_text())
+    for args in (desktop["mcpServers"]["readytrader_crypto"]["args"], agent_zero["mcpServers"]["readytrader_crypto"]["args"]):
         assert args[args.index("-v") + 1].endswith(":/app/data"), args
     assert "-v readytrader-crypto-data:/app/data" in (REPO_ROOT / "README.md").read_text()
+
+
+def test_the_agent_zero_config_is_what_agent_zero_reads():
+    # UAT DOC-06: Agent Zero v2.13 keeps MCP servers as JSON ({"mcpServers": {...}}) in Settings -> MCP/A2A ->
+    # External MCP Servers; the old `agent.yaml` mcp_servers block gave its parser no server at all, and the
+    # README's Agent Zero example had no data volume.
+    import re
+
+    config = json.loads((REPO_ROOT / "configs/agent_zero.mcp.json").read_text())
+    entry = config["mcpServers"]["readytrader_crypto"]
+    assert entry["type"] == "stdio" and entry["args"][entry["args"].index("-v") + 1] == "readytrader-crypto-data:/app/data"
+    readme = (REPO_ROOT / "README.md").read_text()
+    section = readme[readme.index("### Option A: Agent Zero") : readme.index("### Option B")]
+    block = re.search(r"```json\n(.*?)```", section, re.S).group(1)
+    assert json.loads(block) == config
+    assert "agent.yaml" not in section and "External MCP Servers" in section
 
 
 def test_sentinel_stack_runs_the_api_server():
