@@ -1,0 +1,5 @@
+crypto dev (seen)                              fire  0.38% (  75/ 19897)  P(severe)  66.7% vs 20.7%  lift 3.22  MAE p10  -46.1% vs  -27.4%  ret med   8.4% vs  1.0%  coins firing 20
+crypto old HELD-OUT (seen by v1)               fire  0.11% (  35/ 31711)  P(severe)  40.0% vs 12.8%  lift 3.11  MAE p10  -50.5% vs  -22.3%  ret med   2.4% vs -0.6%  coins firing 10
+crypto FRESH all years                         fire  0.26% ( 199/ 75178)  P(severe)  40.2% vs 19.7%  lift 2.04  MAE p10  -36.6% vs  -27.3%  ret med  11.1% vs -1.0%  coins firing 30
+crypto FRESH held-out years                    fire  0.19% (  92/ 49712)  P(severe)  20.7% vs 17.1%  lift 1.21  MAE p10  -24.5% vs  -25.3%  ret med  10.9% vs -1.5%  coins firing 26
+FAIL against the pre-registered criterion: Ship only if, on the fresh coins, lift >= 2.0 over all years AND lift >= 1.5 on the held-out years, with fire rate between 0.1% and 2%. Otherwise report the failure and ship nothing for crypto.

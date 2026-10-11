@@ -31,60 +31,86 @@ except ImportError:
     feedparser = None
 
 
-def get_fear_greed_index() -> str:
-    """
-    Fetch the Crypto Fear & Greed Index from alternative.me.
-    """
+class SourceError(Exception):
+    """A news or sentiment source that could not answer: `code` is not_configured (a key is missing)
+    or source_unavailable (it failed). The MCP tools return it as an error, never as news."""
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+
+
+def fear_greed_index() -> str:
+    """The Crypto Fear & Greed Index from alternative.me. Raises SourceError when it cannot be read."""
     try:
-        url = "https://api.alternative.me/fng/"
-        response = requests.get(url, timeout=10)
+        response = requests.get("https://api.alternative.me/fng/", timeout=10)
         data = response.json()
-        if "data" in data and len(data["data"]) > 0:
-            item = data["data"][0]
-            value = item["value"]
-            classification = item["value_classification"]
-            return f"Fear & Greed Index: {value} ({classification})"
-        return "Error: Could not retrieve Fear & Greed Index."
+        item = data["data"][0]
+        return f"Fear & Greed Index: {item['value']} ({item['value_classification']})"
     except Exception as e:
-        return f"Error fetching Fear & Greed Index: {str(e)}"
+        raise SourceError("source_unavailable", f"The Fear & Greed Index could not be read: {type(e).__name__}") from e
 
 
-def get_market_news() -> str:
-    """
-    Fetch aggregated crypto market news using CryptoPanic API if available.
-    """
+def get_fear_greed_index() -> str:
+    """String form of fear_greed_index() (kept for existing callers): a failure comes back as text."""
+    try:
+        return fear_greed_index()
+    except SourceError as e:
+        return f"Error: {e.message}"
+
+
+def market_news() -> str:
+    """CryptoPanic hot news. Raises SourceError when not configured or when CryptoPanic fails."""
     api_key = os.getenv("CRYPTOPANIC_API_KEY")
     if not api_key:
-        return "Market News Unavailable: CRYPTOPANIC_API_KEY not configured. Set this environment variable to enable real-time crypto news."
-
+        raise SourceError("not_configured", "Market news needs CRYPTOPANIC_API_KEY (https://cryptopanic.com/developers/api/).")
     try:
         url = f"https://cryptopanic.com/api/v1/posts/?auth_token={api_key}&kind=news&filter=hot"
         response = requests.get(url, timeout=10)
         data = response.json()
-
-        if "results" in data:
-            headlines = [f"{i + 1}. {p['title']}" for i, p in enumerate(data["results"][:5])]
-            return "CryptoPanic News:\n" + "\n".join(headlines)
-        return "Error: No news found via CryptoPanic."
     except Exception as e:
-        return f"Error fetching CryptoPanic news: {str(e)}"
+        raise SourceError("source_unavailable", f"CryptoPanic did not answer: {type(e).__name__}") from e
+    if "results" not in data:
+        raise SourceError("source_unavailable", "CryptoPanic answered without results.")
+    headlines = [f"{i + 1}. {p['title']}" for i, p in enumerate(data["results"][:5])]
+    return "CryptoPanic News:\n" + "\n".join(headlines) if headlines else "CryptoPanic: no hot news right now."
+
+
+def get_market_news() -> str:
+    """String form of market_news() (kept for existing callers): a failure comes back as text."""
+    try:
+        return market_news()
+    except SourceError as e:
+        return f"Market News Unavailable: {e.message}"
 
 
 def fetch_rss_news(symbol: str = "") -> str:
+    """String form of rss_news() (kept for existing callers): a failure comes back as text."""
+    try:
+        return rss_news(symbol)
+    except SourceError as e:
+        return f"Error: {e.message}"
+
+
+def rss_news(symbol: str = "") -> str:
     """
-    Fetch free market news from RSS feeds (CoinDesk, Cointelegraph).
-    This provides 'Free' news without requiring API keys.
+    Fetch free market news from RSS feeds (CoinDesk, Cointelegraph); no API key needed. Raises
+    SourceError(source_unavailable) when no feed could be read.
     """
     if not feedparser:
-        return "Error: feedparser library not installed. Cannot fetch RSS news."
+        raise SourceError("source_unavailable", "feedparser is not installed; RSS news cannot be read.")
 
     feeds = [("CoinDesk", "https://www.coindesk.com/arc/outboundfeeds/rss/"), ("Cointelegraph", "https://cointelegraph.com/rss")]
 
     all_headlines = []
+    failed = []
 
     for name, url in feeds:
         try:
             feed = feedparser.parse(url)
+            if getattr(feed, "bozo", False) and not feed.entries:
+                raise ValueError(str(getattr(feed, "bozo_exception", "unreadable feed")))
             # Take top 3 from each
             count = 0
             for entry in feed.entries:
@@ -97,7 +123,12 @@ def fetch_rss_news(symbol: str = "") -> str:
                 all_headlines.append(f"{entry.title} ({name})")
                 count += 1
         except Exception as e:
-            all_headlines.append(f"Error fetching {name} feed: {str(e)}")
+            failed.append(f"{name}: {type(e).__name__}")
+
+    if len(failed) == len(feeds):
+        raise SourceError("source_unavailable", "No RSS feed could be read (" + "; ".join(failed) + ").")
+    if failed:
+        all_headlines.append("Unavailable feed(s): " + ", ".join(failed))
 
     if not all_headlines:
         if symbol:
@@ -267,13 +298,20 @@ def analyze_social_sentiment(symbol: str) -> str:
     Score recent X and Reddit text about the symbol's base asset and cache the result for the
     Risk Guardian. Every call refreshes; the trade check reads the cached score.
     """
+    return social_sentiment_report(symbol)[0]
+
+
+def social_sentiment_report(symbol: str) -> Tuple[str, Dict[str, str]]:
+    """analyze_social_sentiment, plus each source's state this refresh: {"twitter": ..., "reddit": ...}
+    with "ok" (it answered, possibly with nothing), "not_configured" or "error"."""
     asset = base_asset(symbol)
     if not asset:
-        return "Social Sentiment Unavailable: no symbol given."
+        return "Social Sentiment Unavailable: no symbol given.", {}
 
     tweets, twitter_result, twitter_state = _recent_tweets(asset)
     titles, reddit_result, reddit_state = _recent_reddit_titles(asset)
     states = (twitter_state, reddit_state)
+    source_states = {"twitter": twitter_state, "reddit": reddit_state}
     sources = frozenset(name for name, texts in (("twitter", tweets), ("reddit", titles)) if any(isinstance(text, str) and text.strip() for text in texts))
     configured = any(state != "not_configured" for state in states)
     reading = score_texts(tweets + titles)
@@ -297,34 +335,36 @@ def analyze_social_sentiment(symbol: str) -> str:
         age_min = _sentiment_cache.age_seconds(previous) // 60
         lines.append(f"This refresh is degraded ({reading.texts} texts), so it does not replace the reading from {age_min} min ago.")
         lines.append(f"Sentiment score in force: {_describe(held)}. It expires one hour after it was taken.")
-        return "\n".join(lines)
+        return "\n".join(lines), source_states
 
     if configured:
         lines.append(f"Sentiment score: {_describe(reading)}")
     else:
         lines.append("NOTE: Until a source is configured the Falling Knife check has no data and treats sentiment as neutral (0.0).")
-    return "\n".join(lines)
+    return "\n".join(lines), source_states
+
+
+def financial_news(symbol: str) -> str:
+    """NewsAPI headlines for the symbol. Raises SourceError when not configured or when NewsAPI fails."""
+    api_key = os.getenv("NEWSAPI_KEY")
+    if not api_key or not NewsApiClient:
+        raise SourceError("not_configured", "Financial news needs NEWSAPI_KEY (https://newsapi.org/).")
+    try:
+        newsapi = NewsApiClient(api_key=api_key)
+        articles = newsapi.get_everything(q=f"{symbol} crypto", language="en", sort_by="relevancy", page_size=3)
+    except Exception as e:
+        raise SourceError("source_unavailable", f"NewsAPI did not answer: {type(e).__name__}") from e
+    if articles.get("status") != "ok":
+        raise SourceError("source_unavailable", f"NewsAPI answered status {articles.get('status')!r}.")
+    if not articles.get("articles"):
+        return "NewsAPI: No articles found."
+    headlines = [f"{i + 1}. {a['title']} ({a['source']['name']})" for i, a in enumerate(articles["articles"])]
+    return "Financial Headlines (NewsAPI):\n" + "\n".join(headlines)
 
 
 def fetch_financial_news(symbol: str) -> str:
-    """
-    Fetch financial news using NewsAPI.
-    """
-    api_key = os.getenv("NEWSAPI_KEY")
-    if not api_key or not NewsApiClient:
-        return (
-            f"Financial News Unavailable for {symbol}: NewsAPI not configured.\n"
-            "To enable real financial news feeds, get an API key from https://newsapi.org/ and set NEWSAPI_KEY in your .env file."
-        )
-
+    """String form of financial_news() (kept for existing callers): a failure comes back as text."""
     try:
-        newsapi = NewsApiClient(api_key=api_key)
-        # Search for symbol + crypto or finance
-        articles = newsapi.get_everything(q=f"{symbol} crypto", language="en", sort_by="relevancy", page_size=3)
-
-        if articles["status"] == "ok" and articles["articles"]:
-            headlines = [f"{i + 1}. {a['title']} ({a['source']['name']})" for i, a in enumerate(articles["articles"])]
-            return "Financial Headlines (NewsAPI):\n" + "\n".join(headlines)
-        return "NewsAPI: No articles found."
-    except Exception as e:
-        return f"NewsAPI Error: {str(e)}"
+        return financial_news(symbol)
+    except SourceError as e:
+        return f"Financial News Unavailable for {symbol}: {e.message}"

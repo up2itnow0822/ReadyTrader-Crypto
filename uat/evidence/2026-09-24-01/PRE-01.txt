@@ -1,0 +1,24 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_baseline.sh
+# at 2026-09-24T16:19:01+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+== ruff check
+ok
+== ruff format --check
+131 files already formatted
+== pytest (make test env)
+FAILED tests/integration/test_exchange_sandbox.py::TestCoinbasePublicAPI::test_coinbase_public_ticker
+FAILED tests/integration/test_exchange_sandbox.py::TestCoinbasePublicAPI::test_coinbase_public_markets
+FAILED tests/integration/test_exchange_sandbox.py::TestRateLimiting::test_exchange_rate_limit_respected
+== bandit
+ok
+== pip-audit
+No known vulnerabilities found
+== verify_docs
+============================================================
+Documentation verification PASSED
+============================================================
+== mdformat --check
+mdformat exit=0
+
+
+exit=0

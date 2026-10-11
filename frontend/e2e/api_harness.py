@@ -52,7 +52,13 @@ BTC_ORDER_PAYLOAD = {
     "price": 50000.0,
     "exchange": "binance",
     "market_type": "spot",
+    # A proposal records the mode it was made in; the API executes it only in that mode.
+    "paper_mode": True,
 }
+
+# Paper orders fill at the market price, so the harness serves fixed prices instead of calling an
+# exchange: deterministic, and no network needed. The seeded BTC limit (50000) is marketable.
+FIXED_PRICES = {"BTC/USDT": 50000.0, "ETH/USDT": 2500.0, "ETH/USDC": 2500.0, "USDC/USDT": 1.0}
 
 
 def _configure_environment(auth: bool, db_dir: Path) -> None:
@@ -93,6 +99,7 @@ def _seed_default_proposals(store) -> None:
             "amount": 1.5,
             "chain": "ethereum",
             "rationale": "<img src=x onerror=alert(1)>",
+            "paper_mode": True,
         },
         ttl_seconds=900,
     )
@@ -100,9 +107,21 @@ def _seed_default_proposals(store) -> None:
     # 3) Expires almost immediately, to exercise the on-screen countdown/expiry.
     store.create(kind="place_cex_order", payload=dict(BTC_ORDER_PAYLOAD, amount=0.001), ttl_seconds=5)
 
-    # 4) Costs ~5,000,000 USDT against a 100,000 USDT wallet -- the paper engine
-    #    refuses it with insufficient_funds, which /api/approve-trade reports as a 422.
+    # 4) Costs ~5,000,000 USDT against a 100,000 USDT wallet -- the Risk Guardian refuses
+    #    it (position size), which /api/approve-trade reports as a 422.
     store.create(kind="place_cex_order", payload=dict(BTC_ORDER_PAYLOAD, amount=100.0), ttl_seconds=900)
+
+
+def _serve_fixed_prices(container) -> None:
+    from marketdata.bus import MarketDataResult  # noqa: E402
+
+    def fetch_ticker(symbol: str):
+        price = FIXED_PRICES.get(str(symbol or "").strip().upper())
+        if price is None:
+            raise ValueError(f"api_harness has no fixed price for {symbol!r}")
+        return MarketDataResult(source="api_harness", data={"symbol": symbol, "last": price}, meta={})
+
+    container.marketdata_bus.fetch_ticker = fetch_ticker
 
 
 def create_app(auth: bool, db_dir: Path):
@@ -115,6 +134,7 @@ def create_app(auth: bool, db_dir: Path):
     # A fresh store: nothing this process might otherwise load from an on-disk
     # proposal row belonging to a different session id leaks into the seeded set.
     api_server.global_container.execution_store = ExecutionStore()
+    _serve_fixed_prices(api_server.global_container)
     api_server.global_container.paper_engine.deposit(AGENT_USER_ID, "USDT", STARTING_USDT)
     _seed_default_proposals(api_server.global_container.execution_store)
 
@@ -122,7 +142,7 @@ def create_app(auth: bool, db_dir: Path):
     async def _seed_extra(payload: dict = Body(...)):  # pragma: no cover -- test-only route
         """Seed one more proposal mid-run. Never present outside this harness."""
         kind = str(payload.get("kind") or "place_cex_order")
-        proposal_payload = payload.get("payload") or dict(BTC_ORDER_PAYLOAD)
+        proposal_payload = {"paper_mode": True, **(payload.get("payload") or dict(BTC_ORDER_PAYLOAD))}
         ttl_seconds = int(payload.get("ttl_seconds") or 120)
         prop = api_server.global_container.execution_store.create(
             kind=kind, payload=proposal_payload, ttl_seconds=ttl_seconds

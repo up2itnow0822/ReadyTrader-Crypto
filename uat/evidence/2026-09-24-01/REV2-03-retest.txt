@@ -1,0 +1,18 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev2.sh 'test_probe_drawdown.py::test_D1_small_dip_then_topup_then_tiny_loss_halts'; bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev2.sh 'test_probe_drawdown.py::test_D1b_drawdown_denominator_is_equity_at_peak'
+# at 2026-09-24T20:21:39+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+D1 deposit 1000: True
+D1 buy 0.0009 BTC: True
+D1 deposit 100,000 USDT: True
+D1 buy 0.1 BTC (4,990 USD, 4.9%): True
+D1 equity 100899.01  net deposits 101000.00  loss -100.99 (-0.100% of equity)
+D1 metrics: {'daily_pnl_pct': -0.0009999009900989453, 'drawdown_pct': 0.0009999009900989453, 'max_drawdown_pct': 0.0009999009900989453}
+D1 BUY 0.001 BTC: True None
+.
+D1b equity 100899.01, result -100.99 (-0.100% of equity)
+D1b metrics next day: {'daily_pnl_pct': -0.0009990107911977963, 'drawdown_pct': 0.0010889208802230543, 'max_drawdown_pct': 0.0010889208802230543}
+D1b BUY 0.001 BTC next day: True None
+.
+
+
+exit=0

@@ -1,0 +1,22 @@
+$ .venv/bin/python /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_cexgate.py live
+# at 2026-09-24T17:44:05+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+mode=live PAPER_MODE=False approval=ApprovalMode.APPROVE_EACH
+place_cex_order(ETH/USDT buy 0.05) -> {"data": {"approval_required": true, "confirm_token": "cabc39cc9c5c1a014bed4dfe0581f752", "expires_at": 1790271968.5283015, "kind": "place_cex_order", "request_id": "37c12faa94308a4ca9968593"}, "ok": true}
+   exchange calls so far: 0 
+replace_cex_order(order 123 -> BTC/USDT buy 5 @90000) -> {"error": {"code": "approval_required", "data": {"exchange": "binance", "order_id": "123"}, "message": "replace_cex_order cannot go through EXECUTION_APPROVAL_MODE=approve_each: cancel_cex_order, then place_cex_order (which returns a proposal)."}, "ok": false}
+   exchange calls so far: 0 
+cancel_cex_order(123) -> {"data": {"exchange": "binance", "market_type": "spot", "result": {"id": "stub-1", "status": "open"}}, "ok": true}
+   exchange calls so far: 1 {"method": "cancel_order", "auth": true, "kwargs": {"order_id": "123", "symbol": "ETH/USDT"}}
+cancel_all_cex_orders() -> {"data": {"exchange": "binance", "market_type": "spot", "result": {"id": "stub-1", "status": "open"}}, "ok": true}
+   exchange calls so far: 2 {"method": "cancel_all_orders", "auth": true, "kwargs": {"symbol": null}}
+get_cex_order(123) -> {"data": {"exchange": "binance", "market_type": "spot", "order": {"id": "stub-1", "status": "open"}}, "ok": true}
+   exchange calls so far: 3 {"method": "fetch_order", "auth": true, "kwargs": {"order_id": "123", "symbol": "ETH/USDT"}}
+list_cex_open_orders() -> {"data": {"exchange": "binance", "market_type": "spot", "orders": []}, "ok": true}
+   exchange calls so far: 4 {"method": "fetch_open_orders", "auth": true, "kwargs": {"symbol": null}}
+
+--- stderr ---
+<string>:83: UserWarning: SIGNER_POLICY_ENABLED=false: No signer-side guardrails. Enable for defense-in-depth in live trading.
+
+
+exit=0

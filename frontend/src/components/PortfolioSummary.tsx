@@ -3,7 +3,8 @@
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { formatPercent, formatQuantity, toFiniteNumber } from "@/lib/format";
 
-const STABLE_ASSETS = new Set(["USDT", "USDC", "DAI", "USD"]);
+// The USD stablecoins the server values at 1 USD (paper_engine.USD_STABLES).
+const STABLE_ASSETS = new Set(["USD", "USDT", "USDC", "DAI", "BUSD", "FDUSD", "TUSD", "USDP"]);
 
 export function PortfolioSummary() {
   const { portfolio, loading, error } = usePortfolio();
@@ -36,8 +37,12 @@ export function PortfolioSummary() {
               <span className="stat__value">{formatPercent(portfolio?.metrics.daily_pnl_pct)}</span>
             </div>
             <div className="stat">
-              <span className="stat__label">Max drawdown</span>
+              <span className="stat__label">Drawdown from peak</span>
               <span className="stat__value">{formatPercent(portfolio?.metrics.drawdown_pct)}</span>
+            </div>
+            <div className="stat">
+              <span className="stat__label">Max drawdown</span>
+              <span className="stat__value">{formatPercent(portfolio?.metrics.max_drawdown_pct)}</span>
             </div>
           </div>
 

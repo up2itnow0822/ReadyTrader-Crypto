@@ -1,0 +1,12 @@
+$ REPO=/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_envsigner.sh; echo '--- exit of the settings import above: see last line (no error = accepted)'
+# at 2026-09-24T18:00:40+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+82:# --- Signer configuration (needed only for on-chain execution: live swap_tokens / transfer_eth) ---
+86:SIGNER_TYPE=null
+97:# SIGNER_TYPE=cb_mpc_2pc
+--- env.example as .env, then the documented Live-but-halted switch (PAPER_MODE=false, LIVE_TRADING_ENABLED=true, TRADING_HALTED=true):
+<string>:83: UserWarning: ALLOW_EXCHANGES/ALLOW_CHAINS not set: configure allowlists for production live trading.
+--- exit of the settings import above: see last line (no error = accepted)
+
+
+exit=0

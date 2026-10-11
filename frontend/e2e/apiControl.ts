@@ -1,7 +1,8 @@
 import { execSync, spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
 
-const PYTHON = process.env.PW_PYTHON_PATH || "/home/claude/work/venv-rt/bin/python3";
+import { HARNESS_PYTHON as PYTHON } from "./constants";
+
 const HARNESS_PATH = path.join(__dirname, "api_harness.py");
 
 /** Used only by the resilience spec, which kills and restarts the shared API harness. */

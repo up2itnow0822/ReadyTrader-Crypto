@@ -1,0 +1,11 @@
+$ .venv/bin/python /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_dd.py
+# at 2026-09-24T16:40:17+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+a) limit BUY 1 ETH @2000 rests (funds reserved): Order Placed: BUY 1.0 ETH/USDT @ 2000.0. ID: 1
+   equity: 8000.0 metrics: {"daily_pnl_pct": -0.2, "drawdown_pct": 0.2}
+b) after a 12% loss: {"daily_pnl_pct": -0.12, "drawdown_pct": 0.12} equity 8800.0
+   after recovering to a new high: {"daily_pnl_pct": 0.01, "drawdown_pct": 0.12} equity 10100.0
+   Risk Guardian, small BUY: {'allowed': False, 'reason': 'Max Drawdown Limit Hit (12.0%). Trading HALTED for Buys.'}
+
+
+exit=0

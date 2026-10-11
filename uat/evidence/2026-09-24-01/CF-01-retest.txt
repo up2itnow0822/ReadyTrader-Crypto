@@ -1,0 +1,12 @@
+$ REPO=/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_cwd.sh
+# at 2026-09-24T17:48:08+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+== client cwd = an empty folder (/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cwd_client)
+TOOLS 29: cancel_all_cex_orders, cancel_cex_order, deposit_paper_funds, fetch_ohlcv, get_cex_balance, get_cex_capabilities, get_cex_my_trades, get_cex_order, get_crypto_price, get_financial_news, get_
+CALL deposit_paper_funds {"asset": "USDT", "amount": 100} -> { "data": { "amount": 100.0, "asset": "USDT", "balance": 100.0, "result": "Deposited 100.0 USDT. New Balance: 100.0" }, "ok": true }
+files created in the client's folder:
+== client cwd = a folder the server cannot write (/proc, like '/' for a non-root desktop app)
+TOOLS 29: cancel_all_cex_orders, cancel_cex_order, deposit_paper_funds, fetch_ohlcv, get_cex_balance, get_cex_capabilities, get_cex_my_trades, get_cex_order, get_crypto_price, get_financial_news, get_free_news, get_latest_insights, get_mark
+
+
+exit=0

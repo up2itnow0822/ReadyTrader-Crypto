@@ -62,7 +62,7 @@ class TestKillSwitch:
             current_drawdown_pct=0.15,  # 15% drawdown - exceeds threshold
         )
         assert result["allowed"] is False
-        assert "HALTED" in result["reason"]
+        assert "Max Drawdown Limit Hit" in result["reason"] and "halted" in result["reason"]
 
 
 class TestDailyLossLimit:

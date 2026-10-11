@@ -1,0 +1,18 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev/sentinel.sh
+# at 2026-09-24T19:08:39+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+readytrader build target: (none: last stage = mcp)
+up exit=0
+rt-sentinel-readytrader-1	Exited (0) 20 seconds ago
+rt-sentinel-sentinel-1	Up 25 seconds (healthy)
+--- readytrader logs (tail):
+
+[09/24/26 19:08:44] INFO     Starting MCP server                transport.py:209
+                             'ReadyTrader-Crypto' with                          
+                             transport 'stdio'                                  
+--- readytrader API health from inside the stack:
+Error response from daemon: container 3a6c53868119096a35b6b2b796dc62dc653829f2749e242982073146f637caf0 is not running
+down
+
+
+exit=0

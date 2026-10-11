@@ -17,7 +17,9 @@
 #### Kill switch (live trading)
 
 - Default is `TRADING_HALTED=true` (safe). Set `TRADING_HALTED=false` only after UAT.
-- To halt immediately: set `TRADING_HALTED=true` and restart the container/process.
+- To halt immediately: set `TRADING_HALTED=true` and restart the container/process. The kill switch
+  refuses new orders, swaps and transfers; reading the account and cancelling orders still work, so
+  run `cancel_all_cex_orders(...)` and `list_cex_open_orders(...)` next (`docs/LIVE_TESTING_PROTOCOL.md` 4.5).
 
 #### BTC CEX production path (spot)
 
@@ -39,7 +41,8 @@
 #### Debug execution failures
 
 - Look for JSON logs with `event=tool_error` (and check `level`).
-- In approve-each mode, inspect pending proposals with `GET /api/pending-approvals` and confirm with `POST /api/approve-trade` (HTTP API; there is no MCP approval tool).
+- In approve-each mode, inspect pending proposals with `GET /api/pending-approvals` and confirm with `POST /api/approve-trade` (HTTP API; there is no MCP approval tool). Start the MCP server and the API server with the same `EXECUTION_DB_PATH` and `EXECUTION_SESSION_ID`, or the API cannot see the MCP server's proposals (`EXEC_309`). A `409` `EXEC_313` means the proposal was made in the other mode (paper/live).
+- A refused order names its rule: `risk_blocked` (the Risk Guardian: `error.data.risk` has the account value, the exposure added and the sentiment it used), `trading_halted`, `live_trading_disabled`, or a policy code such as `symbol_not_allowed`. `cex_error` / `execution_error` mean an unexpected exchange or RPC failure: the exception is in the log.
 - Re-run failed operations with an `idempotency_key` to avoid duplicates.
 
 #### Market data
@@ -53,10 +56,10 @@ ______________________________________________________________________
 
 ### Incident playbooks (Phase 4)
 
-#### 1) Rate limit storm (tools returning `rate_limited`)
+#### 1) Rate limit storm (HTTP API returning `rate_limited`)
 
 - **Symptoms**:
-  - Tools start failing with `rate_limited`
+  - API calls (the dashboard) start failing with `rate_limited`; MCP tools are not rate-limited
   - Metrics show rising `counters.rate_limited_total`
 - **Triage**:
   - Call `GET /api/metrics` and inspect:
@@ -65,10 +68,7 @@ ______________________________________________________________________
   - Check tool call patterns (agents may be looping/retrying too aggressively)
 - **Mitigation**:
   - Reduce call frequency (prefer caching, batch calls, or use websocket streams)
-  - Raise limits (carefully):
-    - `RATE_LIMIT_DEFAULT_PER_MIN`
-    - `RATE_LIMIT_EXECUTION_PER_MIN`
-    - `RATE_LIMIT_<TOOL>_PER_MIN`
+  - Raise the limit (carefully): `RATE_LIMIT_DEFAULT_PER_MIN`
 
 #### 2) Websocket disconnect loop (public streams)
 

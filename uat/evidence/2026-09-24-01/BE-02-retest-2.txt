@@ -1,0 +1,11 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev/run.sh probe_be02_sell
+# at 2026-09-24T19:40:25+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+market BUY 0.05 BTC, price=1        : ok=True code=None fill_price=84000.0
+held: {'BTC': 0.05, 'USDT': 95800.0}
+market SELL 0.05 BTC, price=10000000: ok=True code=None fill_price=84000.0
+limit SELL 0.01 BTC @ 10000000      : ok=False code=limit_not_marketable fill_price=None
+after round trip: {'USDT': 100000.0} (started with 100000 USDT)
+
+
+exit=0

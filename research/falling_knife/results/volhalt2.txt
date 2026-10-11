@@ -1,0 +1,10 @@
+DEV n=65213  TR>3.0x frequency = 0.75%
+  cc>3x  dev 3.75%  held-out 4.18%
+  cc>3.5x  dev 2.14%  held-out 2.45%
+  cc>4x  dev 1.26%  held-out 1.49%
+  cc>4.5x  dev 0.80%  held-out 0.96%
+  cc>5x  dev 0.53%  held-out 0.60%
+  cc>5.5x  dev 0.36%  held-out 0.41%
+  cc>6x  dev 0.25%  held-out 0.31%
+  cc>7x  dev 0.14%  held-out 0.17%
+frequency-matched dev quantile: 4.58x

@@ -1,0 +1,17 @@
+$ echo 'credential variables set in this environment (names only):'; env | grep -E '^(CEX_|NEWSAPI|CRYPTOPANIC|TWITTER|REDDIT|ONEINCH|SIGNER_REMOTE|MPC_SIGNER|RPC_|.*_RPC_URL|KEYSTORE)' | cut -d= -f1 | sort; echo '(end)'; echo; echo 'public sources, live calls this run:'; grep -h 'get_crypto_price\|get_sentiment\|get_free_news' /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/uat/evidence/2026-09-24-01/BE-01-retest.txt /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/uat/evidence/2026-09-24-01/BE-10.txt /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/uat/evidence/2026-09-24-01/INT-01-retest.txt | cut -c1-200
+# at 2026-09-24T18:02:41+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+credential variables set in this environment (names only):
+(end)
+
+public sources, live calls this run:
+TOOLS 29: cancel_all_cex_orders, cancel_cex_order, deposit_paper_funds, fetch_ohlcv, get_cex_balance, get_cex_capabilities, get_cex_my_trades, get_cex_order, get_crypto_price, get_financial_news, get_
+CALL get_crypto_price {"symbol": "BTC/USDT"} -> { "data": { "exchange": "binance", "price": 84237.6, "result": "The current price of BTC/USDT is 84237.6 (Source: ccxt_rest)", "source": "ccxt_rest", "s
+TOOLS 29: cancel_all_cex_orders, cancel_cex_order, deposit_paper_funds, fetch_ohlcv, get_cex_balance, get_cex_capabilities, get_cex_my_trades, get_cex_order, get_crypto_price, get_financial_news, get_
+CALL get_sentiment {} -> { "data": { "sentiment": "Fear & Greed Index: 71 (Greed)" }, "ok": true }
+CALL get_crypto_price {"symbol": "NOTACOIN/USDT"} -> { "error": { "code": "fetch_price_error", "data": { "symbol": "NOTACOIN/USDT" }, "message": "All providers failed to fetch ticker for NOTACOIN/USDT
+TOOLS 29: cancel_all_cex_orders, cancel_cex_order, deposit_paper_funds, fetch_ohlcv, get_cex_balance, get_cex_capabilities, get_cex_my_trades, get_cex_order, get_crypto_price, get_financial_news, get_
+CALL get_free_news {"symbol": "BTC"} -> { "data": { "news": "Market News (Free RSS):\n1. Sequans exits Bitcoin treasury strategy after selling remaining 314 BTC (Cointelegraph)\n2. Bitcoin ETFs add $3
+
+
+exit=0

@@ -1,0 +1,16 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_ci_gate.sh
+# at 2026-09-25T12:19:47+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+HEAD fdbdcd4 on uat/2026-09-24-crypto
+make check exit=0
+All checks passed!
+148 files already formatted
+710 passed, 5 skipped, 109 warnings in 137.82s (0:02:17)
+No known vulnerabilities found
+make security exit=0
+	No issues identified.
+No known vulnerabilities found
+found 0 vulnerabilities
+
+
+exit=0

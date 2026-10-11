@@ -1,0 +1,16 @@
+$ sed -n 38,45p frontend/src/components/PortfolioSummary.tsx; cd frontend && npx vitest run src/components/PortfolioSummary.test.tsx 2>&1 | grep -E 'labels|counts|Test Files|Tests '
+# at 2026-09-24T19:36:45+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+            </div>
+            <div className="stat">
+              <span className="stat__label">Drawdown from peak</span>
+              <span className="stat__value">{formatPercent(portfolio?.metrics.drawdown_pct)}</span>
+            </div>
+            <div className="stat">
+              <span className="stat__label">Max drawdown</span>
+              <span className="stat__value">{formatPercent(portfolio?.metrics.max_drawdown_pct)}</span>
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+
+
+exit=0

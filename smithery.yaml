@@ -1,33 +1,39 @@
+# Smithery listing: the stdio MCP server in its paper profile. Live trading needs a signer, an
+# approval API and operator settings (README, docs/LIVE_TESTING_PROTOCOL.md), so it is not offered
+# here: the server always starts with PAPER_MODE=true and no signer. The optional keys below turn on
+# the keyed news and sentiment sources; everything else works without keys.
 startCommand:
   type: stdio
-  command: python
-  args:
-    - app/main.py
+  configSchema:
+    type: object
+    properties:
+      TWITTER_BEARER_TOKEN:
+        type: string
+        description: "X (Twitter) bearer token for get_social_sentiment (optional)."
+      REDDIT_CLIENT_ID:
+        type: string
+        description: "Reddit app client id for get_social_sentiment (optional, with REDDIT_CLIENT_SECRET)."
+      REDDIT_CLIENT_SECRET:
+        type: string
+        description: "Reddit app client secret (optional)."
+      NEWSAPI_KEY:
+        type: string
+        description: "NewsAPI key for get_financial_news (optional)."
+      CRYPTOPANIC_API_KEY:
+        type: string
+        description: "CryptoPanic key for get_news (optional)."
+    required: []
+  commandFunction: |-
+    (config) => {
+      const env = { PAPER_MODE: 'true', LIVE_TRADING_ENABLED: 'false', TRADING_HALTED: 'true', SIGNER_TYPE: 'null' };
+      for (const key of ['TWITTER_BEARER_TOKEN', 'REDDIT_CLIENT_ID', 'REDDIT_CLIENT_SECRET', 'NEWSAPI_KEY', 'CRYPTOPANIC_API_KEY']) {
+        if (config && config[key]) env[key] = String(config[key]);
+      }
+      return { command: 'python', args: ['app/main.py'], env };
+    }
 name: ReadyTrader-Crypto
 description: >-
   A specialized bridge that turns your AI Agent into a professional crypto trading operator.
-  Features specific "Intelligence vs. Execution" separation of powers, a "Risk Guardian" safety layer,
-  and deep DeFi integrations (Aave, Uniswap).
+  Features specific "Intelligence vs. Execution" separation of powers, a "Risk Guardian" safety layer
+  on every order, a persistent paper account, and DEX swaps through 1inch.
 projectUrl: https://github.com/up2itnow0822/ReadyTrader-Crypto
-configSchema:
-  type: object
-  properties:
-    PAPER_MODE:
-      type: string
-      description: "Set to 'true' for zero-risk paper trading simulation (default)."
-      default: "true"
-    RISK_PROFILE:
-      type: string
-      description: "Risk enforcement profile ('conservative', 'moderate', 'aggressive')."
-      default: "conservative"
-    EXECUTION_APPROVAL_MODE:
-      type: string
-      description: "Set to 'approve_each' to require human confirmation for every trade."
-      default: "auto"
-    CEX_API_KEY:
-      type: string
-      description: "API Key for centralized exchange execution."
-    CEX_API_SECRET:
-      type: string
-      description: "API Secret for centralized exchange execution."
-  required: []

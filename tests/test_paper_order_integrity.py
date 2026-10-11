@@ -21,6 +21,9 @@ USER = "agent_zero"
 def engine(tmp_path):
     eng = PaperTradingEngine(db_path=str(tmp_path / "paper.db"))
     eng.deposit(USER, "USDT", 1_000.0)
+    # 20 ETH (50,000 at the test price) makes the account big enough that the orders below pass the
+    # Risk Guardian's 5% size rule and reach the ledger's own checks.
+    eng.deposit(USER, "ETH", 20.0)
     return eng
 
 
@@ -96,7 +99,8 @@ def test_tool_reports_a_fill_with_numbers(cex_tool, engine):
 @pytest.mark.parametrize(
     "kwargs,code",
     [
-        ({"side": "buy", "amount": 1.0}, "insufficient_funds"),
+        ({"side": "buy", "amount": 0.03}, "insufficient_funds"),
+        ({"side": "buy", "amount": 1.0}, "risk_blocked"),
         ({"side": "buy", "amount": -1.0}, "invalid_amount"),
         ({"side": "hodl", "amount": 0.01}, "invalid_side"),
         ({"side": "buy", "amount": float("nan")}, "invalid_amount"),

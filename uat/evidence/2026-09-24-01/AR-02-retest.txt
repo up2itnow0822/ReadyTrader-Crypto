@@ -1,0 +1,13 @@
+$ git log --oneline -1; /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/.venv/bin/python /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_cors_outer.py /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto 2>&1 | grep -v 'Warning\|warnings.warn\|authlib\|compatible before\|httpx2\|"event"'
+# at 2026-09-25T12:16:17+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+fdbdcd4 uat(review): AR-01..AR-03 classes from the FOREX/Stocks reviews, checked in Crypto
+middleware, outermost first: ['CORSMiddleware', 'BaseHTTPMiddleware', 'BaseHTTPMiddleware', 'BaseHTTPMiddleware']
+GET /api/health #1: 200 Access-Control-Allow-Origin=http://localhost:3000
+GET /api/health #2: 200 Access-Control-Allow-Origin=http://localhost:3000
+GET /api/health #3: 429 Access-Control-Allow-Origin=http://localhost:3000
+GET /api/health #4: 429 Access-Control-Allow-Origin=http://localhost:3000
+unhandled error: 500 Access-Control-Allow-Origin=http://localhost:3000 body={"ok":false,"error":{"code":"SYS_803","message":"Internal error in api_server: unexpected 
+
+
+exit=0

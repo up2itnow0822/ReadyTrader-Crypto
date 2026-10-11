@@ -38,14 +38,14 @@ Think of it this way: Your AI agent provides the **Intelligence** (analyzing cha
 The core philosophy of this project is a strict separation of powers:
 
 - **The AI Agent (The Brain):** Decides *what* and *when* to trade. It can research historical data, scan social media, and simulate strategies, but it has no direct power to move money.
-- **The MCP Server (The Guardrail):** Owns the API keys and enforces your safety policies. It filters every AI request through a "Risk Guardian" that rejects any trade that is too large, too risky, or violates your personal limits.
+- **The MCP Server (The Guardrail):** Owns the API keys and enforces your safety policies. Every order (paper or live) goes through a "Risk Guardian" that rejects a trade that is too large for the account, adds exposure after a loss limit is hit, or buys into extreme bearish sentiment; live orders also pass your allowlists, limits and kill switch.
 
 ## 🔄 A Day in the Life of a Trade
 
 1. **Research:** You ask your agent, "Find a good entry for BTC." The agent calls `fetch_ohlcv` and `get_sentiment`.
 1. **Proposal:** The agent concludes, "BTC is oversold; I want to buy $100." It calls `place_cex_order` (paper mode by default; live mode requires `LIVE_TRADING_ENABLED=true`).
-1. **Governance:** The Risk Guardian (`validate_trade_risk`) and the policy engine's allowlists/limits (live orders only) check the request before anything executes.
-1. **Consent:** With `EXECUTION_APPROVAL_MODE=approve_each` in **live** mode, the server returns a proposal (`request_id` + `confirm_token`) instead of executing immediately. Today this can only be confirmed from the **same process** that created it — see [Known limitation: cross-process approvals](docs/ARCHITECTURE.md#approval-gate) before relying on the dashboard for this.
+1. **Governance:** The Risk Guardian runs on the order itself (the same rules `validate_trade_risk` answers with), and live orders also pass the policy engine's allowlists and limits, before anything executes.
+1. **Consent:** With `EXECUTION_APPROVAL_MODE=approve_each` in **live** mode, the server returns a proposal (`request_id` + `confirm_token`) instead of executing immediately. You approve or reject it on the dashboard or with `POST /api/approve-trade`; the Risk Guardian and the live gates run again when it executes. Start the MCP server and the API server with the same `EXECUTION_DB_PATH` and `EXECUTION_SESSION_ID` so the API can see the MCP server's proposals ([Approval gate](docs/ARCHITECTURE.md#approval-gate)).
 
 ______________________________________________________________________
 
@@ -62,21 +62,21 @@ ______________________________________________________________________
 
 **Features:**
 
-- **Real-time Tickers**: Low-latency price streaming via WebSockets.
-- **Multi-Agent Insights**: Shared "Market Insights" for collaborative research.
-- **Mobile Guard**: Push notifications for trades requiring manual approval.
-- **Glassmorphic UI**: High-performance charting and portfolio visualization.
+- **Approvals**: approve or reject each pending proposal (`EXECUTION_APPROVAL_MODE=approve_each`), with the order spelled out; optional Discord or Telegram message when one is waiting (`DISCORD_WEBHOOK_URL`, `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`).
+- **Live prices**: a price chart fed by the API's WebSocket ticker stream.
+- **History and status**: executed trades, the trading mode (paper/live/unknown), the kill switch and market-data health.
+- **Mobile layout**: the same pages at phone width. There are no push notifications.
 
 ______________________________________________________________________
 
 ## 🚀 Key Features
 
-- **📉 Paper Trading Simulator**: Zero-risk practice environment with persistent balances and realistic order handling.
-- **🧠 Strategy Factory**: Built-in Backtesting Engine with a **Strategy Marketplace** for saving and sharing agent configurations.
-- **🏦 Deep DeFi Integration**: Direct support for **Aave V3** (Lending) and **Uniswap V3** (Concentrated Liquidity).
-- **🛡️ Risk Guardian**: Hard-coded safety layer. Automatically rejects trade requests that violate risk rules.
+- **📉 Paper Trading Simulator**: Zero-risk practice with persistent balances. Orders fill at the market price (a limit order only when it is marketable), so paper results mean something.
+- **🧠 Strategy Research**: `run_backtest_simulation` runs agent-written strategy code in an isolated sandbox against history; a synthetic stress lab (`examples/stress_test_demo.py`) runs it through hundreds of generated markets.
+- **🏦 DEX swaps**: `swap_tokens` through 1inch (live) or at the market rate (paper). Aave V3 and Uniswap V3 helpers exist as a library in `defi/`; they are not exposed as tools.
+- **🛡️ Risk Guardian**: Hard-coded safety layer on every order, paper and live: 5% position sizing at the market price and a sentiment Falling Knife rule ([why there is no price rule for crypto](docs/FALLING_KNIFE.md)); on the paper account also daily-loss and drawdown limits (live accounts have no loss history here, so those two do not run live).
 - **🤝 Multi-Agent Orchestration**: Support for "Researcher" and "Executor" agent handoffs via a shared **Insight Store**.
-- **📰 Advanced Intelligence**: Real-time sentiment feeds from X, Reddit, and News APIs with local NLP fallbacks.
+- **📰 Intelligence**: X and Reddit sentiment scored locally, NewsAPI and CryptoPanic headlines, free RSS news and the Fear & Greed index. A source without its key answers `not_configured`, never an empty result.
 
 ______________________________________________________________________
 
@@ -99,18 +99,26 @@ Prompt pack (copy/paste): `prompts/READYTRADER_PROMPT_PACK.md`.
 
 ### Prerequisites
 
-- Docker (Docker Compose optional)
+- Python 3.12+ for the local install and the zero-key quickstart below, **or** Docker for the
+  container (Docker Compose optional).
 
 ### 1. Build & Run (Standalone)
 
-Run the server in a container. It exposes stdio for MCP clients.
+Run the MCP server in a container. It speaks MCP over stdio, so an MCP client starts it with
+`docker run -i` (the configs below do exactly that). The image starts paper-only and halted. The
+named volume keeps the paper account, audit log and proposals (`/app/data`) from one session to
+the next; without it every session starts from an empty paper wallet.
 
 ```bash
 cd ReadyTrader-Crypto
 docker build -t readytrader-crypto .
-# Run interactively (to test)
-docker run --rm -i readytrader-crypto
+# Run interactively (to test): an MCP client would now send it JSON-RPC on stdin
+docker run --rm -i -v readytrader-crypto-data:/app/data -e PAPER_MODE=true readytrader-crypto
 ```
+
+The approval/dashboard API server is a second image: `docker build --target api -t readytrader-crypto:api .`. `docker-compose.yml` runs both (the dashboard too with `--profile with-frontend`) with a shared data
+volume and proposal session; it needs `API_JWT_SECRET` and `API_ADMIN_PASSWORD_HASH` in `.env`
+(see the top of that file).
 
 ### Local development (no Docker)
 
@@ -128,14 +136,14 @@ Create a `.env` file or pass environment variables. Start from `env.example` (co
 <details>
 <summary><b>🛡️ Live Trading Safety & Approval</b></summary>
 
-| Variable                  | Default | Description                                                               |
-| :------------------------ | :------ | :------------------------------------------------------------------------ |
-| `PAPER_MODE`              | `true`  | Set to `false` for live trading.                                          |
-| `LIVE_TRADING_ENABLED`    | `false` | Must be `true` for any live execution.                                    |
-| `TRADING_HALTED`          | `false` | Global kill switch to halt all live actions.                              |
-| `EXECUTION_APPROVAL_MODE` | `auto`  | `auto` executes immediately; `approve_each` requires manual confirmation. |
-| `API_PORT`                | `8000`  | Port for the FastAPI/WebSocket server (`api_server.py`).                  |
-| `DISCORD_WEBHOOK_URL`     | `""`    | Optional webhook for trade approval notifications.                        |
+| Variable                  | Default | Description                                                                                                          |
+| :------------------------ | :------ | :------------------------------------------------------------------------------------------------------------------- |
+| `PAPER_MODE`              | `true`  | Set to `false` for live trading.                                                                                     |
+| `LIVE_TRADING_ENABLED`    | `false` | Must be `true` for any live execution.                                                                               |
+| `TRADING_HALTED`          | `true`  | Kill switch: refuses new live orders, swaps and transfers (reads and cancels still work). Set `false` to trade live. |
+| `EXECUTION_APPROVAL_MODE` | `auto`  | `auto` executes immediately; `approve_each` requires manual confirmation.                                            |
+| `API_PORT`                | `8000`  | Port for the FastAPI/WebSocket server (`api_server.py`).                                                             |
+| `DISCORD_WEBHOOK_URL`     | `""`    | Optional webhook for trade approval notifications.                                                                   |
 
 </details>
 
@@ -167,11 +175,11 @@ Create a `.env` file or pass environment variables. Start from `env.example` (co
 <details>
 <summary><b>🛠️ Ops, Observability & Limits</b></summary>
 
-| Variable                     | Default        | Description                           |
-| :--------------------------- | :------------- | :------------------------------------ |
-| `RATE_LIMIT_DEFAULT_PER_MIN` | `120`          | Default API rate limit.               |
-| `RISK_PROFILE`               | `conservative` | Presets for sizing and safety limits. |
-| `ALLOW_CHAINS`               | `ethereum...`  | Allowlists for EVM networks.          |
+| Variable                     | Default        | Description                                                                                                                              |
+| :--------------------------- | :------------- | :--------------------------------------------------------------------------------------------------------------------------------------- |
+| `RATE_LIMIT_DEFAULT_PER_MIN` | `120`          | Default API rate limit.                                                                                                                  |
+| `RISK_PROFILE`               | `conservative` | Reserved, not applied: the Risk Guardian's limits are fixed (5% position, 5% daily loss, 10% drawdown, -0.5 sentiment) whatever it says. |
+| `ALLOW_CHAINS`               | `ethereum...`  | Allowlists for EVM networks.                                                                                                             |
 
 </details>
 
@@ -340,24 +348,26 @@ Paste into your agent once connected (paper mode). Also see the full
 1. "Try to validate a BTC buy sized at 50% of a $10,000 portfolio — I want to see it get
    blocked." → `validate_trade_risk` refusing on position size (verified: this call returns
    `result.allowed: false`).
-1. "Place a paper limit order for 0.05 ETH/USDT at the price you just fetched, then show me
-   my paper balances." → `place_cex_order` (with an explicit `price`), `get_cex_balance`.
+1. "Buy 0.05 ETH/USDT in paper at the market, then show me my paper balances." →
+   `place_cex_order` (market order: it fills at the current price), `get_cex_balance`.
 1. "Backtest a simple RSI mean-reversion strategy (buy under 30, sell over 70) on BTC/USDT and
    report PnL." → `run_backtest_simulation` (verified end-to-end through `BacktestEngine` with
    this exact strategy shape — see `docs/STRATEGY_SANDBOX.md` for the contract).
 
 ### Troubleshooting
 
-| Symptom                                                                                       | Likely cause                                                                                                                                                                                                                         | Fix                                                                                                                                                                                                                                                              |
-| :-------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Server doesn't appear in the client                                                           | Relative paths, or a `python` that lacks the deps                                                                                                                                                                                    | Use absolute paths for both `command` and the `server.py` arg, and point at the venv's `python` (`.venv/bin/python`), not a bare `python`/`python3`.                                                                                                             |
-| `paper_price_required`                                                                        | `place_cex_order` in paper mode with no `price` and no market-data-bus price for that symbol                                                                                                                                         | Pass `price` explicitly, or call `fetch_ohlcv`/`get_crypto_price` first to confirm data is flowing.                                                                                                                                                              |
-| `insufficient_funds`                                                                          | No paper balance for the asset being spent                                                                                                                                                                                           | Call `deposit_paper_funds` first.                                                                                                                                                                                                                                |
-| `execution_mode_blocked`                                                                      | `EXECUTION_MODE` doesn't allow the venue you're calling (`cex`/`dex`/`hybrid`)                                                                                                                                                       | Set `EXECUTION_MODE` to the venue you need.                                                                                                                                                                                                                      |
-| Exchange/network errors (`cex_error`, `fetch_price_error`, `NET_501`) in a restricted network | Outbound access to the exchange is blocked (firewalled sandbox, corporate proxy)                                                                                                                                                     | Confirm outbound HTTPS to the exchange is allowed; this is environmental, not a bug — the server itself starts and lists tools fine (verified: all four quickstart configs above listed 29 tools while this exact network error occurred on `get_crypto_price`). |
-| Strategy rejected (`error_kind: "forbidden"` or `"compile"`)                                  | Strategy code imports something other than `math`, uses an underscore-prefixed name, or has a syntax error                                                                                                                           | Read `docs/STRATEGY_SANDBOX.md`; no `pandas`/`ta`/`string`/`random`, no `_private` names.                                                                                                                                                                        |
-| API refuses to start with `DEV_MODE=false`                                                    | `api_server.py` fails closed: needs `API_AUTH_REQUIRED=true` + `API_JWT_SECRET`, and non-wildcard CORS, once `DEV_MODE=false`                                                                                                        | Set those, or keep `DEV_MODE=true` for local HTTP API work (the MCP stdio path above doesn't need the API server at all).                                                                                                                                        |
-| Approvals never show up in the dashboard                                                      | **Known limitation**, not a misconfiguration: `EXECUTION_APPROVAL_MODE=approve_each` proposals created by the MCP process are invisible to the API process's `ExecutionStore` (separate processes, separate per-process session ids) | Read `docs/ARCHITECTURE.md#approval-gate` before relying on the dashboard for an MCP-originated proposal — today it cannot see or approve one.                                                                                                                   |
+| Symptom                                                                                       | Likely cause                                                                                                                                                     | Fix                                                                                                                                                                                                                                                              |
+| :-------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Server doesn't appear in the client                                                           | Relative paths, or a `python` that lacks the deps                                                                                                                | Use absolute paths for both `command` and the `server.py` arg, and point at the venv's `python` (`.venv/bin/python`), not a bare `python`/`python3`.                                                                                                             |
+| `paper_price_required`                                                                        | No market price for the symbol: paper orders and swaps fill at the market price                                                                                  | Call `get_crypto_price` to confirm data is flowing for that symbol (see "Exchange/network errors" below).                                                                                                                                                        |
+| `limit_not_marketable`                                                                        | A paper limit BUY below the market (or SELL above it): it would rest on the book, and paper mode does not simulate resting orders                                | Use a market order, or a limit at or through the market.                                                                                                                                                                                                         |
+| `risk_blocked`                                                                                | The Risk Guardian refused the order; the message says which rule (size over 5% of the account, a loss limit, bearish sentiment, or an account it could not read) | Reduce the size, or read `error.data.risk` for the numbers it used.                                                                                                                                                                                              |
+| `insufficient_funds`                                                                          | No paper balance for the asset being spent                                                                                                                       | Call `deposit_paper_funds` first.                                                                                                                                                                                                                                |
+| `execution_mode_blocked`                                                                      | `EXECUTION_MODE` doesn't allow the venue you're calling (`cex`/`dex`/`hybrid`)                                                                                   | Set `EXECUTION_MODE` to the venue you need.                                                                                                                                                                                                                      |
+| Exchange/network errors (`cex_error`, `fetch_price_error`, `NET_501`) in a restricted network | Outbound access to the exchange is blocked (firewalled sandbox, corporate proxy)                                                                                 | Confirm outbound HTTPS to the exchange is allowed; this is environmental, not a bug — the server itself starts and lists tools fine (verified: all four quickstart configs above listed 29 tools while this exact network error occurred on `get_crypto_price`). |
+| Strategy rejected (`error_kind: "forbidden"` or `"compile"`)                                  | Strategy code imports something other than `math`, uses an underscore-prefixed name, or has a syntax error                                                       | Read `docs/STRATEGY_SANDBOX.md`; no `pandas`/`ta`/`string`/`random`, no `_private` names.                                                                                                                                                                        |
+| API refuses to start with `DEV_MODE=false`                                                    | `api_server.py` fails closed: needs `API_AUTH_REQUIRED=true` + `API_JWT_SECRET`, and non-wildcard CORS, once `DEV_MODE=false`                                    | Set those, or keep `DEV_MODE=true` for local HTTP API work (the MCP stdio path above doesn't need the API server at all).                                                                                                                                        |
+| Approvals never show up in the dashboard                                                      | The MCP server and the API server are separate processes; each has its own proposal session unless both are given the same one                                   | Start both with the same `EXECUTION_DB_PATH` and `EXECUTION_SESSION_ID` (see `docs/ARCHITECTURE.md#approval-gate`).                                                                                                                                              |
 
 ______________________________________________________________________
 
@@ -365,37 +375,44 @@ ______________________________________________________________________
 
 ### Option A: Agent Zero (Recommended)
 
-To give Agent Zero these powers, add the following to your **Agent Zero Settings** (or `agent.yaml`).
-The MCP server key/name is arbitrary; we use `readytrader_crypto` in examples.
+**With the Agent Zero plugin:** install [a0-readytrader-crypto-plugin](https://github.com/up2itnow0822/a0-readytrader-crypto-plugin)
+(2.0.0 or later) from Agent Zero's **Plugins** page (Git URL or ZIP). It installs this server into
+the plugin's folder, registers it with Agent Zero's MCP client in paper mode, and adds a paper-trading
+skill.
 
-Quick copy/paste file: `configs/agent_zero.mcp.yaml`.
+**By hand:** in Agent Zero, open **Settings → MCP/A2A → External MCP Servers** and add the server to
+the JSON there. Copy/paste file: `configs/agent_zero.mcp.json`.
 
-**Via User Interface:**
-
-1. Go to **Settings** -> **MCP Servers**.
-1. Add a new server:
-   - **Name**: `readytrader_crypto`
-   - **Type**: `stdio`
-   - **Command**: `docker`
-   - **Args**: `run`, `-i`, `--rm`, `-e`, `PAPER_MODE=true`, `readytrader`
-
-**Via `agent.yaml`:**
-
-```yaml
-mcp_servers:
-  readytrader_crypto:
-    command: "docker"
-    args: 
-      - "run"
-      - "-i" 
-      - "--rm"
-      - "-e"
-      - "PAPER_MODE=true"
-      - "readytrader-crypto"
+```json
+{
+  "mcpServers": {
+    "readytrader_crypto": {
+      "type": "stdio",
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-v",
+        "readytrader-crypto-data:/app/data",
+        "-e",
+        "PAPER_MODE=true",
+        "readytrader-crypto"
+      ]
+    }
+  }
+}
 ```
 
-Prebuilt config: `configs/agent_zero.mcp.yaml`.
-*Restart Agent Zero after saving.*
+- The agent sees the tools as `readytrader_crypto.<tool>` (Agent Zero lowercases the server name and turns
+  other characters into `_`). Saving the settings reloads Agent Zero's MCP servers.
+- Agent Zero starts the server afresh for every call, so the `-v` volume is what keeps the paper
+  account between calls. Agent Zero must be able to run `docker` where it runs.
+- **Without Docker:** set `"command"` to the Python 3.12 interpreter of a ReadyTrader-Crypto checkout
+  with its requirements installed (e.g. `/path/to/ReadyTrader-Crypto/.venv/bin/python`) and `"args"` to
+  `["/path/to/ReadyTrader-Crypto/server.py"]`, paths Agent Zero can reach. Agent Zero passes the server
+  only a minimal environment, so put settings in the entry's `"env"` (for example
+  `{"PAPER_MODE": "true"}`) or in the checkout's `.env`.
 
 ### Option B: Generic MCP Client (Claude Desktop, etc.)
 
@@ -447,10 +464,11 @@ Perfect for "interning" your agent. The real paper workflow, tool by tool:
 
 - **Deposit Funds**: `deposit_paper_funds("USDC", 10000)`
 - **Get a price**: `fetch_ohlcv("ETH/USDT", "1h", 1)` (numeric `close`) or `get_crypto_price("ETH/USDT")`
-- **Place an order**: `place_cex_order("ETH/USDT", "buy", 1.0, order_type="limit", price=2500.0)` —
-  paper mode routes to the paper engine and needs no exchange credentials. Pass `price`
-  explicitly; if you omit it, the paper fill uses the market-data bus and fails with
-  `paper_price_required` if that has no usable price for the symbol.
+- **Place an order**: `place_cex_order("ETH/USDT", "buy", 1.0)` — paper mode routes to the paper
+  engine and needs no exchange credentials. It fills at the market price from the market-data bus
+  (`paper_price_required` when there is none). A limit order fills, at the market, only when it is
+  marketable (`limit_not_marketable` otherwise). The Risk Guardian checks it first against the
+  paper account (`risk_blocked` with the reason).
 - **Check balances**: `get_cex_balance()` — in paper mode this returns the paper wallet, no
   credentials required.
 
@@ -463,17 +481,18 @@ The agent can query the "weather" before flying.
 - **Agent Logic**: "The market is Trending Up (ADX > 25). I will switch to my Trend-Following Strategy and disable Mean-Reversion."
 
 **The Guardian (Passive Safety):**
-You don't need to do anything. If the agent tries to bet 50% of the portfolio on a whim, `validate_trade_risk` will **BLOCK** the trade automatically.
+You don't need to do anything. If the agent tries to bet 50% of the portfolio on a whim, the order
+itself is refused (`risk_blocked`); `validate_trade_risk` lets the agent ask first.
 
 ______________________________________________________________________
 
 ## 🧰 Tool Reference
 
-ReadyTrader-Crypto registers **29 MCP tools** (`server.py` + `app/tools/*.py`). For the complete,
-generated catalog with exact signatures and docstrings, see: `docs/TOOLS.md` (run
-`python tools/generate_tool_docs.py` to regenerate it from the live registry — a test,
-`tests/test_docs_tool_roster.py`, fails the build if this README or `docs/TOOLS.md` ever drift
-from what `server.py` actually registers). A representative slice:
+ReadyTrader-Crypto registers **29 MCP tools** (`server.py` + `app/tools/*.py`). The complete
+catalog, with parameters, examples and error codes, is `docs/TOOLS.md` (curated; a test,
+`tests/test_docs_tool_roster.py`, fails the build if this README or `docs/TOOLS.md` names a tool
+the server does not register, or misses one it does). `python tools/generate_tool_docs.py` prints
+the live registry (names, signatures and the descriptions agents see). A representative slice:
 
 | Category         | Tool                      | Description                                                   |
 | :--------------- | :------------------------ | :------------------------------------------------------------ |
@@ -482,12 +501,12 @@ from what `server.py` actually registers). A representative slice:
 |                  | `get_market_regime`       | Trend/chop detection (ADX-based).                             |
 | **Intelligence** | `get_sentiment`           | Crypto Fear & Greed Index.                                    |
 |                  | `get_social_sentiment`    | X/Reddit text scored -1..+1; feeds the Falling Knife check.   |
-|                  | `get_financial_news`      | Simulated high-tier financial news.                           |
+|                  | `get_financial_news`      | NewsAPI headlines for a symbol (needs a NewsAPI key).         |
 | **Trading**      | `swap_tokens`             | DEX swap (paper or live).                                     |
 |                  | `place_cex_order`         | CEX order — paper mode by default, no credentials required.   |
 |                  | `get_cex_balance`         | Account balance (paper wallet, or the real exchange balance). |
 | **Risk & Paper** | `deposit_paper_funds`     | Seed the paper wallet.                                        |
-|                  | `validate_trade_risk`     | Risk Guardian check (position size, drawdown, Falling Knife). |
+|                  | `validate_trade_risk`     | Ask the Risk Guardian first (the same rules run on orders).   |
 | **Research**     | `run_backtest_simulation` | Run a strategy through the isolated sandbox against history.  |
 
 ______________________________________________________________________
@@ -541,13 +560,11 @@ ReadyTrader-Crypto maintains rigorous quality standards through comprehensive au
 
 ### Test Suites
 
-| Suite                      | Tests | Coverage | Description                                  |
-| :------------------------- | :---: | :------: | :------------------------------------------- |
-| **Unit Tests**             | 180+  |   57%+   | Core functionality, models, utilities        |
-| **Integration Tests**      |  59   |    —     | End-to-end flows, API interactions           |
-| **Operational Safeguards** |  24   |    —     | Kill switch, loss limits, policy enforcement |
-| **Risk Manager**           |   5   |   96%    | Position sizing, drawdown, sentiment checks  |
-| **Policy Engine**          |  12+  |   89%    | Allowlists, signing guardrails, limits       |
+`pytest` collects about 680 tests: unit tests for every tool, the paper ledger, the Risk Guardian
+and the policy engine; integration flows under `tests/integration/` (the exchange-sandbox tests
+there call public Kraken/Coinbase endpoints); and one regression test per UAT finding. The
+dashboard has its own unit tests (`cd frontend && npm test`) and an 18-journey Playwright suite
+against the real API server (`cd frontend && npm run e2e`).
 
 ### Quality Gates
 
@@ -578,16 +595,17 @@ config block, but no Makefile target or workflow invokes it).
 
 These safety mechanisms are continuously verified:
 
-| Safeguard              | Threshold        | Behavior                  |
-| :--------------------- | :--------------- | :------------------------ |
-| **Kill Switch**        | 10% max drawdown | Blocks all BUY orders     |
-| **Daily Loss Limit**   | 5% daily loss    | Halts trading for the day |
-| **Position Sizing**    | 5% per trade     | Rejects oversized orders  |
-| **Falling Knife**      | -0.5 sentiment   | Blocks buys in crashes    |
-| **Chain Allowlist**    | Configurable     | Only approved networks    |
-| **Token Allowlist**    | Configurable     | Only approved assets      |
-| **Exchange Allowlist** | Configurable     | Only approved venues      |
-| **Signing Limits**     | Configurable     | Max value, gas, data size |
+| Safeguard              | Threshold        | Behavior                                                        |
+| :--------------------- | :--------------- | :-------------------------------------------------------------- |
+| **Kill Switch**        | `TRADING_HALTED` | Refuses every new live order; reads and cancels still work      |
+| **Max Drawdown**       | 10% from peak    | Blocks new exposure (paper account; deposits do not clear it)   |
+| **Daily Loss Limit**   | 5% daily loss    | Blocks new exposure today (paper account)                       |
+| **Position Sizing**    | 5% per trade     | Rejects oversized orders                                        |
+| **Falling Knife**      | -0.5 sentiment   | Blocks BUYs (no price rule for crypto: `docs/FALLING_KNIFE.md`) |
+| **Chain Allowlist**    | Configurable     | Only approved networks                                          |
+| **Token Allowlist**    | Configurable     | Only approved assets                                            |
+| **Exchange Allowlist** | Configurable     | Only approved venues                                            |
+| **Signing Limits**     | Configurable     | Max value, gas, data size                                       |
 
 ### GitHub Actions Workflows
 
@@ -631,7 +649,8 @@ ______________________________________________________________________
 ## 📌 Project docs
 
 - `docs/README.md`: docs index / navigation
-- `docs/TOOLS.md`: complete tool catalog (generated from `app/tools`)
+- `docs/TOOLS.md`: complete tool catalog (curated; the roster is checked against the server)
+- `docs/FALLING_KNIFE.md`: the Risk Guardian's Falling Knife rule, and why crypto has no price rule
 - `docs/STRATEGY_SANDBOX.md`: strategy contract, isolation layers, and limits for `run_backtest_simulation`
 - `docs/ERRORS.md`: common error codes and operator troubleshooting
 - `docs/EXCHANGES.md`: exchange capability matrix (Supported vs Experimental)

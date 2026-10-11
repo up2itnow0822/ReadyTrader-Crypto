@@ -1,0 +1,40 @@
+{
+  "frozen_at_utc": "2026-09-24T05:21:34Z",
+  "selection_rule": "On the dev split only: highest lift in P(further severe drop within H days) among configs firing on 0.3%-1.0% of instrument-days; on ties within 0.2 lift, the simplest rule (fewest active conditions). Held-out scored once, after this file was written.",
+  "crypto": {
+    "K": 3,
+    "N": 20,
+    "Z": 4.5,
+    "dmin": 0.0,
+    "still": "lowest",
+    "H": 10,
+    "severe": 0.2,
+    "split": "2022-01-01"
+  },
+  "equity": {
+    "K": 3,
+    "N": 20,
+    "Z": 0.0,
+    "dmin": 0.2,
+    "still": "lowest",
+    "H": 10,
+    "severe": 0.1,
+    "split": "2020-01-01"
+  },
+  "fx": {
+    "K": 3,
+    "N": 20,
+    "Z": 0.0,
+    "dmin": 0.05,
+    "still": "lowest",
+    "H": 10,
+    "severe": 0.03,
+    "split": "2017-01-01",
+    "volatility_halt": {
+      "ratio": 3.0,
+      "N": 20,
+      "definition": "latest bar true range / mean true range of the 20 prior bars"
+    }
+  },
+  "data_notes": "Crypto: Binance archive daily, LUNA clipped at 2022-05-28 (Terra 2.0 reuses the symbol). Equity: Yahoo daily split-adjusted, index ETFs excluded from scoring. FX: Yahoo daily, every pair also scored inverted; USDCNY/USDARS/USDRUB excluded (managed or unreliable); single-bar spikes >8% that reverse >6% next bar removed as bad ticks."
+}

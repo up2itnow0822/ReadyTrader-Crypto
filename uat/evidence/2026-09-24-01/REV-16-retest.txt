@@ -1,0 +1,16 @@
+$ grep -n 'paper_mode_not_supported\|market price (a limit' docs/HERMES_INTEGRATION.md; sed -n 7,11p smithery.yaml; grep -n 'approve_each' smithery.yaml; grep -n 'with-frontend' README.md; grep -n 'Aave\|every trade\|authenticated exchange calls even when' smithery.yaml docs/HERMES_INTEGRATION.md README.md || echo '(no stale claims)'
+# at 2026-09-24T19:36:48+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+123:| `place_cex_order`                                                                            | Paper order at the market price (a limit only when marketable) |
+127:`paper_mode_not_supported` when `PAPER_MODE=true` (paper orders fill at once and never rest on an
+description: >-
+  A specialized bridge that turns your AI Agent into a professional crypto trading operator.
+  Features specific "Intelligence vs. Execution" separation of powers, a "Risk Guardian" safety layer
+  on every order, a persistent paper account, and DEX swaps through 1inch.
+projectUrl: https://github.com/up2itnow0822/ReadyTrader-Crypto
+21:      description: "Set to 'approve_each' to require human confirmation for every live order, swap and transfer (paper orders fill immediately)."
+119:The approval/dashboard API server is a second image: `docker build --target api -t readytrader-crypto:api .`. `docker-compose.yml` runs both (the dashboard too with `--profile with-frontend`) with a shared data
+README.md:76:- **🏦 DEX swaps**: `swap_tokens` through 1inch (live) or at the market rate (paper). Aave V3 and Uniswap V3 helpers exist as a library in `defi/`; they are not exposed as tools.
+
+
+exit=0

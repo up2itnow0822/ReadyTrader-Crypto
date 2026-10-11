@@ -81,11 +81,11 @@ def test_paper_order_without_price_uses_bus_price(real_paper_engine):
         patch.multiple(settings, PAPER_MODE=True, EXECUTION_MODE=ExecutionMode.CEX),
         patch("app.tools.execution._paper_reference_price", return_value=60_000.0),
     ):
-        res = json.loads(place_cex_order("BTC/USDT", "buy", 0.01, order_type="market"))
+        res = json.loads(place_cex_order("BTC/USDT", "buy", 0.005, order_type="market"))
     assert res["ok"] is True, res
     assert res["data"]["mode"] == "paper"
-    assert real_paper_engine.get_balance("agent_zero", "BTC") == pytest.approx(0.01)
-    assert real_paper_engine.get_balance("agent_zero", "USDT") == pytest.approx(10_000.0 - 600.0)
+    assert real_paper_engine.get_balance("agent_zero", "BTC") == pytest.approx(0.005)
+    assert real_paper_engine.get_balance("agent_zero", "USDT") == pytest.approx(10_000.0 - 300.0)
 
 
 def test_paper_order_without_price_and_without_bus_price_fails(real_paper_engine):

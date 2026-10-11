@@ -1,0 +1,40 @@
+{
+  "captured_at": "2026-09-24T18:02:28+0000",
+  "request": {
+    "method": "GET",
+    "url": "http://127.0.0.1:8190/api/health",
+    "headers": {},
+    "body": ""
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "date": "Thu, 24 Sep 2026 18:02:27 GMT",
+      "server": "uvicorn",
+      "content-length": "159",
+      "content-type": "application/json",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "DENY",
+      "x-xss-protection": "1; mode=block",
+      "referrer-policy": "strict-origin-when-cross-origin",
+      "Connection": "close"
+    },
+    "body": "{\"status\":\"ok\",\"mode\":\"paper\",\"timestamp\":\"2026-09-24T18:02:28.401086+00:00\",\"version\":\"0.2.0\",\"trading_halted\":true,\"live_enabled\":false,\"auth_required\":true}",
+    "elapsed_ms": 5,
+    "error": null
+  },
+  "expectations": [
+    {
+      "expectation": "status == 200",
+      "passed": true,
+      "detail": "got 200"
+    },
+    {
+      "expectation": "json mode == 'paper'",
+      "passed": true,
+      "detail": "got 'paper'"
+    }
+  ],
+  "ok": true,
+  "reason": ""
+}

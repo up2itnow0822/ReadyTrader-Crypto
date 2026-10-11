@@ -7,6 +7,8 @@ import threading
 import time
 from typing import Any, Dict, Optional
 
+from storage_paths import data_path, ensure_parent
+
 
 class IdempotencyStore:
     """
@@ -84,9 +86,9 @@ class IdempotencyStore:
         conn.commit()
 
     def _db_path(self) -> str:
-        default = "data/idempotency.db"
+        default = data_path("idempotency.db")
         p = (os.getenv("READYTRADER_IDEMPOTENCY_DB_PATH") or os.getenv("IDEMPOTENCY_DB_PATH") or default).strip()
-        os.makedirs(os.path.dirname(p), exist_ok=True)
+        ensure_parent(p)
         return p
 
     def _get_conn(self) -> Optional[sqlite3.Connection]:

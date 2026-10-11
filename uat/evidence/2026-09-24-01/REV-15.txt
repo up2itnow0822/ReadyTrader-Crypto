@@ -1,0 +1,22 @@
+$ grep -rn 'RISK_PROFILE\|risk_config' --include=*.py --include=*.md --include=*.yml --include=*.yaml --include=*.example . | grep -v '.venv\|uat/\|.autoimprove\|node_modules\|tests/'
+# at 2026-09-24T19:08:38+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+./smithery.yaml:19:    RISK_PROFILE:
+./app/core/settings.py:147:RISK_PROFILES: dict[RiskProfile, RiskProfileConfig] = {
+./app/core/settings.py:203:    RISK_PROFILE: RiskProfile = field(
+./app/core/settings.py:204:        default_factory=lambda: RiskProfile(os.getenv("RISK_PROFILE", "conservative").strip().lower())
+./app/core/settings.py:205:        if os.getenv("RISK_PROFILE", "conservative").strip().lower() in [e.value for e in RiskProfile]
+./app/core/settings.py:400:    def risk_config(self) -> RiskProfileConfig:
+./app/core/settings.py:402:        return RISK_PROFILES[self.RISK_PROFILE]
+./docker-compose.live.yml:79:      - RISK_PROFILE=${RISK_PROFILE:-conservative}
+./docker-compose.live.yml:170:      - RISK_PROFILE=${RISK_PROFILE:-conservative}
+./README.md:179:| `RISK_PROFILE`               | `conservative` | Presets for sizing and safety limits. |
+./docker-compose.yml:55:      - RISK_PROFILE=${RISK_PROFILE:-conservative}
+./docker-compose.yml:132:      - RISK_PROFILE=${RISK_PROFILE:-conservative}
+./env.live.btc.example:16:RISK_PROFILE=conservative
+./docs/HERMES_INTEGRATION.md:36:RISK_PROFILE=conservative
+./docs/HERMES_INTEGRATION.md:70:      RISK_PROFILE: "conservative"
+./env.example:61:RISK_PROFILE=conservative
+
+
+exit=0

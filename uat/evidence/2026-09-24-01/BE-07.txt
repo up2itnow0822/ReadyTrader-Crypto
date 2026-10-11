@@ -1,0 +1,12 @@
+$ grep -o '"event": "[a-z_]*"\|"ts_ms": [0-9]*' /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/uat/evidence/2026-09-24-01/FE-02.txt | paste - - | sort | uniq -c | sort -rn | head; echo; echo distinct ts_ms values across all API log lines:; grep -o '"ts_ms": [0-9]*' /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/uat/evidence/2026-09-24-01/FE-02.txt | sort -u
+# at 2026-09-24T16:51:31+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+      9 "event": "api_client_disconnected"	"ts_ms": 1790267900073
+      9 "event": "api_client_connected"	"ts_ms": 1790267900073
+      5 "event": "auth_success"	"ts_ms": 1790267900073
+
+distinct ts_ms values across all API log lines:
+"ts_ms": 1790267900073
+
+
+exit=0

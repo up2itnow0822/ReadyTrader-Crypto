@@ -1,0 +1,51 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_reg_sweep2.sh
+# at 2026-09-24T19:44:57+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+PASS BE-01
+PASS BE-02
+PASS BE-03
+PASS BE-04
+PASS BE-05
+PASS BE-06
+PASS BE-07
+PASS BE-08
+PASS BE-09
+PASS BE-12
+PASS DATA-01
+PASS DATA-02
+PASS CF-01
+PASS CF-03
+PASS INT-01
+PASS CLI-01
+PASS DOC-01
+PASS DOCK-05
+PASS REV-01a
+PASS REV-01b
+PASS REV-02
+PASS REV-03
+PASS REV-04
+PASS REV-05
+PASS REV-06
+PASS REV-07
+PASS REV-09
+PASS REV-10
+PASS REV-11
+PASS REV-12
+PASS REV-13
+PASS REV-14
+PASS REV-17
+PASS FK-01
+--- quality gate:
+make check exit=0
+[tester]	WARNING	nosec encountered (B113), but no failed test on line 120
+[tester]	WARNING	nosec encountered (B113), but no failed test on line 140
+No known vulnerabilities found
+Documentation verification PASSED
+make security exit=0
+	Total issues (by severity):
+	Total issues (by confidence):
+No known vulnerabilities found
+found 0 vulnerabilities
+
+
+exit=0

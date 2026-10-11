@@ -1,0 +1,13 @@
+$ grep -n 'Daily loss / max drawdown' -A6 docs/TOOLS.md
+# at 2026-09-25T12:16:21+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+72:- Daily loss / max drawdown: after a 5% daily loss or a 10% drawdown of the paper account
+73-  (trading results; deposits are not gains and do not end a halt), only trades that reduce
+74-  exposure pass. "Today" starts from the account's last recorded value of the previous UTC day (a
+75-  trade, a deposit or the first check of a day records one), else its first value today: a move
+76-  after a day's last record counts toward the next day's loss too, which errs toward halting. Live accounts have no loss history here, so these two rules do not run on live
+77-  orders; the order's `risk.inactive_rules` says so.
+78-- Falling Knife (sentiment only — there is no price-based Falling Knife rule for crypto;
+
+
+exit=0

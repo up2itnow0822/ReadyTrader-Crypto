@@ -1,0 +1,9 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_integration.sh
+# at 2026-09-24T16:25:47+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+(this run: the sandbox proxy CA appended to the venv certifi bundle, as a corporate TLS proxy requires; no repo change)
+75 passed, 5 skipped in 44.16s
+curl (trusts this sandbox's proxy CA): kraken 200, coinbase 200, binance 451
+
+
+exit=0

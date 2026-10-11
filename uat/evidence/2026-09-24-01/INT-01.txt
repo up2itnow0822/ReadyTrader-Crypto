@@ -1,0 +1,12 @@
+$ REPO=/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/cr_base PROBE_MAX=330 bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_be.sh "$(cat /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_intel2.json)"
+# at 2026-09-24T16:52:43+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+env: {"PAPER_DB_PATH": "/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/crbe_dir/paper.db", "EXECUTION_DB_PATH": "/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/crbe_dir/exec.db", "INSIGHTS_DB_PATH": "/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/crbe_dir/insights.db"}
+TOOLS 29: cancel_all_cex_orders, cancel_cex_order, deposit_paper_funds, fetch_ohlcv, get_cex_balance, get_cex_capabilities, get_cex_my_trades, get_cex_order, get_crypto_price, get_financial_news, get_free_news, get_latest_insights, get_market_regime, get_news, get_sentiment, get_social_sentiment, list_cex_open_orders, list_cex_orders, list_cex_private_updates, place_cex_order, post_market_insight, replace_cex_order, run_backtest_simulation, start_cex_private_ws, stop_cex_private_ws, swap_tokens, transfer_eth, validate_trade_risk, wait_for_cex_order
+CALL get_financial_news {"symbol": "BTC"} -> { "data": { "financial_news": "Financial News Unavailable for BTC: NewsAPI not configured.\nTo enable real financial news feeds, get an API key from https://newsapi.org/ and set NEWSAPI_KEY in your .env file.", "symbol": "BTC" }, "ok": true }
+CALL get_news {} -> { "data": { "news": "Market News Unavailable: CRYPTOPANIC_API_KEY not configured. Set this environment variable to enable real-time crypto news." }, "ok": true }
+CALL get_social_sentiment {"symbol": "BTC"} -> { "data": { "social_sentiment": "Social Sentiment Unavailable for BTC: No sentiment APIs configured.\nTo enable real-time sentiment analysis:\n1. X (Twitter): Get a Bearer Token from https://developer.x.com/ and set TWITTER_BEARER_TOKEN\n2. Reddit: Create an app at https://www.reddit.com/prefs/apps and set REDDIT_CLIENT_ID and R
+CALL get_free_news {"symbol": "BTC"} -> { "data": { "news": "Market News (Free RSS):\n1. Bitcoin ETFs add $347M as BTC falls below $84K after topping $87K (Cointelegraph)\n2. Bitcoin long liquidations hit $280M as BTC price dips under $84K (Cointelegraph)", "symbol": "BTC" }, "ok": true }
+
+
+exit=0

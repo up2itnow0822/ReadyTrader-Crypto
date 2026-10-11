@@ -1,0 +1,34 @@
+$ /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/.venv/bin/python /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_live_errors.py
+# at 2026-09-24T16:47:52+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+TRADING_HALTED=true: place_cex_order(ETH/USDT buy 0.05) -> {"error": {"code": "cex_error", "data": {}, "message": "Exchange operation failed."}, "ok": false}
+not allowlisted: place_cex_order(BTC/USDT buy 0.01) -> {"error": {"code": "cex_error", "data": {}, "message": "Exchange operation failed."}, "ok": false}
+over MAX_CEX_ORDER_AMOUNT: place_cex_order(ETH/USDT buy 0.5) -> {"error": {"code": "cex_error", "data": {}, "message": "Exchange operation failed."}, "ok": false}
+allowed: place_cex_order(ETH/USDT buy 0.05) -> {"data": {"amount": 0.05, "exchange": "binance", "market_type": "spot", "mode": "live", "order": {"id": "stub-1", "status": "open"}, "order_type": "limit", "price": 2500.0, "side": "buy", "symbol": "ETH/USDT", "venue": "cex"}, "ok": true}
+
+--- stderr ---
+<string>:83: UserWarning: SIGNER_POLICY_ENABLED=false: No signer-side guardrails. Enable for defense-in-depth in live trading.
+cex_error: TRADING_HALTED=true (live execution is halted)
+Traceback (most recent call last):
+  File "/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/app/tools/execution.py", line 494, in place_cex_order
+    _require_live_allowed(venue="cex")
+  File "/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/app/tools/execution.py", line 74, in _require_live_allowed
+    raise ValueError("TRADING_HALTED=true (live execution is halted)")
+ValueError: TRADING_HALTED=true (live execution is halted)
+cex_error: 
+Traceback (most recent call last):
+  File "/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/app/tools/execution.py", line 516, in place_cex_order
+    global_container.policy_engine.validate_cex_order(
+  File "/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/policy_engine.py", line 329, in validate_cex_order
+    raise PolicyError(
+policy_engine.PolicyError
+cex_error: 
+Traceback (most recent call last):
+  File "/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/app/tools/execution.py", line 516, in place_cex_order
+    global_container.policy_engine.validate_cex_order(
+  File "/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/policy_engine.py", line 358, in validate_cex_order
+    raise PolicyError(
+policy_engine.PolicyError
+
+
+exit=0

@@ -1,0 +1,17 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_toolsdoc2.sh
+# at 2026-09-24T17:49:11+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+480:the server does not register, or misses one it does). `python tools/generate_tool_docs.py` prints
+# ReadyTrader-Crypto MCP Tool Catalog
+
+Generated from the tools `server.py` registers: the descriptions agents see.
+--- docs/TOOLS.md after running it (git status, empty = untouched):
+--- --write docs/TOOLS.md is refused:
+generate_tool_docs.py: error: docs/TOOLS.md is curated; write the registry somewhere else and compare
+--- roster test:
+4 passed, 3 warnings in 3.49s
+--- claims the audit removed (expect none):
+897:  `volume`, `trending_topics`, or per-platform `sources` field — the score lives inside this
+
+
+exit=0

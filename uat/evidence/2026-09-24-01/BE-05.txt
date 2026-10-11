@@ -1,0 +1,22 @@
+$ .venv/bin/python /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_cexgate.py live
+# at 2026-09-24T16:42:13+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+mode=live PAPER_MODE=False approval=ApprovalMode.APPROVE_EACH
+place_cex_order(ETH/USDT buy 0.05) -> {"data": {"approval_required": true, "confirm_token": "25d7b5c052ec0275961f9cf27367d128", "expires_at": 1790268256.4075937, "kind": "place_cex_order", "request_id": "afec30de18ead54c35e09602"}, "ok": true}
+   exchange calls so far: 0 
+replace_cex_order(order 123 -> BTC/USDT buy 5 @90000) -> {"data": {"exchange": "binance", "market_type": "spot", "order": {"id": "stub-1", "status": "open"}}, "ok": true}
+   exchange calls so far: 1 {"method": "replace_order", "auth": true, "kwargs": {"order_id": "123", "symbol": "BTC/USDT", "side": "buy", "amount": 5.0, "order_type": "limit", "price": 90000.0}}
+cancel_cex_order(123) -> {"data": {"exchange": "binance", "market_type": "spot", "result": {"id": "stub-1", "status": "open"}}, "ok": true}
+   exchange calls so far: 2 {"method": "cancel_order", "auth": true, "kwargs": {"order_id": "123", "symbol": "ETH/USDT"}}
+cancel_all_cex_orders() -> {"data": {"exchange": "binance", "market_type": "spot", "result": {"id": "stub-1", "status": "open"}}, "ok": true}
+   exchange calls so far: 3 {"method": "cancel_all_orders", "auth": true, "kwargs": {"symbol": null}}
+get_cex_order(123) -> {"data": {"exchange": "binance", "market_type": "spot", "order": {"id": "stub-1", "status": "open"}}, "ok": true}
+   exchange calls so far: 4 {"method": "fetch_order", "auth": true, "kwargs": {"order_id": "123", "symbol": "ETH/USDT"}}
+list_cex_open_orders() -> {"data": {"exchange": "binance", "market_type": "spot", "orders": []}, "ok": true}
+   exchange calls so far: 5 {"method": "fetch_open_orders", "auth": true, "kwargs": {"symbol": null}}
+
+--- stderr ---
+<string>:83: UserWarning: SIGNER_POLICY_ENABLED=false: No signer-side guardrails. Enable for defense-in-depth in live trading.
+
+
+exit=0

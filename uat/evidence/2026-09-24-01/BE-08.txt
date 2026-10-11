@@ -1,0 +1,10 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_xproc.sh
+# at 2026-09-24T17:09:20+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+process A (MCP server) proposed: {"request_id": "bd67ad26bdd6fe41cd019e86...
+process B (API server) pending: []
+process B confirm: unknown - Unknown request_id
+process C (second API worker) confirm again: unknown
+
+
+exit=0

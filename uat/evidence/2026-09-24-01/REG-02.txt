@@ -1,0 +1,18 @@
+$ TAILN=6 bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_e2e2.sh
+# at 2026-09-24T18:36:12+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+PW_PYTHON_PATH=<unset>
+[1A[2K[2m[WebServer] [22mKilled
+[1A[2K  18 passed (53.2s)
+To open last HTML report run:
+[36m[39m
+[36m  npx playwright show-report[39m
+[36m[39m
+E2E_EXIT=0
+--- npm run lint after the e2e run:
+> eslint
+
+LINT_EXIT=0
+
+
+exit=0

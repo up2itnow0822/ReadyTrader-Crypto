@@ -86,7 +86,10 @@ export interface RejectTradeResponse {
 
 export interface PortfolioMetrics {
   daily_pnl_pct: number;
+  /** The current fall from the best result so far (what the Risk Guardian's drawdown rule reads). */
   drawdown_pct: number;
+  /** The deepest fall on record. */
+  max_drawdown_pct?: number;
 }
 
 export interface PaperPortfolioResponse {

@@ -1,0 +1,13 @@
+$ cd /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/cr_head2 && git log --oneline -1 && /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/.venv/bin/python /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_cors_outer.py /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/cr_head2 2>&1 | grep -v 'Warning\|warnings.warn\|authlib\|compatible before\|httpx2\|"event"'
+# at 2026-09-25T12:04:35+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+4a03c09 uat: close run 2026-09-24-01
+middleware, outermost first: ['BaseHTTPMiddleware', 'BaseHTTPMiddleware', 'BaseHTTPMiddleware', 'CORSMiddleware']
+GET /api/health #1: 200 Access-Control-Allow-Origin=http://localhost:3000
+GET /api/health #2: 200 Access-Control-Allow-Origin=http://localhost:3000
+GET /api/health #3: 429 Access-Control-Allow-Origin=None
+GET /api/health #4: 429 Access-Control-Allow-Origin=None
+unhandled error: 500 Access-Control-Allow-Origin=None body={"ok":false,"error":{"code":"SYS_803","message":"Internal error in api_server: unexpected 
+
+
+exit=0

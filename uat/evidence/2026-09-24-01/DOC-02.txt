@@ -1,0 +1,40 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_readme_walk.sh
+# at 2026-09-24T17:08:56+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+== DOC-02 prerequisites vs pyproject
+### Prerequisites
+
+- Docker (Docker Compose optional)
+
+### 1. Build & Run (Standalone)
+5:requires-python = ">=3.12"
+
+== DOC-03 README config defaults vs Settings()
+135:| `TRADING_HALTED`          | `false` | Global kill switch to halt all live actions.                              |
+Settings() default TRADING_HALTED = True
+
+== DOC-04 feature claims
+67:- **Mobile Guard**: Push notifications for trades requiring manual approval.
+68:- **Glassmorphic UI**: High-performance charting and portfolio visualization.
+75:- **🧠 Strategy Factory**: Built-in Backtesting Engine with a **Strategy Marketplace** for saving and sharing agent configurations.
+76:- **🏦 Deep DeFi Integration**: Direct support for **Aave V3** (Lending) and **Uniswap V3** (Concentrated Liquidity).
+485:|                  | `get_financial_news`      | Simulated high-tier financial news.                           |
+583:| **Kill Switch**        | 10% max drawdown | Blocks all BUY orders     |
+-- modules importing defi/ (Aave V3 / Uniswap V3) outside defi/ and tests:
+(none: no MCP tool or API route uses them)
+-- MCP tools that save/share strategies:
+(none: strategies are only listed read-only at GET /api/strategies)
+-- push notification support in the dashboard:
+7: * no push routes on the API, and approving a trade from a notification without seeing
+-- tool behind get_financial_news:
+309:def fetch_financial_news(symbol: str) -> str:
+310-    """
+311-    Fetch financial news using NewsAPI.
+312-    """
+
+== DOC-05 Agent Zero UI args name an image the README never builds
+380:   - **Args**: `run`, `-i`, `--rm`, `-e`, `PAPER_MODE=true`, `readytrader`
+110:docker build -t readytrader-crypto .
+
+
+exit=0

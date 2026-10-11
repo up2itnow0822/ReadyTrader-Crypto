@@ -155,10 +155,10 @@ ______________________________________________________________________
 
 #### Step 1: Prepare
 
-```bash
-# Set trading halted to prevent new executions
-export TRADING_HALTED=true
+Restart the MCP server and the API server with `TRADING_HALTED=true` (settings are read at
+start-up; exporting the variable in another shell does not change a running server), then:
 
+```bash
 # Verify halt is active
 curl -s http://localhost:8000/api/health | jq '.trading_halted'
 # Should return: true
@@ -219,10 +219,9 @@ from server import mcp
 
 #### Step 4: Resume Trading
 
-```bash
-# Only after validation passes
-export TRADING_HALTED=false
+Only after validation passes, restart both servers with `TRADING_HALTED=false`, then:
 
+```bash
 # Verify trading is enabled
 curl -s http://localhost:8000/api/health | jq '.trading_halted'
 # Should return: false

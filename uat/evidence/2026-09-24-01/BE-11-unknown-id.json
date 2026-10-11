@@ -1,0 +1,43 @@
+{
+  "captured_at": "2026-09-24T18:02:28+0000",
+  "request": {
+    "method": "POST",
+    "url": "http://127.0.0.1:8190/api/approve-trade",
+    "headers": {
+      "Authorization": "<redacted>",
+      "Content-Type": "application/json"
+    },
+    "body": "{\"request_id\":\"nope\",\"approve\":true}"
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "date": "Thu, 24 Sep 2026 18:02:28 GMT",
+      "server": "uvicorn",
+      "content-length": "329",
+      "content-type": "application/json",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "DENY",
+      "x-xss-protection": "1; mode=block",
+      "referrer-policy": "strict-origin-when-cross-origin",
+      "Connection": "close"
+    },
+    "body": "{\"ok\":false,\"error\":{\"code\":\"EXEC_309\",\"message\":\"Proposal nope cannot be approved (unknown)\",\"category\":\"execution\",\"severity\":\"low\",\"data\":{\"request_id\":\"nope\",\"reason\":\"unknown\"},\"suggestion\":\"The proposal does not exist in this server process; ask the agent to propose again.\",\"doc_ref\":\"docs/ARCHITECTURE.md#approval-gate\"}}",
+    "elapsed_ms": 9,
+    "error": null
+  },
+  "expectations": [
+    {
+      "expectation": "status == 404",
+      "passed": true,
+      "detail": "got 404"
+    },
+    {
+      "expectation": "body contains 'EXEC_309'",
+      "passed": true,
+      "detail": ""
+    }
+  ],
+  "ok": true,
+  "reason": ""
+}

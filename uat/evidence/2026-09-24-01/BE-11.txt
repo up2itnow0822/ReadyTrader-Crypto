@@ -1,0 +1,17 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_api.sh /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/uat/evidence/2026-09-24-01
+# at 2026-09-24T18:02:24+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+BE-11-health -> exit 0
+BE-11-no-token -> exit 0
+BE-11-bad-login -> exit 0
+BE-11-pending -> exit 0
+BE-11-empty-body -> exit 0
+BE-11-unknown-id -> exit 0
+BE-11-portfolio -> exit 0
+BE-11-history -> exit 0
+BE-11-audit-nonadmin -> exit 0
+--- API log lines:
+3
+
+
+exit=0

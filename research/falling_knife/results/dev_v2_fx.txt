@@ -1,0 +1,11 @@
+DEV fx (before split), K=3, still=lowest
+high-based  dmin=3%                            fire  3.52% (4589/130350)  P(severe)  37.5% vs 16.9%  lift 2.22  MAE p10   -6.3% vs   -3.8%  ret med   0.1% vs  0.0%
+close-based dmin=3%                            fire  1.82% (2370/130350)  P(severe)  39.1% vs 16.9%  lift 2.31  MAE p10   -6.9% vs   -3.8%  ret med   0.4% vs  0.0%
+high-based  dmin=4%                            fire  1.58% (2063/130350)  P(severe)  43.2% vs 16.9%  lift 2.55  MAE p10   -7.4% vs   -3.8%  ret med   0.2% vs  0.0%
+close-based dmin=4%                            fire  0.74% ( 965/130350)  P(severe)  44.5% vs 16.9%  lift 2.63  MAE p10   -8.6% vs   -3.8%  ret med   0.6% vs  0.0%
+high-based  dmin=5%                            fire  0.81% (1053/130350)  P(severe)  45.7% vs 16.9%  lift 2.70  MAE p10   -8.9% vs   -3.8%  ret med   0.5% vs  0.0%
+close-based dmin=5%                            fire  0.36% ( 475/130350)  P(severe)  47.8% vs 16.9%  lift 2.82  MAE p10  -10.4% vs   -3.8%  ret med   1.0% vs  0.0%
+high-based  dmin=6%                            fire  0.43% ( 557/130350)  P(severe)  51.5% vs 16.9%  lift 3.05  MAE p10  -10.4% vs   -3.8%  ret med   0.4% vs  0.0%
+close-based dmin=6%                            fire  0.19% ( 253/130350)  P(severe)  53.0% vs 16.9%  lift 3.13  MAE p10  -11.9% vs   -3.8%  ret med   1.4% vs  0.0%
+high-based  dmin=8%                            fire  0.17% ( 217/130350)  P(severe)  61.3% vs 16.9%  lift 3.62  MAE p10  -12.2% vs   -3.8%  ret med   1.4% vs  0.0%
+close-based dmin=8%                            fire  0.08% ( 105/130350)  P(severe)  66.7% vs 16.9%  lift 3.94  MAE p10  -12.1% vs   -3.8%  ret med   1.9% vs  0.0%

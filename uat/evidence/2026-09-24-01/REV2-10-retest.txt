@@ -1,0 +1,10 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/smithery_eval.sh
+# at 2026-09-24T20:22:19+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+startCommand.type: stdio | configSchema: ['CRYPTOPANIC_API_KEY', 'NEWSAPI_KEY', 'REDDIT_CLIENT_ID', 'REDDIT_CLIENT_SECRET', 'TWITTER_BEARER_TOKEN']
+commandFunction({NEWSAPI_KEY, PAPER_MODE:'false'}) -> {"command":"python","args":["app/main.py"],"env":{"PAPER_MODE":"true","LIVE_TRADING_ENABLED":"false","TRADING_HALTED":"true","SIGNER_TYPE":"null","NEWSAPI_KEY":"uat-not-a-key"}}
+TOOLS 29: cancel_all_cex_orders, cancel_cex_order, deposit_paper_funds, fetch_ohlcv, get_cex_balance, get_cex_capabilities, get_cex_my_trades, get_cex_order, ge
+CALL deposit_paper_funds {"asset": "USDT", "amount": 10} -> { "data": { "amount": 10.0, "asset": "USDT", "balance": 10.0, "result": "Deposited 10.0 USDT. New Ba
+
+
+exit=0

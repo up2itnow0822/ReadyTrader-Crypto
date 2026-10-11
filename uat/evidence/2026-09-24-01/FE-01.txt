@@ -1,0 +1,44 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_e2e.sh
+# at 2026-09-24T16:37:51+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+PW_PYTHON_PATH=<unset>
+> frontend@0.1.0 pree2e
+> npm run build
+> frontend@0.1.0 prebuild
+> node scripts/generate-icons.mjs
+Wrote /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/frontend/public/icons/icon-192.png (1173 bytes)
+Wrote /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/frontend/public/icons/icon-512.png (4628 bytes)
+> frontend@0.1.0 build
+> next build
+▲ Next.js 16.3.5 (Turbopack)
+✓ Running next.config.ts took 41ms
+  Creating an optimized production build ...
+✓ Compiled successfully in 360ms
+  Running TypeScript ...
+  Finished TypeScript in 3.6s ...
+  Collecting page data using 1 worker ...
+  Generating static pages using 1 worker (0/2) ...
+✓ Generating static pages using 1 worker (2/2) in 129ms
+  Finalizing page optimization ...
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /disclaimer
+├ ƒ /history
+├ ○ /icon.svg
+└ ƒ /status
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+> frontend@0.1.0 e2e
+> playwright test
+[1A[2K[2m[WebServer] [22m/bin/sh: 1: /home/claude/work/venv-rt/bin/python3: not found
+Error: Process from config.webServer was not able to start. Exit code: 127
+[1A[2K
+To open last HTML report run:
+[36m[39m
+[36m  npx playwright show-report ../../../../../../../../home/claude/work/discovery/m4/playwright-report[39m
+[36m[39m
+E2E_EXIT=1
+
+
+exit=0

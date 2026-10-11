@@ -1,0 +1,14 @@
+$ REPO=/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/cr_head bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev2.sh 'test_probe_colon.py::test_C1_live_colon_symbol_details'; cd /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/cr_head && PYTHONPATH=. /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/.venv/bin/python /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/review2/ccxt_route.py 2>&1 | grep -E 'resolve_symbol|endpoint called' | cut -c1-220; grep -n 'ALLOW_CEX_SYMBOLS' /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/env.example
+# at 2026-09-24T20:15:36+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+C1 pre_trade_check SELL 0.5 BTC/USDT:USDT market_type=spot: {'allowed': True, 'reason': 'Trade looks safe.', 'position_units': 0.5, 'exposure_added_units': 0.0, 'exposure_added_usd': None, 'market_price': None}
+C1 four successive SELL 0.5 BTC/USDT:USDT: [True, True, True, True] orders sent: 4
+C1 same order with market_type=swap: False No market price for BTC/USDT:USDT: the Risk Guardian values orders at the market, so an order that adds exposure waits for market data.
+.
+resolve_symbol('BTC/USDT:USDT') with market_type=spot -> BTC/USDT:USDT
+endpoint called: [('fapiPrivatePostOrder', {'symbol': 'BTCUSDT', 'side': 'SELL', 'newClientOrderId': 'x-cvBPrNm9a98a1ec42796513a2ee5a0', 'newOrderRespType': 'RESULT', 'type': 'MARKET', 'quantity': '0.5'})]
+endpoint called (direct): [('fapiPrivatePostOrder', {'symbol': 'BTCUSDT', 'side': 'SELL', 'newClientOrderId': 'x-cvBPrNm9a98a1ec42796513a2ee5a0', 'newOrderRespType': 'RESULT', 'type': 'MARKET', 'quantity': '0.5'}), ('fap
+76:# ALLOW_CEX_SYMBOLS=btc/usdt,eth/usdt
+
+
+exit=0

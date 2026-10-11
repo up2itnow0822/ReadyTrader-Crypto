@@ -7,11 +7,38 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 
-# Local secrets / env
-.env
+# Local secrets / env: every .env* file (.env, .env.live, .env.*.local, ...) and key file, in any
+# folder (a bare pattern matches only at the context root). env.example and env.live.btc.example
+# are templates and stay.
+**/.env*
+**/*.pem
+**/*.key
+**/keystore*.json
+
+# Local data, environments and history: never baked into an image layer
+data/
+**/data/*.db
+.venv/
+venv/
+env/
+node_modules/
+.git/
+uat/
+artifacts/
+coverage_html/
+htmlcov/
+.coverage
+.benchmarks/
+.autoimprove/
+research/
+
+# The dashboard is built from its own context (./frontend); the Python images do not use it
+frontend/
 
 # Local runtime artifacts
-paper.db
+**/*.db
+**/*.db-shm
+**/*.db-wal
 
 # Dev-only
 tests/

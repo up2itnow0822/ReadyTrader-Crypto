@@ -1,10 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 import path from "node:path";
 
-import { API_PORT, API_URL, BASE_URL, NEXT_PORT } from "./e2e/constants";
+import { API_PORT, API_URL, BASE_URL, HARNESS_PYTHON as PYTHON, NEXT_PORT } from "./e2e/constants";
 
-const PYTHON = process.env.PW_PYTHON_PATH || "/home/claude/work/venv-rt/bin/python3";
-const REPORT_DIR = process.env.PW_REPORT_DIR || "/home/claude/work/discovery/m4/playwright-report";
+const REPORT_DIR = process.env.PW_REPORT_DIR || path.join(__dirname, "playwright-report");
 
 export default defineConfig({
   testDir: "./e2e",

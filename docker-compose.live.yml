@@ -104,6 +104,8 @@ services:
       - AUDIT_DB_PATH=/app/data/audit.db
       - IDEMPOTENCY_DB_PATH=/app/data/idempotency.db
       - EXECUTION_DB_PATH=/app/data/execution.db
+      # Shared with the mcp service: the dashboard approves the MCP server's proposals.
+      - EXECUTION_SESSION_ID=${EXECUTION_SESSION_ID:?set EXECUTION_SESSION_ID in .env.live (any fixed string; change it to invalidate open proposals)}
 
       # === OBSERVABILITY ===
       - READYTRADER_LOG_LEVEL=${READYTRADER_LOG_LEVEL:-info}
@@ -187,8 +189,10 @@ services:
       - CEX_COINBASE_API_SECRET=${CEX_COINBASE_API_SECRET}
       - MARKETDATA_EXCHANGES=${MARKETDATA_EXCHANGES:-binance,kraken,coinbase}
 
-      # Persistence
+      # Persistence (shared with the api service, which approves this server's proposals)
       - AUDIT_DB_PATH=/app/data/audit.db
+      - EXECUTION_DB_PATH=/app/data/execution.db
+      - EXECUTION_SESSION_ID=${EXECUTION_SESSION_ID:?set EXECUTION_SESSION_ID in .env.live (any fixed string; change it to invalidate open proposals)}
     volumes:
       - readytrader-live-data:/app/data
     command: ["python", "app/main.py"]

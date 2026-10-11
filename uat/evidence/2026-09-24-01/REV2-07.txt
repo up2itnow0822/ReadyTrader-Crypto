@@ -1,0 +1,11 @@
+$ REPO=/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/cr_head bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev2.sh 'test_probe_colon.py::test_C2_paper_colon_symbol'; REPO=/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/cr_head bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev2.sh 'test_probe_guardian.py::test_P7_side_whitespace_passed_raw'
+# at 2026-09-24T20:15:18+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+C2 paper SELL 0.01 BTC/USDT:USDT: True None
+C2 balances: {'USDT': 10000.0, 'USDT:USDT': 500.0} equity 10000.0
+.
+P7 side ' SELL ': True None [('place_order', {'symbol': 'BTC/USDT', 'side': ' SELL ', 'amount': 0.5, 'order_type': 'LIMIT', 'price': 50000.0, 'params': None})]
+.
+
+
+exit=0

@@ -1,0 +1,59 @@
+$ REPO=/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_readme_walk.sh; echo; echo '== after the fix: the corrected lines'; grep -n 'Python 3.12+\|TRADING_HALTED`          | `true\|DEX swaps\|Aave V3 and Uniswap V3 helpers\|There are no push\|readytrader-crypto`$\|Strategy Research\|Kill Switch\*\*        | `TRADING_HALTED' README.md
+# at 2026-09-24T17:49:30+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+== DOC-02 prerequisites vs pyproject
+### Prerequisites
+
+- Python 3.12+ for the local install and the zero-key quickstart below, **or** Docker for the
+  container (Docker Compose optional).
+
+5:requires-python = ">=3.12"
+
+== DOC-03 README config defaults vs Settings()
+136:| `TRADING_HALTED`          | `true`  | Global kill switch to halt all live actions. Set `false` to trade live.   |
+586:| **Kill Switch**        | `TRADING_HALTED` | Refuses every live order                                        |
+Settings() default TRADING_HALTED = True
+
+== DOC-04 feature claims
+586:| **Kill Switch**        | `TRADING_HALTED` | Refuses every live order                                        |
+-- modules importing defi/ (Aave V3 / Uniswap V3) outside defi/ and tests:
+./.venv/lib/python3.12/site-packages/attr/__init__.py
+./.venv/lib/python3.12/site-packages/referencing/_attrs.py
+./.venv/lib/python3.12/site-packages/cyclopts/config/_env.py
+./.venv/lib/python3.12/site-packages/cyclopts/config/_common.py
+./.venv/lib/python3.12/site-packages/cyclopts/exceptions.py
+./.venv/lib/python3.12/site-packages/cyclopts/parameter.py
+./.venv/lib/python3.12/site-packages/cyclopts/argument/_argument.py
+./.venv/lib/python3.12/site-packages/cyclopts/help/help.py
+./.venv/lib/python3.12/site-packages/cyclopts/help/formatters/default.py
+./.venv/lib/python3.12/site-packages/cyclopts/ext/mkdocs.py
+./.venv/lib/python3.12/site-packages/cyclopts/utils.py
+./.venv/lib/python3.12/site-packages/jsonschema/cli.py
+./.venv/lib/python3.12/site-packages/jsonschema/validators.py
+./.venv/lib/python3.12/site-packages/jsonschema/tests/test_validators.py
+./.venv/lib/python3.12/site-packages/jsonschema/exceptions.py
+-- MCP tools that save/share strategies:
+(none: strategies are only listed read-only at GET /api/strategies)
+-- push notification support in the dashboard:
+7: * no push routes on the API, and approving a trade from a notification without seeing
+-- tool behind get_financial_news:
+358:def fetch_financial_news(symbol: str) -> str:
+359-    """String form of financial_news() (kept for existing callers): a failure comes back as text."""
+360-    try:
+361-        return financial_news(symbol)
+
+== DOC-05 Agent Zero UI args name an image the README never builds
+111:docker build -t readytrader-crypto .
+
+== after the fix: the corrected lines
+68:- **Mobile layout**: the same pages at phone width. There are no push notifications.
+75:- **🧠 Strategy Research**: `run_backtest_simulation` runs agent-written strategy code in an isolated sandbox against history; a synthetic stress lab (`examples/stress_test_demo.py`) runs it through hundreds of generated markets.
+76:- **🏦 DEX swaps**: `swap_tokens` through 1inch (live) or at the market rate (paper). Aave V3 and Uniswap V3 helpers exist as a library in `defi/`; they are not exposed as tools.
+102:- Python 3.12+ for the local install and the zero-key quickstart below, **or** Docker for the
+136:| `TRADING_HALTED`          | `true`  | Global kill switch to halt all live actions. Set `false` to trade live.   |
+163:| `DEX_SLIPPAGE_PCT`     | `1.0`        | Default slippage for DEX swaps.                    |
+383:   - **Args**: `run`, `-i`, `--rm`, `-e`, `PAPER_MODE=true`, `readytrader-crypto`
+586:| **Kill Switch**        | `TRADING_HALTED` | Refuses every live order                                        |
+
+
+exit=0

@@ -1,0 +1,10 @@
+$ REPO=/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/cr_head bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev2.sh test_probe_daily.py
+# at 2026-09-24T20:13:45+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+E1 2026-09-24: metrics {'daily_pnl_pct': -0.058823529411764705, 'drawdown_pct': 0.058823529411764705, 'max_drawdown_pct': 0.058823529411764705} BUY 1 SOL -> False Daily Loss Limit Hit (-5.9%). Orders tha
+E1 2026-09-25: metrics {'daily_pnl_pct': -0.058823529411764705, 'drawdown_pct': 0.058823529411764705, 'max_drawdown_pct': 0.058823529411764705} BUY 1 SOL -> False Daily Loss Limit Hit (-5.9%). Orders tha
+E1 2026-09-26: metrics {'daily_pnl_pct': -0.058823529411764705, 'drawdown_pct': 0.058823529411764705, 'max_drawdown_pct': 0.058823529411764705} BUY 1 SOL -> False Daily Loss Limit Hit (-5.9%). Orders tha
+.
+
+
+exit=0

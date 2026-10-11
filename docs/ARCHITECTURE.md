@@ -123,12 +123,22 @@ The core server exposes tools organized into categories:
 
 #### Risk Guardian Rules
 
-| Rule          | Threshold           | Action     |
-| ------------- | ------------------- | ---------- |
-| Position Size | Max 5% of portfolio | Block      |
-| Daily Loss    | Max 5% loss         | Halt buys  |
-| Max Drawdown  | 10% from peak       | Halt buys  |
-| Falling Knife | Sentiment < -0.5    | Block buys |
+The Risk Guardian runs on every order (`app/tools/trading.pre_trade_check` for CEX orders,
+`swap_check` for swaps), paper and live, before a live order is proposed and again when an
+approved proposal executes. It judges the exposure an order adds, valued at the market price:
+selling what is held into cash is an exit; selling into a crypto quote (ETH/BTC) buys the quote
+asset, which is sized.
+
+| Rule          | Threshold                                     | Action                                                         |
+| ------------- | --------------------------------------------- | -------------------------------------------------------------- |
+| Position Size | Added exposure over 5% of the account's value | Block (valued at the market price)                             |
+| Daily Loss    | 5% loss today (paper account)                 | Block orders that add exposure                                 |
+| Max Drawdown  | 10% below the best result (paper account)     | Block orders that add exposure (deposits do not clear it)      |
+| Falling Knife | Sentiment < -0.5                              | Block BUYs (no price rule for crypto: `docs/FALLING_KNIFE.md`) |
+| Unreadable    | No market price, or account unreadable        | Block orders that add exposure                                 |
+
+The account is the paper account in paper mode, the exchange account for live CEX orders and the
+signer wallet on the chain for live swaps.
 
 #### Policy Engine Allowlists
 
@@ -304,7 +314,7 @@ The core server exposes tools organized into categories:
 │  3. Rate Limiter: Check API rate                                │
 │       │                                                          │
 │       ▼                                                          │
-│  4. Risk Guardian: validate_trade_risk()                        │
+│  4. Risk Guardian: pre_trade_check() (exchange account read)    │
 │       │  - Position size OK (< 5%)                              │
 │       │  - Daily loss OK (< 5%)                                 │
 │       │  - Sentiment OK (not falling knife)                     │
@@ -328,10 +338,9 @@ The core server exposes tools organized into categories:
 │  8. Return to Agent: { approval_required: true, request_id }    │
 │       │                                                          │
 │       ▼                                                          │
-│  9. Operator: Reviews and approves — TODAY this only works if   │
-│       │   the approver is the SAME PROCESS that created the     │
-│       │   proposal. See "Approval gate" below before assuming    │
-│       │   the Web UI can do this for an MCP-created proposal.    │
+│  9. Operator: Reviews and approves on the dashboard (the MCP    │
+│       │   and API servers share EXECUTION_DB_PATH and           │
+│       │   EXECUTION_SESSION_ID; see "Approval gate" below)      │
 │       ▼                                                          │
 │  10. API Server: POST /api/approve-trade                        │
 │       │   - Verify confirm_token OR admin session                │
@@ -375,36 +384,28 @@ While an approved order actually executes, `app.tools.execution.approved_executi
 *only that one call* as approved (a `ContextVar`, not a process-wide flag) — the approval gate
 is never switched off for the rest of the process during that window.
 
-### Known limitation: proposals do not cross processes
+### Sharing proposals between the MCP server and the API server
 
-`ExecutionStore` stamps every proposal with a random per-process session id at construction,
-and refuses to load a proposal stamped with any other session id — deliberately, so a stale
-proposal from a previous process (a restart) can never be approved (`execution_store.py`'s
-module docstring and `_load`/`list_pending`).
+`ExecutionStore` stamps every proposal with a session id and only loads proposals from its own
+session. By default the id is random per process, so a restart invalidates every earlier proposal.
 
 The MCP server (`server.py`) and the API server (`api_server.py`) are **separate processes** in
-every documented deployment (Docker image, `docker-compose.yml`, Hermes stdio config). Each has
-its own `ExecutionStore` instance with its own session id. The practical consequence:
+every documented deployment. Start both with the **same** `EXECUTION_DB_PATH` and the **same**
+`EXECUTION_SESSION_ID` and they share one session: a proposal the agent creates through the MCP
+server appears at `GET /api/pending-approvals` and on the dashboard, and `POST /api/approve-trade`
+confirms or rejects it. Change the id (and restart both) to invalidate every open proposal.
 
-- A proposal created by an agent calling `place_cex_order` through the MCP process is invisible
-  to `GET /api/pending-approvals` and cannot be confirmed or rejected by
-  `POST /api/approve-trade` in the API process — **neither with the correct `confirm_token` nor
-  with an admin session** — because the API process's `ExecutionStore` never has that
-  `request_id` at all.
-- There is currently no MCP tool that can confirm a proposal either (by design: approval is
-  meant to be a human/dashboard action, not something the agent can do to itself).
-- The only configuration in which `POST /api/approve-trade` can confirm a real proposal today
-  is one where the same running process both creates it and serves the HTTP API — not how any
-  shipped deployment is documented to run.
+With persistence on, the database is the source of truth: confirming or cancelling is one
+conditional `UPDATE`, so two processes (or two API workers) cannot both approve one proposal, or
+approve one that was cancelled.
 
-**What this means for an operator today:** with `EXECUTION_APPROVAL_MODE=approve_each` and
-`PAPER_MODE=false`, a live order placed through the MCP-facing agent returns a proposal that
-cannot currently be approved through the dashboard/API in the standard two-process deployment.
-Do not tell agents or operators to "approve the trade in the Web UI" for an MCP-originated
-proposal — it will not find it. The owner has not yet decided how to close this gap (candidates
-include a shared external store, or running both surfaces in one process); track this doc and
-`CHANGELOG.md` for when it changes. See also `docs/ERRORS.md` for the `EXEC_309` (unknown
-proposal) code this produces.
+Every proposal records the mode it was made in (`paper_mode`). The approval endpoint executes it
+only in that mode: an API server in the other mode answers `409` (`EXEC_313`, `mode_mismatch`) and
+the proposal stays pending. Executing re-runs the tool, so the live gates, the policy engine and
+the Risk Guardian all run again with the account read fresh; a refusal answers `422` with the
+tool's error (for example `risk_blocked`) and nothing is recorded as executed.
+
+There is no MCP tool that can confirm a proposal (by design: approval is a human action).
 
 ## Deployment Architectures
 
@@ -536,7 +537,7 @@ See `env.example` for full configuration reference. Key environment variables:
 | -------- | ------------------------- | ----------------- | ------------------------------- |
 | Mode     | `PAPER_MODE`              | `true`            | Paper vs live trading           |
 | Safety   | `LIVE_TRADING_ENABLED`    | `false`           | Enable live execution           |
-| Safety   | `TRADING_HALTED`          | `false`           | Emergency kill switch           |
+| Safety   | `TRADING_HALTED`          | `true`            | Emergency kill switch           |
 | Safety   | `EXECUTION_APPROVAL_MODE` | `auto`            | `auto` or `approve_each`        |
 | Signing  | `SIGNER_TYPE`             | `env_private_key` | Signer backend                  |
 | Store    | `STORE_BACKEND`           | `memory`          | `memory`, `redis`, `postgresql` |

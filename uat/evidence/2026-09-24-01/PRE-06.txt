@@ -1,0 +1,11 @@
+$ cd frontend && npm ci --no-audit --no-fund 2>&1 | tail -3; echo CI_EXIT=${PIPESTATUS[0]}; npm run lint 2>&1 | tail -5; echo LINT_EXIT=${PIPESTATUS[0]}; npm run typecheck 2>&1 | tail -5; echo TSC_EXIT=${PIPESTATUS[0]}; npm test 2>&1 | tail -8; echo TEST_EXIT=${PIPESTATUS[0]}; npm run build 2>&1 | tail -25; echo BUILD_EXIT=${PIPESTATUS[0]}
+# at 2026-09-24T16:35:43+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+
+added 472 packages in 20s
+
+--- stderr ---
+/bin/sh: 1: Bad substitution
+
+
+exit=2

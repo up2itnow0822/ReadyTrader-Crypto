@@ -1,20 +1,32 @@
 from .core import (
+    SourceError,
     analyze_social_sentiment,
     base_asset,
+    fear_greed_index,
     fetch_financial_news,
     fetch_rss_news,
+    financial_news,
     get_cached_sentiment,
     get_cached_sentiment_score,
     get_fear_greed_index,
     get_market_news,
+    market_news,
+    rss_news,
+    social_sentiment_report,
 )
 from .insights import InsightStore, MarketInsight
 
 __all__ = [
+    "SourceError",
     "analyze_social_sentiment",
     "base_asset",
     "fetch_financial_news",
+    "fear_greed_index",
     "fetch_rss_news",
+    "financial_news",
+    "market_news",
+    "rss_news",
+    "social_sentiment_report",
     "get_cached_sentiment",
     "get_cached_sentiment_score",
     "get_fear_greed_index",

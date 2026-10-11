@@ -6,6 +6,8 @@ import time
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+from storage_paths import data_path, ensure_parent
+
 
 @dataclass
 class StrategyArtifact:
@@ -74,8 +76,8 @@ class StrategyRegistry:
     """
 
     def __init__(self, db_path: Optional[str] = None):
-        self.db_path = db_path or os.getenv("READYTRADER_STRATEGY_DB_PATH", os.getenv("STRATEGY_DB_PATH", "data/strategies.db"))
-        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        self.db_path = db_path or os.getenv("READYTRADER_STRATEGY_DB_PATH", os.getenv("STRATEGY_DB_PATH", data_path("strategies.db")))
+        ensure_parent(self.db_path)
         self._init_db()
 
     def _init_db(self):

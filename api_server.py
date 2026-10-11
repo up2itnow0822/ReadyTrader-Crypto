@@ -1,8 +1,11 @@
 import asyncio
+import contextvars
 import json
+import logging
 import os
 import secrets
 import time
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Set
 
@@ -33,16 +36,29 @@ try:
 except ImportError:
     JWT_AVAILABLE = False
 
-# Password hashing support (bcrypt via passlib)
+# Password hashing: the bcrypt package directly (a runtime requirement). passlib 1.7.4 cannot drive
+# bcrypt 4.1+, which made every production login fail.
 try:
-    from passlib.hash import bcrypt
+    import bcrypt
 
     BCRYPT_AVAILABLE = True
 except ImportError:
     BCRYPT_AVAILABLE = False
 
+BCRYPT_MAX_BYTES = 72  # bcrypt only reads the first 72 bytes; bcrypt 5 refuses longer input
+
 # Initial context
 API_CTX = build_log_context(tool="api_server")
+# The request (or WebSocket connection) a log line belongs to; set per request by
+# request_id_middleware, so lines from one request share an id and lines from two never do.
+_REQUEST_ID: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar("readytrader_api_request_id", default=None)
+
+
+def _ctx() -> dict:
+    """The API's log context, carrying the current request's id."""
+    request_id = _REQUEST_ID.get()
+    return {**API_CTX, "request_id": request_id} if request_id else API_CTX
+
 
 app = FastAPI(
     title="ReadyTrader-Crypto API",
@@ -77,35 +93,25 @@ if settings.DEV_MODE or settings.CORS_ALLOW_ALL:
 else:
     cors_origins = list(settings.CORS_ORIGINS) if settings.CORS_ORIGINS else ["http://localhost:3000"]
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
-    allow_credentials=not settings.CORS_ALLOW_ALL,  # No credentials with wildcard
-    max_age=600,  # Cache preflight for 10 minutes
-)
-
 
 # -----------------------------------------------------------------------------
 # Security Headers Middleware
 # -----------------------------------------------------------------------------
-@app.middleware("http")
-async def security_headers_middleware(request: Request, call_next):
-    """Add security headers to all responses."""
-    response = await call_next(request)
-
-    # Security headers
+def _add_security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-
     if not settings.DEV_MODE:
         # HSTS in production
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-
     return response
+
+
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    """Add security headers to all responses."""
+    return _add_security_headers(await call_next(request))
 
 
 # -----------------------------------------------------------------------------
@@ -134,13 +140,46 @@ async def rate_limit_middleware(request: Request, call_next):
     try:
         global_container.rate_limiter.check(key=rate_key, limit=settings.RATE_LIMIT_DEFAULT_PER_MIN, window_seconds=60)
     except RateLimitError:
-        log_event("rate_limit_exceeded", ctx=API_CTX, data={"key": rate_key})
+        log_event("rate_limit_exceeded", ctx=_ctx(), data={"key": rate_key})
         from errors import RateLimitError as RTRateLimitError
 
         error = RTRateLimitError(key=rate_key, limit=settings.RATE_LIMIT_DEFAULT_PER_MIN, window_seconds=60, current_count=0)
         return JSONResponse(status_code=429, content=json_error_response(error), headers={"Retry-After": "60"})
 
     return await call_next(request)
+
+
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next):
+    """Give each HTTP request its own log request_id (added last, so it wraps every other middleware)
+    and return it as X-Request-ID."""
+    request_id = str(uuid.uuid4())
+    token = _REQUEST_ID.set(request_id)
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        # An unhandled error still answers as JSON with the security headers and this request's id
+        # (the id is also in the log line, so an operator can find the traceback).
+        log_event("api_unhandled_error", ctx=_ctx(), data={"path": request.url.path, "error": type(exc).__name__}, level="error")
+        logging.getLogger(__name__).exception("unhandled error in %s (request_id=%s)", request.url.path, request_id)
+        response = _add_security_headers(JSONResponse(status_code=500, content=json_error_response(InternalError("api_server", "unexpected error"))))
+    finally:
+        _REQUEST_ID.reset(token)
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
+# Added after the http middlewares, so CORS wraps them all: the answers they write themselves (a
+# rate-limit 429, the JSON 500 for an unhandled error) carry the CORS headers too; without them the
+# dashboard's browser hid the answer and reported a network error.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+    allow_credentials=not settings.CORS_ALLOW_ALL,  # No credentials with wildcard
+    max_age=600,  # Cache preflight for 10 minutes
+)
 
 
 # -----------------------------------------------------------------------------
@@ -172,11 +211,14 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     if not BCRYPT_AVAILABLE:
         # Fallback to plaintext comparison in dev mode only
         if settings.DEV_MODE:
-            return plain_password == hashed_password
-        raise HTTPException(status_code=500, detail="Password hashing not available. Install passlib[bcrypt].")
+            return secrets.compare_digest(plain_password.encode(), hashed_password.encode())
+        raise HTTPException(status_code=500, detail="Password hashing not available. Install bcrypt (requirements.txt).")
 
+    secret = plain_password.encode("utf-8")
+    if len(secret) > BCRYPT_MAX_BYTES:
+        return False
     try:
-        return bcrypt.verify(plain_password, hashed_password)
+        return bcrypt.checkpw(secret, hashed_password.encode("utf-8"))
     except Exception:
         return False
 
@@ -184,8 +226,11 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def hash_password(password: str) -> str:
     """Hash a password using bcrypt."""
     if not BCRYPT_AVAILABLE:
-        raise HTTPException(status_code=500, detail="Password hashing not available. Install passlib[bcrypt].")
-    return bcrypt.hash(password)
+        raise HTTPException(status_code=500, detail="Password hashing not available. Install bcrypt (requirements.txt).")
+    secret = password.encode("utf-8")
+    if len(secret) > BCRYPT_MAX_BYTES:
+        raise ValueError(f"Passwords are limited to {BCRYPT_MAX_BYTES} bytes (bcrypt)")
+    return bcrypt.hashpw(secret, bcrypt.gensalt()).decode("ascii")
 
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Optional[dict]:
@@ -293,24 +338,25 @@ async def websocket_endpoint(websocket: WebSocket):
     When API_AUTH_REQUIRED=true, clients must pass a valid JWT via
     `Authorization: Bearer <token>` or `?token=<jwt>`.
     """
+    _REQUEST_ID.set(str(uuid.uuid4()))  # one log request_id per connection
     if settings.API_AUTH_REQUIRED:
         token = _ws_token_from_request(websocket)
         payload = _decode_access_token(token) if token else None
         if not payload:
             await websocket.close(code=1008)
-            log_event("api_ws_auth_rejected", ctx=API_CTX, data={"reason": "missing_or_invalid_token"})
+            log_event("api_ws_auth_rejected", ctx=_ctx(), data={"reason": "missing_or_invalid_token"})
             return
 
     await websocket.accept()
     active_connections.add(websocket)
-    log_event("api_client_connected", ctx=API_CTX, data={"active_connections": len(active_connections)})
+    log_event("api_client_connected", ctx=_ctx(), data={"active_connections": len(active_connections)})
     try:
         while True:
             # Keep connection open
             await websocket.receive_text()
     except WebSocketDisconnect:
         active_connections.discard(websocket)
-        log_event("api_client_disconnected", ctx=API_CTX, data={"active_connections": len(active_connections)})
+        log_event("api_client_disconnected", ctx=_ctx(), data={"active_connections": len(active_connections)})
 
 
 @app.get("/api/health")
@@ -348,7 +394,7 @@ async def login(request: LoginRequest):
 
     In production mode:
     - Requires API_ADMIN_PASSWORD_HASH (bcrypt hash)
-    - Set hash using: python -c "from passlib.hash import bcrypt; print(bcrypt.hash('your-password'))"
+    - Set hash using: python -c "import bcrypt; print(bcrypt.hashpw(b'your-password', bcrypt.gensalt()).decode())"
 
     In dev mode:
     - Falls back to plaintext API_ADMIN_PASSWORD if hash not set
@@ -361,12 +407,9 @@ async def login(request: LoginRequest):
     if not admin_pass_hash and not admin_pass_plain:
         raise HTTPException(status_code=501, detail="Authentication not configured. Set API_ADMIN_PASSWORD_HASH (recommended) or API_ADMIN_PASSWORD.")
 
-    # Verify username
-    if request.username != admin_user:
-        log_event("auth_failed", ctx=API_CTX, data={"reason": "invalid_username"})
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-
-    # Verify password
+    # Verify username and password together: the (slow) password check runs whatever the username,
+    # so the response time does not reveal whether the username exists.
+    username_valid = secrets.compare_digest(str(request.username).encode(), str(admin_user).encode())
     password_valid = False
 
     if admin_pass_hash:
@@ -374,16 +417,16 @@ async def login(request: LoginRequest):
         password_valid = verify_password(request.password, admin_pass_hash)
     elif settings.DEV_MODE and admin_pass_plain:
         # Dev mode fallback: plaintext comparison
-        password_valid = request.password == admin_pass_plain
+        password_valid = secrets.compare_digest(request.password.encode(), admin_pass_plain.encode())
     else:
         # Production mode without hash - require hash
         raise HTTPException(status_code=501, detail="Production mode requires API_ADMIN_PASSWORD_HASH. Set DEV_MODE=true for plaintext passwords.")
 
-    if not password_valid:
-        log_event("auth_failed", ctx=API_CTX, data={"reason": "invalid_password"})
+    if not (username_valid and password_valid):
+        log_event("auth_failed", ctx=_ctx(), data={"reason": "invalid_password" if username_valid else "invalid_username"})
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    log_event("auth_success", ctx=API_CTX, data={"user": request.username})
+    log_event("auth_success", ctx=_ctx(), data={"user": request.username})
 
     token = create_access_token(user_id=request.username, additional_claims={"role": "admin"})
     return TokenResponse(access_token=token, expires_in=JWT_EXPIRATION_HOURS * 3600)
@@ -439,7 +482,7 @@ async def approve_trade(req: ApprovalRequest, user: dict = Depends(require_auth)
     """
     log_event(
         "trade_approval_request",
-        ctx=API_CTX,
+        ctx=_ctx(),
         data={
             "user": user.get("sub"),
             "request_id": req.request_id,
@@ -451,6 +494,21 @@ async def approve_trade(req: ApprovalRequest, user: dict = Depends(require_auth)
         if req.approve:
             store = global_container.execution_store
             token = (req.confirm_token or "").strip()
+            # A proposal executes only in the mode it was made in: a live proposal approved on an API
+            # server running in paper mode would "execute" as a paper fill and be marked done (and a
+            # paper one would go live). Checked before confirming, so the proposal stays pending for
+            # an API server in the right mode.
+            existing = store.get(req.request_id)
+            if existing is not None and (existing.payload or {}).get("paper_mode") is not bool(settings.PAPER_MODE):
+                made_in = (existing.payload or {}).get("paper_mode")
+                mismatch = ProposalStateError(
+                    "mode_mismatch",
+                    req.request_id,
+                    f"Proposal {req.request_id} was made in {'paper' if made_in is True else 'live' if made_in is False else 'an unknown'} mode; "
+                    f"this API server runs in {'paper' if settings.PAPER_MODE else 'live'} mode. Nothing was executed.",
+                )
+                log_event("trade_approval_mode_mismatch", ctx=_ctx(), data={"request_id": req.request_id, "made_in_paper_mode": made_in})
+                return JSONResponse(status_code=mismatch.http_status, content=json_error_response(mismatch))
             try:
                 if token:
                     prop = store.confirm(req.request_id, token)
@@ -461,7 +519,7 @@ async def approve_trade(req: ApprovalRequest, user: dict = Depends(require_auth)
                     return JSONResponse(status_code=403, content=json_error_response(denied))
             except ProposalError as pe:
                 if pe.reason == "invalid_token":
-                    log_event("trade_approval_denied", ctx=API_CTX, data={"user": user.get("sub"), "request_id": req.request_id, "reason": pe.reason})
+                    log_event("trade_approval_denied", ctx=_ctx(), data={"user": user.get("sub"), "request_id": req.request_id, "reason": pe.reason})
                     denied = ApprovalDeniedError(req.request_id, "invalid confirm_token")
                     return JSONResponse(status_code=403, content=json_error_response(denied))
                 state_error = ProposalStateError(pe.reason, req.request_id)
@@ -528,7 +586,7 @@ async def approve_trade(req: ApprovalRequest, user: dict = Depends(require_auth)
             # confirmed-but-unexecuted: approvals are single-use, so the agent must propose again.
             result = json.loads(res)
             if not (isinstance(result, dict) and result.get("ok") is True):
-                log_event("trade_approval_execution_refused", ctx=API_CTX, data={"request_id": req.request_id, "result": result})
+                log_event("trade_approval_execution_refused", ctx=_ctx(), data={"request_id": req.request_id, "result": result})
                 return JSONResponse(status_code=422, content=result if isinstance(result, dict) else {"ok": False, "error": {"code": "execution_failed"}})
 
             # Mark proposal as executed to prevent double-execution
@@ -540,16 +598,16 @@ async def approve_trade(req: ApprovalRequest, user: dict = Depends(require_auth)
             token = (req.confirm_token or "").strip()
             allowed = store.token_matches(req.request_id, token) if token else _operator_may_confirm_without_token(user)
             if not allowed:
-                log_event("trade_approval_denied", ctx=API_CTX, data={"user": user.get("sub"), "request_id": req.request_id, "reason": "reject_not_allowed"})
+                log_event("trade_approval_denied", ctx=_ctx(), data={"user": user.get("sub"), "request_id": req.request_id, "reason": "reject_not_allowed"})
                 denied = ApprovalDeniedError(req.request_id, "admin sign-in or the proposal's confirm_token is required to reject")
                 return JSONResponse(status_code=403, content=json_error_response(denied))
             success = store.cancel(req.request_id)
             return {"ok": success}
     except ReadyTraderError as e:
-        log_event("trade_approval_error", ctx=API_CTX, data={"error": e.to_dict()})
+        log_event("trade_approval_error", ctx=_ctx(), data={"error": e.to_dict()})
         return JSONResponse(status_code=400, content=json_error_response(e))
     except Exception as e:
-        log_event("trade_approval_error", ctx=API_CTX, data={"error": str(e)})
+        log_event("trade_approval_error", ctx=_ctx(), data={"error": str(e)})
         error = InternalError(component="approve_trade", reason="unexpected internal failure")
         return JSONResponse(status_code=500, content=json_error_response(error))
 
@@ -680,5 +738,5 @@ if __name__ == "__main__":
 
     port = int(os.getenv("API_PORT", 8000))
     host = os.getenv("API_HOST", "127.0.0.1")
-    log_event("api_server_started", ctx=API_CTX, data={"port": port, "host": host})
+    log_event("api_server_started", ctx=_ctx(), data={"port": port, "host": host})
     uvicorn.run(app, host=host, port=port)

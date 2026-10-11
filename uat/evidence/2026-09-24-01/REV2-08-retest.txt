@@ -1,0 +1,10 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev2_api.sh
+# at 2026-09-24T20:22:15+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+A1 /api/portfolio raising route -> 500 X-Request-ID: 75788c9a-75aa-41e6-8ab1-7dfc0c1737b2 | X-Frame-Options: DENY
+A1 log lines with a request_id: ['{"data": {"error": "RuntimeError", "path": "/api/portfolio"}, "event": "api_unhandled_error", "level": "ERROR", "request_id": "75788c9a-75aa-41e6-8ab1-7dfc0c173', 'unhandled error in /api/portfolio (request_id=75788c9a-75aa-41e6-8ab1-7dfc0c1737b2)', '    |   File "/
+A1 other output (first 3 lines): ['{"data": {"error": "RuntimeError", "path": "/api/portfolio"}, "event": "api_unhandled_error", "level": "ERROR", "request_id": "75788c9a-75aa-41e6-8ab1-7dfc0c1737b2", "service": "readytrader", "tool": "api_server", "ts_ms": 1790281338532}', 'unhandled error in /api/
+A2 limit 5 last codes [429, 429, 429] 429 has X-Request-ID: True | rate-limit log has request_id: True
+
+
+exit=0

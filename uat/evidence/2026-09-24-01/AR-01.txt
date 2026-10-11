@@ -1,0 +1,26 @@
+$ cd /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/cr_head2 && git log --oneline -1 && /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/.venv/bin/python /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/bool_all_params.py /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/cr_head2 app.main 2>&1 | grep -v 'Warning\|warnings.warn\|authlib\|compatible before\|httpx2\|"event"'
+# at 2026-09-25T12:04:17+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+4a03c09 uat: close run 2026-09-24-01
+ACCEPTED fetch_ohlcv.limit=true -> { "error": { "code": "fetch_ohlcv_error", "data": {}, "message": "Error fetching data: [NET_501] Failed to fet
+ACCEPTED deposit_paper_funds.amount=true -> { "data": { "amount": 1.0, "asset": "USD", "balance": 1.0, "result": "Deposited 1.0 USD. New Balance: 1.0" }, 
+ACCEPTED validate_trade_risk.amount_usd=true -> { "data": { "amount_usd": 1.0, "falling_knife": { "price": { "active": false, "reason": "No price-based Fallin
+ACCEPTED validate_trade_risk.portfolio_value=true -> { "data": { "amount_usd": 1.0, "falling_knife": { "price": { "active": false, "reason": "No price-based Fallin
+ACCEPTED post_market_insight.confidence=true -> { "data": { "insight": { "agent_id": "x", "confidence": 1.0, "expires_at_ms": 1790341467836, "insight_id": "ae
+ACCEPTED post_market_insight.ttl_seconds=true -> { "data": { "insight": { "agent_id": "x", "confidence": 1.0, "expires_at_ms": 1790337868840, "insight_id": "4e
+ACCEPTED swap_tokens.amount=true -> { "error": { "code": "paper_price_required", "data": { "mode": "paper", "symbol": "x/x", "venue": "dex" }, "me
+ACCEPTED transfer_eth.amount=true -> { "error": { "code": "paper_mode_not_supported", "data": {}, "message": "Native transfers are not supported in
+ACCEPTED place_cex_order.amount=true -> { "error": { "code": "paper_price_required", "data": { "mode": "paper", "symbol": "x", "venue": "cex" }, "mess
+ACCEPTED place_cex_order.price=true -> { "error": { "code": "paper_price_required", "data": { "mode": "paper", "symbol": "x", "venue": "cex" }, "mess
+ACCEPTED wait_for_cex_order.timeout_sec=true -> { "error": { "code": "paper_mode_not_supported", "data": {}, "message": "wait_for_cex_order works on a live ex
+ACCEPTED wait_for_cex_order.poll_interval_sec=true -> { "error": { "code": "paper_mode_not_supported", "data": {}, "message": "wait_for_cex_order works on a live ex
+ACCEPTED list_cex_open_orders.limit=true -> { "error": { "code": "paper_mode_not_supported", "data": {}, "message": "list_cex_open_orders works on a live 
+ACCEPTED list_cex_orders.limit=true -> { "error": { "code": "paper_mode_not_supported", "data": {}, "message": "list_cex_orders works on a live excha
+ACCEPTED get_cex_my_trades.limit=true -> { "error": { "code": "paper_mode_not_supported", "data": {}, "message": "get_cex_my_trades works on a live exc
+ACCEPTED replace_cex_order.amount=true -> { "error": { "code": "paper_mode_not_supported", "data": {}, "message": "replace_cex_order works on a live exc
+ACCEPTED replace_cex_order.price=true -> { "error": { "code": "paper_mode_not_supported", "data": {}, "message": "replace_cex_order works on a live exc
+ACCEPTED list_cex_private_updates.limit=true -> { "error": { "code": "paper_mode_not_supported", "data": {}, "message": "Private updates are not supported in 
+numeric parameters: 18; true refused: 0; true accepted: 18
+
+
+exit=0

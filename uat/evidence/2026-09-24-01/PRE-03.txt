@@ -1,0 +1,20 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_fresh.sh
+# at 2026-09-24T16:27:36+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+=== Python 3.11.15 (python3)
+[notice] A new release of pip is available: 24.0 -> 26.2.1
+[notice] To update, run: python -m pip install --upgrade pip
+pip exit=0
+--- python app/main.py (stdin closed)
+[09/24/26 16:29:00] INFO     Starting MCP server                transport.py:209
+                             'ReadyTrader-Crypto' with                          
+                             transport 'stdio'                                  
+=== Python 3.12.3 (python3.12)
+pip exit=0
+--- python app/main.py (stdin closed)
+[09/24/26 16:30:21] INFO     Starting MCP server                transport.py:209
+                             'ReadyTrader-Crypto' with                          
+                             transport 'stdio'                                  
+
+
+exit=0

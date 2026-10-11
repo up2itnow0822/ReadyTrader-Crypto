@@ -1,0 +1,37 @@
+$ cat smithery.yaml | head -30; cd /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/cr_head && env -i PATH=$PATH HOME=$HOME PAPER_MODE=false timeout 60 /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/.venv/bin/python app/main.py </dev/null 2>&1 | grep -E 'Error|error' | head -3 | cut -c1-300
+# at 2026-09-24T20:14:32+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+startCommand:
+  type: stdio
+  command: python
+  args:
+    - app/main.py
+name: ReadyTrader-Crypto
+description: >-
+  A specialized bridge that turns your AI Agent into a professional crypto trading operator.
+  Features specific "Intelligence vs. Execution" separation of powers, a "Risk Guardian" safety layer
+  on every order, a persistent paper account, and DEX swaps through 1inch.
+projectUrl: https://github.com/up2itnow0822/ReadyTrader-Crypto
+configSchema:
+  type: object
+  properties:
+    PAPER_MODE:
+      type: string
+      description: "Set to 'true' for zero-risk paper trading simulation (default)."
+      default: "true"
+    EXECUTION_APPROVAL_MODE:
+      type: string
+      description: "Set to 'approve_each' to require human confirmation for every live order, swap and transfer (paper orders fill immediately)."
+      default: "auto"
+    CEX_API_KEY:
+      type: string
+      description: "API Key for centralized exchange execution."
+    CEX_API_SECRET:
+      type: string
+      description: "API Secret for centralized exchange execution."
+  required: []
+    raise SettingsValidationError("MULTIPLE", None, "; ".join(errors))
+app.core.settings.SettingsValidationError: Invalid configuration for MULTIPLE=None: API_AUTH_REQUIRED must be true when DEV_MODE=false and (LIVE_TRADING_ENABLED=true or PAPER_MODE=false); CORS_ORIGINS must not be '*' when DEV_MODE=false for live/non-paper; set explicit origins; SIGNER_TYPE=env_priva
+
+
+exit=0

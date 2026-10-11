@@ -1,0 +1,54 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_fe.sh
+# at 2026-09-24T16:36:16+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+
+added 472 packages in 25s
+CI_EXIT=0
+
+> frontend@0.1.0 lint
+> eslint
+
+LINT_EXIT=0
+
+> frontend@0.1.0 typecheck
+> tsc --noEmit
+
+TSC_EXIT=0
+      Tests  59 passed (59)
+   Start at  16:36:55
+   Duration  12.75s (environment 62%, tests 19%, setup 13%, transform 4%, import 2%)
+
+Environment  jsdom was created 7 times · 7.06s total, 62% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+
+TEST_EXIT=0
+
+▲ Next.js 16.3.5 (Turbopack)
+✓ Running next.config.ts took 55ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 17.8s
+  Running TypeScript ...
+  Finished TypeScript in 6.8s ...
+  Collecting page data using 1 worker ...
+  Generating static pages using 1 worker (0/2) ...
+✓ Generating static pages using 1 worker (2/2) in 160ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /disclaimer
+├ ƒ /history
+├ ○ /icon.svg
+└ ƒ /status
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+BUILD_EXIT=0
+
+
+exit=0

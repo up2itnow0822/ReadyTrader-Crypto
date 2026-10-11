@@ -1,0 +1,21 @@
+$ .venv/bin/python /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_cexgate.py paper
+# at 2026-09-24T17:44:01+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+mode=paper PAPER_MODE=True approval=ApprovalMode.AUTO
+replace_cex_order(order 123 -> BTC/USDT buy 5 @90000) -> {"error": {"code": "paper_mode_not_supported", "data": {}, "message": "replace_cex_order works on a live exchange account; paper orders fill immediately and never rest on an exchange. get_cex_balance shows the paper wallet."}, "ok": false}
+   exchange calls so far: 0 
+cancel_cex_order(123) -> {"error": {"code": "paper_mode_not_supported", "data": {}, "message": "cancel_cex_order works on a live exchange account; paper orders fill immediately and never rest on an exchange. get_cex_balance shows the paper wallet."}, "ok": false}
+   exchange calls so far: 0 
+cancel_all_cex_orders() -> {"error": {"code": "paper_mode_not_supported", "data": {}, "message": "cancel_all_cex_orders works on a live exchange account; paper orders fill immediately and never rest on an exchange. get_cex_balance shows the paper wallet."}, "ok": false}
+   exchange calls so far: 0 
+get_cex_order(123) -> {"error": {"code": "paper_mode_not_supported", "data": {}, "message": "get_cex_order works on a live exchange account; paper orders fill immediately and never rest on an exchange. get_cex_balance shows the paper wallet."}, "ok": false}
+   exchange calls so far: 0 
+list_cex_open_orders() -> {"error": {"code": "paper_mode_not_supported", "data": {}, "message": "list_cex_open_orders works on a live exchange account; paper orders fill immediately and never rest on an exchange. get_cex_balance shows the paper wallet."}, "ok": false}
+   exchange calls so far: 0 
+
+--- stderr ---
+<string>:83: UserWarning: API_AUTH_REQUIRED=false: API endpoints are unauthenticated. api_server refuses to start without auth when DEV_MODE=false.
+<string>:83: UserWarning: CORS_ORIGINS='*': Accepting requests from any origin. api_server refuses wildcard CORS when DEV_MODE=false.
+
+
+exit=0

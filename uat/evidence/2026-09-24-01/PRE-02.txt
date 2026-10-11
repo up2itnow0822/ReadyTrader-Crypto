@@ -1,0 +1,16 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_integration.sh
+# at 2026-09-24T16:24:06+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+E           aiohttp.client_exceptions.ClientConnectorCertificateError: Cannot connect to host api.kraken.com:443 ssl:True [SSLCertVerificationError: (1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1000)')]
+FAILED tests/integration/test_exchange_sandbox.py::TestKrakenPublicAPI::test_kraken_public_ticker
+FAILED tests/integration/test_exchange_sandbox.py::TestKrakenPublicAPI::test_kraken_public_orderbook
+FAILED tests/integration/test_exchange_sandbox.py::TestKrakenPublicAPI::test_kraken_public_trades
+FAILED tests/integration/test_exchange_sandbox.py::TestCoinbasePublicAPI::test_coinbase_public_ticker
+FAILED tests/integration/test_exchange_sandbox.py::TestCoinbasePublicAPI::test_coinbase_public_markets
+FAILED tests/integration/test_exchange_sandbox.py::TestRateLimiting::test_exchange_rate_limit_respected
+6 failed, 65 passed, 9 skipped in 22.30s
+SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1000)
+curl (trusts this sandbox's proxy CA): kraken 200, coinbase 200, binance 451
+
+
+exit=0

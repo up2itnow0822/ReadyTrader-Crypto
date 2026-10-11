@@ -1,0 +1,8 @@
+$ grep -rn 'RISK_PROFILE' README.md smithery.yaml docs/HERMES_INTEGRATION.md; grep -rn 'risk_config' --include=*.py . | grep -v '.venv\|tests/'
+# at 2026-09-24T19:37:00+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+README.md:181:| `RISK_PROFILE`               | `conservative` | Reserved, not applied: the Risk Guardian's limits are fixed (5% position, 5% daily loss, 10% drawdown, -0.5 sentiment) whatever it says. |
+./app/core/settings.py:400:    def risk_config(self) -> RiskProfileConfig:
+
+
+exit=0

@@ -1,0 +1,48 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_e2e.sh with-env
+# at 2026-09-24T16:38:08+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+PW_PYTHON_PATH=/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/frontend/../.venv/bin/python
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 0}, "event": "api_client_disconnected", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 1}, "event": "api_client_connected", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 0}, "event": "api_client_disconnected", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[13/18] [chromium] › e2e/smoke.spec.ts:22:7 › Navigation and manifest › manifest.json only references real routes and existing icons
+[1A[2K[14/18] [chromium] › e2e/smoke.spec.ts:36:7 › Navigation and manifest › the Docs link points at the GitHub README (not fetched -- external site)
+[1A[2K[2m[WebServer] [22m{"data": {"user": "admin"}, "event": "auth_success", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 1}, "event": "api_client_connected", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 0}, "event": "api_client_disconnected", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[15/18] [chromium] › e2e/smoke.spec.ts:43:7 › Navigation and manifest › nav links removed for pages that do not exist
+[1A[2K[2m[WebServer] [22m{"data": {"user": "admin"}, "event": "auth_success", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 1}, "event": "api_client_connected", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[16/18] [chromium] › e2e/smoke.spec.ts:54:7 › Mobile viewport (390x844) › hamburger opens and closes the sidebar; every route has no horizontal scroll
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 0}, "event": "api_client_disconnected", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[2m[WebServer] [22m{"data": {"user": "admin"}, "event": "auth_success", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[2m[WebServer] [22m
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 1}, "event": "api_client_connected", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[2m[WebServer] [22m
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 0}, "event": "api_client_disconnected", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 1}, "event": "api_client_connected", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[2m[WebServer] [22m
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 0}, "event": "api_client_disconnected", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[2m[WebServer] [22m
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 1}, "event": "api_client_connected", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 0}, "event": "api_client_disconnected", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 1}, "event": "api_client_connected", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[17/18] [chromium] › e2e/smoke.spec.ts:74:7 › Mobile viewport (390x844) › Esc closes the sidebar
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 0}, "event": "api_client_disconnected", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[2m[WebServer] [22m{"data": {"user": "admin"}, "event": "auth_success", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 1}, "event": "api_client_connected", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[2m[WebServer] [22m
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 0}, "event": "api_client_disconnected", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[18/18] [chromium] › e2e/z-resilience.spec.ts:12:7 › API resilience › unreachable API shows the banner + Mode unknown, and recovers once it restarts
+[1A[2K[2m[WebServer] [22m{"data": {"user": "admin"}, "event": "auth_success", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[2m[WebServer] [22m{"data": {"active_connections": 1}, "event": "api_client_connected", "level": "INFO", "request_id": "067ee4aa-c48e-4e5e-a9b8-302b1e514513", "service": "readytrader", "tool": "api_server", "ts_ms": 1790267900073}
+[1A[2K[2m[WebServer] [22mKilled
+[1A[2K  18 passed (54.4s)
+To open last HTML report run:
+[36m[39m
+[36m  npx playwright show-report ../../../probes/pw_report[39m
+[36m[39m
+E2E_EXIT=0
+
+
+exit=0

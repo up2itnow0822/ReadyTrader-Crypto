@@ -1,0 +1,36 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_wizard.sh
+# at 2026-09-24T17:55:49+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+== answer 'n' to creating .env
+
+Checking Network Connectivity...
+  [?] Binance API returned status 451.
+  [✓] CoinDesk RSS reachable.
+  [✓] Fear & Greed Index reachable.
+
+Checking Critical Keys in .env...
+
+Setup Scan Complete!
+Next steps:
+1. Open .env and configure your SIGNER_TYPE and exchange keys.
+2. Read docs/SENTIMENT.md for intelligence feed setup.
+3. Run python server.py to start the MCP server.
+
+exit=0
+== answer 'y' (creates .env from env.example), then read the key report
+Checking Critical Keys in .env...
+  [✓] PAPER_MODE detected.
+  [✓] EXECUTION_MODE detected.
+  [✗] PRIVATE_KEY is MISSING.
+  [✗] CRYPTOPANIC_API_KEY is MISSING.
+
+Setup Scan Complete!
+== stdin closed
+  File "/tmp/tmp.jGrol3slSc/tools/setup_wizard.py", line 30, in check_env_file
+    choice = input("Do you want to create a .env from env.example now? (y/n): ")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+EOFError: EOF when reading a line
+exit=1
+
+
+exit=0

@@ -1,0 +1,12 @@
+$ PROBE_MAX=300 bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_be.sh "$(cat /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_case.json)"
+# at 2026-09-24T17:47:44+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+env: {"PAPER_DB_PATH": "/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/crbe_dir/paper.db", "EXECUTION_DB_PATH": "/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/crbe_dir/exec.db", "INSIGHTS_DB_PATH": "/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/crbe_dir/insights.db"}
+TOOLS 29: cancel_all_cex_orders, cancel_cex_order, deposit_paper_funds, fetch_ohlcv, get_cex_balance, get_cex_capabilities, get_cex_my_trades, get_cex_order, get_crypto_price, get_financial_news, get_free_news, get_latest_insights, get_market_regime, get_news, get_sentiment, get_social_sentiment, list_cex_open_orders, list_cex_orders, list_cex_private_updates, place_cex_order, post_market_insight, replace_cex_order, run_backtest_simulation, start_cex_private_ws, stop_cex_private_ws, swap_tokens, transfer_eth, validate_trade_risk, wait_for_cex_order
+CALL deposit_paper_funds {"asset": "usdt", "amount": 1000} -> { "data": { "amount": 1000.0, "asset": "USDT", "balance": 1000.0, "result": "Deposited 1000.0 USDT. New Balance: 1000.0" }, "ok": true }
+CALL place_cex_order {"symbol": "BTC/USDT", "side": "buy", "amount": 0.0005, "order_type": "market", "price": 84000} -> { "data": { "fill": { "amount": 0.0005, "price": 84186.1, "quote": "USDT", "side": "buy", "symbol": "BTC/USDT", "total_value": 42.093050000000005 }, "mode": "paper", "result": "Paper Trade Executed: BUY 0.0005 BTC/USDT @ 84186.1. Value: 42.093050000000005 USDT. Rationale: cex_order_paper", "risk": {
+CALL place_cex_order {"symbol": "btc/usdt", "side": "buy", "amount": 0.0005, "order_type": "market", "price": 84000} -> { "data": { "fill": { "amount": 0.0005, "price": 84186.1, "quote": "USDT", "side": "buy", "symbol": "BTC/USDT", "total_value": 42.093050000000005 }, "mode": "paper", "result": "Paper Trade Executed: BUY 0.0005 BTC/USDT @ 84186.1. Value: 42.093050000000005 USDT. Rationale: cex_order_paper", "risk": {
+CALL get_cex_balance {} -> { "data": { "balance": { "BTC": 0.001, "USDT": 915.8139000000001 }, "exchange": "binance", "market_type": "spot", "mode": "paper" }, "ok": true }
+
+
+exit=0

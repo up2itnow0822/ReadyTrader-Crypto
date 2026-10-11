@@ -1,0 +1,10 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev/run.sh probe_request_id; grep -n 'API_CTX = ' api_server.py
+# at 2026-09-24T19:08:34+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+auth_failed log lines: 2 request_ids: ['c1ff1a59-da7a-4821-9ef8-10b1b925c7d4', 'c1ff1a59-da7a-4821-9ef8-10b1b925c7d4'] -> distinct: 1
+48:API_CTX = build_log_context(tool="api_server")
+
+
+exit=0

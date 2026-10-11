@@ -1,0 +1,9 @@
+DEV crypto (before 2022), K=3, still=lowest, close-based
+close-based dmin=15%                           fire  3.98% ( 791/ 19897)  P(severe)  29.1% vs 20.7%  lift 1.41  MAE p10  -37.9% vs  -27.4%  ret med   4.3% vs  1.0%
+close-based dmin=20%                           fire  1.63% ( 325/ 19897)  P(severe)  32.6% vs 20.7%  lift 1.58  MAE p10  -41.2% vs  -27.4%  ret med   6.8% vs  1.0%
+close-based dmin=25%                           fire  0.66% ( 131/ 19897)  P(severe)  51.9% vs 20.7%  lift 2.51  MAE p10  -44.3% vs  -27.4%  ret med   8.2% vs  1.0%
+close-based dmin=30%                           fire  0.38% (  75/ 19897)  P(severe)  66.7% vs 20.7%  lift 3.22  MAE p10  -46.1% vs  -27.4%  ret med   8.4% vs  1.0%
+close-based dmin=35%                           fire  0.27% (  54/ 19897)  P(severe)  74.1% vs 20.7%  lift 3.58  MAE p10  -45.4% vs  -27.4%  ret med   8.2% vs  1.0%
+close-based dmin=40%                           fire  0.12% (  24/ 19897)  P(severe)  75.0% vs 20.7%  lift 3.63  MAE p10  -45.5% vs  -27.4%  ret med   2.9% vs  1.0%
+close-based dmin=45%                           fire  0.06% (  11/ 19897)  P(severe)  81.8% vs 20.7%  lift 3.96  MAE p10  -34.7% vs  -27.4%  ret med  10.0% vs  1.0%
+close-based dmin=50%                           fire  0.03% (   6/ 19897)  P(severe)  83.3% vs 20.7%  lift 4.03  MAE p10  -34.7% vs  -27.4%  ret med  -0.2% vs  1.0%

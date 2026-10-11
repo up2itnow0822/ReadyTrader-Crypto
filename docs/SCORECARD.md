@@ -64,14 +64,14 @@ pip-audit -r requirements.txt
 
 ### Tool-surface correctness (docs drift)
 
-The documented tool catalog must be generated from the **actual registered tools**.
+The documented tool catalog must name exactly the **actual registered tools**.
 
 ```bash
-python tools/generate_tool_docs.py
-git diff --exit-code docs/TOOLS.md
+pytest -q tests/test_docs_tool_roster.py
+python tools/generate_tool_docs.py   # prints the live registry to compare descriptions by eye
 ```
 
-- **Pass**: `docs/TOOLS.md` matches the running MCP tool registry.
+- **Pass**: `docs/TOOLS.md` and the README name every registered tool and no other.
 
 ### Docs format (mdformat)
 
@@ -109,5 +109,5 @@ This section is informational; the commands above are the source of truth.
 
 ### Notes / common gotchas
 
-- **Tool docs drift**: `docs/TOOLS.md` must be committed after running `python tools/generate_tool_docs.py`.
+- **Tool docs drift**: `docs/TOOLS.md` is curated; update it with any tool change (the roster test catches added or removed tools, not changed behaviour).
 - **Paper mode**: default mode should not require signing keys; live signing requires explicit signer configuration.

@@ -1,0 +1,9 @@
+$ REPO=/tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/cr_livecompose.sh
+# at 2026-09-24T18:25:17+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+config exit=0
+readytrader-api {'EXECUTION_APPROVAL_MODE': 'approve_each', 'EXECUTION_DB_PATH': '/app/data/execution.db', 'EXECUTION_SESSION_ID': 'btc-live-desk-1', 'TRADING_HALTED': '"true"'}
+readytrader-mcp {'EXECUTION_APPROVAL_MODE': 'approve_each', 'EXECUTION_DB_PATH': '/app/data/execution.db', 'EXECUTION_SESSION_ID': 'btc-live-desk-1', 'TRADING_HALTED': '"true"'}
+
+
+exit=0

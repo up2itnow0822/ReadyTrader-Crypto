@@ -1,0 +1,18 @@
+$ bash /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/probes/rev/run.sh probe_live_inactive; grep -n 'daily-loss and drawdown\|in both modes\|inactive_rules\|paper account' README.md docs/TOOLS.md docs/ERRORS.md | head -10
+# at 2026-09-24T19:35:51+00:00 in /tmp/claude-0/-home-claude/55237518-b0f0-557c-b340-66cb8731d4ad/scratchpad/repos/ReadyTrader-Crypto
+
+live pre_trade_check: {'allowed': True, 'equity_usd': 100000.0, 'inactive_rules': ['daily_loss_limit', 'max_drawdown']}
+live _account_state: {'equity_usd': 100000.0, 'position': 0.0, 'daily_pnl_pct': 0.0, 'drawdown_pct': 0.0, 'unmeasured': ['daily_loss_limit', 'max_drawdown']}
+README.md:77:- **🛡️ Risk Guardian**: Hard-coded safety layer on every order, paper and live: 5% position sizing at the market price and a sentiment Falling Knife rule ([why there is no price rule for crypto](docs/FALLING_KNIFE.md)); on the paper account also daily-loss and drawdown limits (live accounts have no loss history here, so those two do not run live).
+README.md:109:named volume keeps the paper account, audit log and proposals (`/app/data`) from one session to
+README.md:464:  paper account (`risk_blocked` with the reason).
+README.md:594:| **Max Drawdown**       | 10% from peak    | Blocks new exposure (paper account; deposits do not clear it)   |
+README.md:595:| **Daily Loss Limit**   | 5% daily loss    | Blocks new exposure today (paper account)                       |
+docs/TOOLS.md:72:- Daily loss / max drawdown: after a 5% daily loss or a 10% drawdown of the paper account
+docs/TOOLS.md:75:  orders; the order's `risk.inactive_rules` says so.
+docs/TOOLS.md:151:  - Checked against the paper account's value.
+docs/TOOLS.md:254:The Risk Guardian (`docs/FALLING_KNIFE.md`) checks every order, in both modes, before it fills,
+docs/TOOLS.md:256:account's value (the paper account, or the exchange account in live mode); a measured sentiment
+
+
+exit=0
