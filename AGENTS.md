@@ -91,7 +91,7 @@ Default section order:
 
 - Secrets stay in `.env` / operator vault — never commit
 
-- Quality gate: `make check` and `make security`
+- Quality gate: `make check` and `make security`. CI uses Node 24.19.0 with explicit frontend type, unit, production-build and browser gates. Independent checks use non-cancelled/install-success guards so a failed audit does not hide their results; every audit remains fatal and unfiltered. The locked Python audit runs separately from the frontend/security steps.
 
 - `requirements.txt` owns pinned runtime dependencies; regenerate `requirements.lock.txt` from a clean `requirements-dev.txt` environment after dependency changes and verify it with `pip check` and `pip-audit`
 
