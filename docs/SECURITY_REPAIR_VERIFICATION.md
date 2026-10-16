@@ -7,28 +7,28 @@ security certification. A new security-service scan must identify the repaired
 commit. No merge, deployment, live trade, wallet transaction or credential rotation
 was performed.
 
-| Finding | Implementation                                                                                   | Primary regression coverage                                                           |
-| ------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| 1       | Authenticated MPC control, canonical signer policy and exact-digest external approval            | `tests/test_mpc_security.py`, `mpc_signer/control/*_test.go`                          |
-| 2       | Containment: opaque live aggregation refused before proposal or signing; paper swaps retained    | `tests/test_execution_security_repairs.py`                                            |
-| 3       | Release input as validated environment data, least-privilege jobs                                | `tests/test_delivery_security_repairs.py`                                             |
-| 4       | Strict legacy and EIP-1559 fee normalization and caps                                            | `tests/test_execution_security_repairs.py`, `tests/test_mpc_security.py`              |
-| 5       | Strict safety settings and aggregate startup errors                                              | `tests/test_safety_config_risk_repairs.py`                                            |
-| 6       | Sandbox/global tool admission and container resource limits                                      | `tests/test_research_resource_repairs.py`, `tests/test_safety_config_risk_repairs.py` |
-| 7       | Dedicated login budgets and bounded off-loop password checks                                     | `tests/test_api_security_repairs.py`                                                  |
-| 8       | Durable payload-bound pre-effect claims, read-only completed replay and conservative uncertainty | `tests/test_execution_security_repairs.py`                                            |
-| 9       | Required Grafana Docker secret and loopback publication                                          | `tests/test_delivery_security_repairs.py`; Docker unavailable locally                 |
-| 10      | Mandatory live fail-closed freshness and consumption-time recheck                                | `tests/test_safety_config_risk_repairs.py`                                            |
-| 11      | Bounded insight fields, retention and atomic database quotas                                     | `tests/test_research_resource_repairs.py`                                             |
-| 12      | Finite risk balances/prices/derived values and raw CCXT boolean rejection                        | `tests/test_safety_config_risk_repairs.py`                                            |
-| 13      | Private bounded metadata-only webhook diagnostics                                                | `tests/test_delivery_security_repairs.py`                                             |
-| 14      | Origin-bound short-lived single-use WebSocket tickets                                            | `tests/test_api_security_repairs.py`, `frontend/src/lib/useWebSocket.test.ts`         |
-| 15      | Bounded source bytes and killable absolute request deadlines                                     | `tests/test_research_resource_repairs.py`                                             |
-| 16      | Expiring capped limiter state and normalized peer keys                                           | `tests/test_api_security_repairs.py`                                                  |
-| 17      | No blind CEX mutation retries; read-only supported reconciliation                                | `tests/test_execution_security_repairs.py`                                            |
-| 18      | Disabled-by-default authenticated dual-approved bootstrap ceremony                               | `mpc_signer/control/*_test.go`                                                        |
-| 19      | Frontend Docker context excludes local secrets and artifacts                                     | `tests/test_delivery_security_repairs.py`; Docker unavailable locally                 |
-| 20      | Bounded authenticated MPC admission and operation deadlines                                      | `mpc_signer/control/*_test.go`                                                        |
+| Finding | Implementation                                                                                   | Primary regression coverage                                                                                   |
+| ------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| 1       | Authenticated MPC control, canonical signer policy and exact-digest external approval            | `tests/test_mpc_security.py`, `mpc_signer/control/*_test.go`                                                  |
+| 2       | Containment: opaque live aggregation refused before proposal or signing; paper swaps retained    | `tests/test_execution_security_repairs.py`                                                                    |
+| 3       | Release input as validated environment data, least-privilege jobs                                | `tests/test_delivery_security_repairs.py`                                                                     |
+| 4       | Strict legacy and EIP-1559 fee normalization and caps                                            | `tests/test_execution_security_repairs.py`, `tests/test_mpc_security.py`                                      |
+| 5       | Strict safety settings and aggregate startup errors                                              | `tests/test_safety_config_risk_repairs.py`                                                                    |
+| 6       | Sandbox/global tool admission and container resource limits                                      | `tests/test_research_resource_repairs.py`, `tests/test_safety_config_risk_repairs.py`                         |
+| 7       | Dedicated login budgets and bounded off-loop password checks                                     | `tests/test_api_security_repairs.py`                                                                          |
+| 8       | Durable payload-bound pre-effect claims, read-only completed replay and conservative uncertainty | `tests/test_execution_security_repairs.py`                                                                    |
+| 9       | Required Grafana Docker secret and loopback publication                                          | `tests/test_delivery_security_repairs.py`; Docker unavailable locally                                         |
+| 10      | Mandatory live fail-closed freshness and consumption-time recheck                                | `tests/test_safety_config_risk_repairs.py`                                                                    |
+| 11      | Bounded insight fields, retention and atomic database quotas                                     | `tests/test_research_resource_repairs.py`, `tests/test_api_server.py`                                         |
+| 12      | Finite risk balances/prices/derived values and raw CCXT boolean rejection                        | `tests/test_safety_config_risk_repairs.py`                                                                    |
+| 13      | Private bounded metadata-only webhook diagnostics                                                | `tests/test_delivery_security_repairs.py`                                                                     |
+| 14      | Origin-bound short-lived single-use WebSocket tickets                                            | `tests/test_api_security_repairs.py`, `frontend/src/lib/api.test.ts`, `frontend/src/lib/useWebSocket.test.ts` |
+| 15      | Bounded source bytes and killable absolute request deadlines                                     | `tests/test_research_resource_repairs.py`                                                                     |
+| 16      | Expiring capped limiter state and normalized peer keys                                           | `tests/test_api_security_repairs.py`                                                                          |
+| 17      | No blind CEX mutation retries; read-only supported reconciliation                                | `tests/test_execution_security_repairs.py`                                                                    |
+| 18      | Disabled-by-default authenticated dual-approved bootstrap ceremony                               | `mpc_signer/control/*_test.go`                                                                                |
+| 19      | Frontend Docker context excludes local secrets and artifacts                                     | `tests/test_delivery_security_repairs.py`; Docker unavailable locally                                         |
+| 20      | Bounded authenticated MPC admission and operation deadlines                                      | `mpc_signer/control/*_test.go`                                                                                |
 
 ## Review corrections
 
@@ -39,6 +39,12 @@ re-evaluated against mutable risk/approval gates instead of replaying their dura
 result. Regression coverage includes valid provider latency, each boolean price
 field and completed/conflicting/pending keys after risk, halt, approval and venue
 changes.
+
+Post-merge Copilot review of PR #23 left three open findings, fixed in the follow-up
+PR: `get_latest_insights` now returns `invalid_insight` for store `ValueError`s
+instead of letting them escape; `apiFetch` clears a 401 only when that request's
+token is still current; `GET /api/insights` translates store validation (`limit`
+outside `[1, 100]`, blank/oversized `symbol`) to HTTP 400.
 
 ## Operational limitations
 

@@ -266,6 +266,24 @@ class TestInsightsEndpoint:
         data = response.json()
         assert "insights" in data
 
+    def test_list_insights_rejects_limit_above_store_bound(self, api_client):
+        response = api_client.get("/api/insights", params={"limit": 101})
+
+        assert response.status_code == 400
+        assert "limit" in response.json()["detail"]
+
+    def test_list_insights_rejects_whitespace_symbol(self, api_client):
+        response = api_client.get("/api/insights", params={"symbol": "   "})
+
+        assert response.status_code == 400
+        assert "symbol" in response.json()["detail"]
+
+    def test_list_insights_rejects_oversized_symbol(self, api_client):
+        response = api_client.get("/api/insights", params={"symbol": "B" * 65})
+
+        assert response.status_code == 400
+        assert "symbol" in response.json()["detail"]
+
 
 class TestTradeHistoryEndpoint:
     """Test trade history endpoint."""

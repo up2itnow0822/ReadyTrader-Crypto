@@ -94,8 +94,10 @@ export interface ApiFetchOptions extends Omit<RequestInit, "body"> {
  * - Aborts after 8s and reports that as a normal (non-throwing-uncaught) ApiError.
  * - Normalizes both the `{ok:false,error:{...}}` tool envelope and FastAPI's
  *   `{detail: ...}` shape into `{status, code, message, suggestion}`.
- * - On a 401, clears the stored token so `AuthProvider` flips the app to the login
- *   screen; the caller still receives the thrown ApiError so it can stop spinners.
+ * - On a 401, clears the stored token only when that request's Authorization
+ *   token is still the current session token. A late 401 from a previous
+ *   session must not log out a newer one. The caller still receives the thrown
+ *   ApiError so it can stop spinners.
  */
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   const { apiUrl } = getRuntimeConfig();
@@ -105,9 +107,10 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   if (options.body !== undefined && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
+  let requestToken: string | null = null;
   if (!options.skipAuth) {
-    const token = getToken();
-    if (token) headers.set("Authorization", `Bearer ${token}`);
+    requestToken = getToken();
+    if (requestToken) headers.set("Authorization", `Bearer ${requestToken}`);
   }
 
   const controller = new AbortController();
@@ -138,7 +141,7 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
 
   if (!response.ok) {
     const normalized = await parseErrorBody(response);
-    if (response.status === 401) {
+    if (response.status === 401 && requestToken !== null && getToken() === requestToken) {
       clearToken("expired");
     }
     throw new ApiError(normalized);
