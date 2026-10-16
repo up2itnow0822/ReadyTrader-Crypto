@@ -94,17 +94,19 @@ def _feed(monkeypatch, tweets, reddit_titles):
     monkeypatch.setenv("REDDIT_CLIENT_ID", "test-id")
     monkeypatch.setenv("REDDIT_CLIENT_SECRET", "test-secret")
 
-    tweepy = MagicMock()
-    tweepy.Client.return_value.search_recent_tweets.return_value = types.SimpleNamespace(data=[types.SimpleNamespace(text=t) for t in tweets] or None)
+    bounded_session = MagicMock()
+    x_session = bounded_session.return_value
+    x_session.__enter__.return_value = x_session
+    x_session.get.return_value.json.return_value = {"data": [{"text": text} for text in tweets], "meta": {"result_count": len(tweets)}}
     praw = MagicMock()
     praw.Reddit.return_value.subreddit.return_value.search.return_value = [types.SimpleNamespace(title=t) for t in reddit_titles]
-    monkeypatch.setattr(core, "tweepy", tweepy)
+    monkeypatch.setattr(core, "_BoundedSession", bounded_session)
     monkeypatch.setattr(core, "praw", praw)
-    return tweepy, praw
+    return x_session, praw
 
 
-def _fail_both_sources(tweepy, praw):
-    tweepy.Client.return_value.search_recent_tweets.side_effect = RuntimeError("rate limited")
+def _fail_both_sources(x_session, praw):
+    x_session.get.side_effect = RuntimeError("rate limited")
     praw.Reddit.return_value.subreddit.return_value.search.side_effect = RuntimeError("503")
 
 
@@ -291,9 +293,9 @@ def test_blank_symbol_is_rejected_without_caching():
 
 
 def test_social_search_uses_base_asset(monkeypatch):
-    tweepy, praw = _feed(monkeypatch, PANIC[:10], PANIC[10:])
+    x_session, praw = _feed(monkeypatch, PANIC[:10], PANIC[10:])
     core.analyze_social_sentiment("BTC/USDT")
-    query = tweepy.Client.return_value.search_recent_tweets.call_args.kwargs["query"]
+    query = x_session.get.call_args.kwargs["params"]["query"]
     assert query.startswith("BTC ")
     assert praw.Reddit.return_value.subreddit.return_value.search.call_args.args[0] == "BTC"
 
@@ -348,9 +350,9 @@ def test_missing_data_is_neutral_and_says_so():
 
 def test_risk_check_never_fetches(monkeypatch):
     """validate_trade_risk is documented as pure validation: it reads the cache and nothing else."""
-    tweepy, praw = _feed(monkeypatch, PANIC[:10], PANIC[10:])
+    x_session, praw = _feed(monkeypatch, PANIC[:10], PANIC[10:])
     _risk_check("buy", "BTC/USDT")
-    tweepy.Client.assert_not_called()
+    x_session.get.assert_not_called()
     praw.Reddit.assert_not_called()
 
 
@@ -388,8 +390,8 @@ def test_expired_readings_are_swept_on_write():
 
 
 def test_source_error_degrades_to_the_other_source(monkeypatch):
-    tweepy, _ = _feed(monkeypatch, [], PANIC[:10])
-    tweepy.Client.return_value.search_recent_tweets.side_effect = RuntimeError("rate limited")
+    x_session, _ = _feed(monkeypatch, [], PANIC[:10])
+    x_session.get.side_effect = RuntimeError("rate limited")
     out = core.analyze_social_sentiment("BTC")
     assert "Twitter Error" in out
     assert core.get_cached_sentiment_score("BTC") < GATE
@@ -399,9 +401,9 @@ def test_source_error_degrades_to_the_other_source(monkeypatch):
 
 
 def test_failed_refresh_cannot_reopen_the_gate(monkeypatch):
-    tweepy, praw = _feed(monkeypatch, PANIC[:10], PANIC[10:])
+    x_session, praw = _feed(monkeypatch, PANIC[:10], PANIC[10:])
     core.analyze_social_sentiment("BTC")
-    _fail_both_sources(tweepy, praw)
+    _fail_both_sources(x_session, praw)
 
     out = core.analyze_social_sentiment("BTC")
 
@@ -412,9 +414,9 @@ def test_failed_refresh_cannot_reopen_the_gate(monkeypatch):
 
 def test_one_source_erroring_cannot_reopen_the_gate_even_with_a_full_neutral_sample(monkeypatch):
     """Reddit 503s while Twitter returns ten price-bot posts: sample size alone would pass, the error must not."""
-    tweepy, praw = _feed(monkeypatch, PANIC[:10], PANIC[10:])
+    x_session, praw = _feed(monkeypatch, PANIC[:10], PANIC[10:])
     core.analyze_social_sentiment("BTC")
-    tweepy.Client.return_value.search_recent_tweets.return_value = types.SimpleNamespace(data=[types.SimpleNamespace(text=t) for t in JARGON[:10]])
+    x_session.get.return_value.json.return_value = {"data": [{"text": text} for text in JARGON[:10]], "meta": {"result_count": 10}}
     praw.Reddit.return_value.subreddit.return_value.search.side_effect = RuntimeError("503")
 
     core.analyze_social_sentiment("BTC")
@@ -424,9 +426,9 @@ def test_one_source_erroring_cannot_reopen_the_gate_even_with_a_full_neutral_sam
 
 def test_one_source_down_cannot_reopen_the_gate(monkeypatch):
     """Twitter rate-limited, Reddit returns five routine titles: a 5-text sample must not replace a 12-text panic."""
-    tweepy, praw = _feed(monkeypatch, PANIC[:10], PANIC[10:])
+    x_session, praw = _feed(monkeypatch, PANIC[:10], PANIC[10:])
     core.analyze_social_sentiment("BTC")
-    tweepy.Client.return_value.search_recent_tweets.side_effect = RuntimeError("429")
+    x_session.get.side_effect = RuntimeError("429")
     praw.Reddit.return_value.subreddit.return_value.search.return_value = [types.SimpleNamespace(title=t) for t in JARGON[:5]]
 
     core.analyze_social_sentiment("BTC")
@@ -441,9 +443,9 @@ def test_one_source_down_cannot_reopen_the_gate(monkeypatch):
 )
 def test_source_returning_no_usable_text_cannot_reopen_the_gate(monkeypatch, reddit_posts):
     """A successful response without scored text still loses a previously contributing feed."""
-    tweepy, praw = _feed(monkeypatch, PANIC[:10], PANIC[10:])
+    x_session, praw = _feed(monkeypatch, PANIC[:10], PANIC[10:])
     core.analyze_social_sentiment("BTC")
-    tweepy.Client.return_value.search_recent_tweets.return_value = types.SimpleNamespace(data=[types.SimpleNamespace(text=t) for t in JARGON[:10]])
+    x_session.get.return_value.json.return_value = {"data": [{"text": text} for text in JARGON[:10]], "meta": {"result_count": 10}}
     praw.Reddit.return_value.subreddit.return_value.search.return_value = reddit_posts
 
     out = core.analyze_social_sentiment("BTC")
@@ -454,9 +456,9 @@ def test_source_returning_no_usable_text_cannot_reopen_the_gate(monkeypatch, red
 
 def test_configured_source_that_never_contributed_does_not_look_lost(monkeypatch):
     """A configured provider with no text in either refresh must not degrade the usable feed."""
-    tweepy, praw = _feed(monkeypatch, PANIC[:10], [])
+    x_session, praw = _feed(monkeypatch, PANIC[:10], [])
     core.analyze_social_sentiment("BTC")
-    tweepy.Client.return_value.search_recent_tweets.return_value = types.SimpleNamespace(data=[types.SimpleNamespace(text=t) for t in JARGON[:10]])
+    x_session.get.return_value.json.return_value = {"data": [{"text": text} for text in JARGON[:10]], "meta": {"result_count": 10}}
     praw.Reddit.return_value.subreddit.return_value.search.return_value = []
 
     out = core.analyze_social_sentiment("BTC")
@@ -467,9 +469,9 @@ def test_configured_source_that_never_contributed_does_not_look_lost(monkeypatch
 
 def test_error_from_source_that_never_contributed_does_not_hold_bearish(monkeypatch):
     """A noncontributing Reddit feed may fail while the sole contributor cleanly refreshes."""
-    tweepy, praw = _feed(monkeypatch, PANIC[:10], [])
+    x_session, praw = _feed(monkeypatch, PANIC[:10], [])
     core.analyze_social_sentiment("BTC")
-    tweepy.Client.return_value.search_recent_tweets.return_value = types.SimpleNamespace(data=[types.SimpleNamespace(text=t) for t in JARGON[:10]])
+    x_session.get.return_value.json.return_value = {"data": [{"text": text} for text in JARGON[:10]], "meta": {"result_count": 10}}
     praw.Reddit.return_value.subreddit.return_value.search.side_effect = RuntimeError("503")
 
     out = core.analyze_social_sentiment("BTC")
@@ -485,7 +487,7 @@ def test_more_bearish_degraded_refresh_tightens_the_gate(monkeypatch):
         SentimentReading(score=-0.5, texts=10, bullish=2, bearish=6),
         sources={"twitter", "reddit"},
     )
-    tweepy, praw = _feed(monkeypatch, PANIC[:10], [])
+    x_session, praw = _feed(monkeypatch, PANIC[:10], [])
     praw.Reddit.return_value.subreddit.return_value.search.side_effect = RuntimeError("503")
 
     out = core.analyze_social_sentiment("BTC")
@@ -497,7 +499,7 @@ def test_more_bearish_degraded_refresh_tightens_the_gate(monkeypatch):
     assert entry["sources"] == {"twitter"}
     assert entry["guard_sources"] == {"twitter", "reddit"}
 
-    tweepy.Client.return_value.search_recent_tweets.return_value = types.SimpleNamespace(data=[types.SimpleNamespace(text=t) for t in JARGON[:10]])
+    x_session.get.return_value.json.return_value = {"data": [{"text": text} for text in JARGON[:10]], "meta": {"result_count": 10}}
     out = core.analyze_social_sentiment("BTC")
 
     assert "does not replace" in out
@@ -585,10 +587,10 @@ def test_full_refresh_replaces_a_bearish_reading(monkeypatch):
 
 
 def test_held_reading_still_expires(monkeypatch):
-    tweepy, praw = _feed(monkeypatch, PANIC[:10], PANIC[10:])
+    x_session, praw = _feed(monkeypatch, PANIC[:10], PANIC[10:])
     core.analyze_social_sentiment("BTC")
     first_seen = core._sentiment_cache.cache["BTC"]["time"]
-    _fail_both_sources(tweepy, praw)
+    _fail_both_sources(x_session, praw)
     core.analyze_social_sentiment("BTC")
 
     assert core._sentiment_cache.cache["BTC"]["time"] == first_seen  # holding does not extend the TTL
@@ -598,9 +600,9 @@ def test_held_reading_still_expires(monkeypatch):
 
 def test_failed_refresh_does_not_hold_a_bullish_reading(monkeypatch):
     """Holding is one-directional: a stale upbeat reading must not pass as a live measurement."""
-    tweepy, praw = _feed(monkeypatch, [], [])
+    x_session, praw = _feed(monkeypatch, [], [])
     core._sentiment_cache.set("BTC", SentimentReading(score=0.9, texts=15, bullish=14, bearish=1))
-    _fail_both_sources(tweepy, praw)
+    _fail_both_sources(x_session, praw)
 
     out = core.analyze_social_sentiment("BTC")
 

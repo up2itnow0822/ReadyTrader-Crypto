@@ -59,7 +59,7 @@ README for migrations and unsupported paths. In particular:
   Native MPC compilation and browser end-to-end results are reported separately
   from the passing unit and control-package tests.
 
-## Local verification results
+## Initial code-repair verification results
 
 - Final offline Python suite (excluding only `tests/integration/test_exchange_sandbox.py`): **977 passed**, 123 warnings, 126.15 seconds.
 
@@ -88,3 +88,38 @@ README for migrations and unsupported paths. In particular:
   Python audit printed four rows across two packages (one duplicate advisory row);
   frontend audit reported one critical and seven high findings in unchanged
   dependencies. Separate dependency review is required.
+
+## Dependency follow-up verification (2026-10-16)
+
+This follow-up supersedes the dependency and browser limitations of the initial
+local run above, but not the native MPC/link, deployment or live-ceremony limits.
+
+- Final offline Python suite, excluding only `tests/integration/test_exchange_sandbox.py`: **1024 passed**, 123 warnings, 114.08 seconds. The first follow-up run exposed an outdated `twitter.com` route in the local source-test server; correcting it to the official X hostname restored the real-transport regression without weakening assertions.
+- Clean Python 3.12 runtime/development resolution and `pip check` pass. The
+  regenerated lock preserves unrelated versions and platform markers. PyJWT is
+  2.15.1 and multidict is 6.9.1; Tweepy, requests-oauthlib and OAuthlib are absent.
+  Both `pip-audit -r requirements.txt` and `pip-audit -r requirements.lock.txt`
+  report no known vulnerabilities.
+- Next.js and its ESLint configuration are 16.3.8; sharp is 0.35.5 and
+  source-map-js is 1.2.2. ESLint, TypeScript, all 67 frontend unit tests and the
+  production build pass. All **18 Playwright browser journeys pass** against the
+  local paper API after installing the official Chromium binary, without bypassing
+  the browser or execution sandbox.
+- Full `npm audit` still fails with five high affected-package entries in the
+  single unpatched braces dependency chain. Production-only audit reports zero,
+  but is diagnostic evidence, not a substitute for the full gate. No exclusions,
+  severity downgrades or lint suppressions were added. See
+  [dependency security gate](SECURITY_REPAIR_OPERATIONS.md#dependency-security-gate).
+- The direct X source has 47 transport/parsing/error regression cases. Test-first
+  execution observed 45 failures and two passes before the implementation; the
+  combined X, sentiment and UAT regression set then passed all 198 cases.
+  Real bounded-transport coverage now matches the exact official `api.x.com`
+  hostname; deadline and redirect safeguards remain enabled.
+- The CEX ingestion test used a stale 2024 timestamp, causing an unintended public
+  exchange fallback. It now uses a fresh timestamp and explicitly asserts that
+  the CCXT fallback was not called; all nine CEX integration cases pass. Product
+  freshness and network behavior were not relaxed.
+- Ruff lint/format, Bandit, documentation verification and Markdown checks pass.
+  No live credentials, trades, new service subscriptions or provider accounts were
+  used for these tests. Direct X preserves the existing bearer-token configuration;
+  TwitterAPI.io would require a separate provider key and was not configured.

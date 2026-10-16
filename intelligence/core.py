@@ -15,11 +15,6 @@ from .sentiment import MIN_DIRECTIONAL, MIN_TEXTS, SentimentReading, score_texts
 
 # Optional imports for Real APIs
 try:
-    import tweepy
-except ImportError:
-    tweepy = None
-
-try:
     import praw
 except ImportError:
     praw = None
@@ -386,15 +381,33 @@ SourceResult = Tuple[List[str], str, str]
 
 
 def _recent_tweets(asset: str) -> SourceResult:
-    bearer = os.getenv("TWITTER_BEARER_TOKEN")
-    if not (bearer and tweepy):
+    bearer = (os.getenv("TWITTER_BEARER_TOKEN") or "").strip()
+    if not bearer:
         return [], "Twitter: API Key missing.", "not_configured"
     try:
-        client = tweepy.Client(bearer_token=bearer)
-        client.session.close()
-        client.session = _BoundedSession()
-        tweets = client.search_recent_tweets(query=f"{asset} -is:retweet lang:en", max_results=10)
-        texts = [t.text for t in tweets.data or []]
+        # Keep the existing app-only token and query semantics without an OAuth SDK.
+        # The transport enforces the same deadline, byte limits and no-redirect policy.
+        with _BoundedSession() as session:
+            response = session.get(
+                "https://api.x.com/2/tweets/search/recent",
+                headers={"Authorization": f"Bearer {bearer}"},
+                params={"query": f"{asset} -is:retweet lang:en", "max_results": 10},
+            )
+            response.raise_for_status()
+            payload = response.json()
+        if not isinstance(payload, dict) or payload.get("errors"):
+            raise ValueError("invalid search response")
+        rows = payload.get("data")
+        if (rows is None and "data" not in payload) or rows == []:
+            meta = payload.get("meta")
+            if not isinstance(meta, dict) or type(meta.get("result_count")) is not int or meta["result_count"] != 0:
+                raise ValueError("invalid empty search response")
+            rows = []
+        if not isinstance(rows, list) or len(rows) > 10:
+            raise ValueError("invalid search result list")
+        if any(not isinstance(row, dict) or not isinstance(row.get("text"), str) for row in rows):
+            raise ValueError("invalid search result text")
+        texts = [row["text"] for row in rows if row["text"].strip()]
         if not texts:
             return [], "Twitter (Real): No recent tweets found.", "ok"
         preview = " | ".join(t[:50] + "..." for t in texts[:2])

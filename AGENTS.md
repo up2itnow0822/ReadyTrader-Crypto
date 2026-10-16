@@ -123,6 +123,8 @@ Default section order:
 
 - Default data files come from `storage_paths.data_path` (`<repo>/data/` or `READYTRADER_DATA_DIR`), never the working directory; each `*_PATH` variable still wins
 
+- The X recent-search source calls the official API through `_BoundedSession` with `TWITTER_BEARER_TOKEN`; it does not use Tweepy/OAuthlib. Keep the ten-result English/non-retweet query, strict response validation, source-status semantics and bounded transport. Never send the X bearer token to a third-party provider.
+
 - A news or sentiment source that cannot answer raises `intelligence.SourceError`; tools return it as `not_configured` / `source_unavailable`, never as an `ok: true` payload
 
 - Unit tests never reach an exchange for a price: `tests/conftest.py` (`offline_market_prices`) serves fixed prices through the market-data bus

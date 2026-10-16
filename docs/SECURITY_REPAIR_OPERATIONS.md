@@ -146,3 +146,32 @@ The complete native signer build and real two-party ceremony require independent
 validation before live use. Passing standalone control-package tests does not
 prove native-library compatibility or transport correctness. See the signer README
 for exact policy and approval formats and recovery requirements.
+
+## Dependency security gate
+
+The 2026-10-16 dependency repair upgrades Next.js and its ESLint configuration to
+16.3.8, sharp to 0.35.5, source-map-js to 1.2.2, PyJWT to 2.15.1 and multidict to
+6.9.1. Runtime pins and the development lock must remain compatible; never force
+an incompatible dependency with `--no-deps` to bypass resolution.
+
+The full npm audit still fails on
+[GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm): braces
+3.0.3 has no published patched release. It arrives through the Next.js ESLint
+plugin's fast-glob/micromatch chain and is development tooling, not a dashboard
+runtime dependency. The app does not configure the optional Next root-directory
+glob that reaches this helper. This limits the current exposure but does not
+remove the vulnerable dependency or satisfy the zero-finding gate. Keep the Next
+lint rules and full development-dependency audit enabled; do not waive or hide the
+finding. Recheck the upstream advisory and supported plugin releases before release.
+
+The Twitter source now uses the [official X recent-search API](https://docs.x.com/x-api/posts/search-recent-posts)
+directly through the existing bounded transport. It preserves `TWITTER_BEARER_TOKEN`,
+the ten-result English/non-retweet query and the sentiment source status contract.
+Malformed or partial/error responses fail closed; only explicit zero-result
+responses count as a successful empty source. No live credential was used for
+verification. Removing Tweepy also removes requests-oauthlib and OAuthlib from the
+runtime/development dependency graph, resolving
+[GHSA-xpv3-w29h-x7cv](https://github.com/advisories/GHSA-xpv3-w29h-x7cv) without an
+unsupported version override. TwitterAPI.io is a different provider requiring its
+own account/key; existing X credentials are not sent there. The braces residual
+means this change is still not a clean overall security certification.

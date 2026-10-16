@@ -7,6 +7,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlsplit
 
 import pytest
 from fastmcp import FastMCP
@@ -373,13 +374,13 @@ def test_insight_file_growth_is_capped_and_failed_insert_is_atomic(tmp_path, mon
     assert len(store.get_latest_insights()) == written
 
 
-def test_real_news_and_social_sdks_use_bounded_transport(monkeypatch, source_server):
+def test_real_news_and_social_sources_use_bounded_transport(monkeypatch, source_server):
     real_send = core._BoundedSession.send
 
     def local_send(self, request, **kwargs):
         if "newsapi.org" in request.url:
             endpoint = "/news"
-        elif "twitter.com" in request.url:
+        elif urlsplit(request.url).hostname == "api.x.com":
             endpoint = "/twitter"
         elif "access_token" in request.url:
             endpoint = "/token"
@@ -399,7 +400,7 @@ def test_real_news_and_social_sdks_use_bounded_transport(monkeypatch, source_ser
 
 
 @pytest.mark.parametrize("name", ["financial_news", "_recent_tweets", "_recent_reddit_titles"])
-def test_real_sdks_do_not_retry_past_source_deadline(name, monkeypatch, source_server):
+def test_real_sources_do_not_retry_past_source_deadline(name, monkeypatch, source_server):
     real_send = core._BoundedSession.send
 
     def local_send(self, request, **kwargs):

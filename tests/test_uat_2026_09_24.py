@@ -636,9 +636,9 @@ def test_social_sentiment_says_when_every_configured_source_failed(monkeypatch):
     monkeypatch.setenv("TWITTER_BEARER_TOKEN", "test-token")
     for var in ("REDDIT_CLIENT_ID", "REDDIT_CLIENT_SECRET"):
         monkeypatch.delenv(var, raising=False)
-    tweepy = MagicMock()
-    tweepy.Client.return_value.search_recent_tweets.side_effect = RuntimeError("401 Unauthorized")
-    monkeypatch.setattr(core, "tweepy", tweepy)
+    bounded_session = MagicMock()
+    bounded_session.return_value.__enter__.return_value.get.side_effect = RuntimeError("401 Unauthorized")
+    monkeypatch.setattr(core, "_BoundedSession", bounded_session)
     try:
         out = _call_tool(register_research_tools, "get_social_sentiment", {"symbol": "BTC"})
     finally:
