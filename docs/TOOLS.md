@@ -1084,8 +1084,8 @@ Returns:
 - JSON with `insights`: an array of unexpired insights (newest first, limited to the 5 most
   recent), each {insight_id, symbol, agent_id, signal, confidence, reasoning, timestamp_ms,
   expires_at_ms, meta}. `timestamp_ms`/`expires_at_ms` are Unix milliseconds (not
-  `created_at`/`expires_at` timestamps), and `signal`/`confidence` are whatever
-  `post_market_insight` was given — not validated or restricted to BULLISH/BEARISH/NEUTRAL.
+  `created_at`/`expires_at` timestamps). A non-empty whitespace-only or >64-byte `symbol`
+  returns `invalid_insight` in the JSON error envelope (matching `post_market_insight`).
 ```
 
 ______________________________________________________________________

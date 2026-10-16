@@ -95,7 +95,8 @@ Browser clients first authenticate POST /api/auth/ws-ticket and then offer
 `readytrader,ticket.<opaque>` as WebSocket subprotocols. Tickets are Origin-bound,
 single-use, expire in thirty seconds and have a 1024-entry capacity. The server
 negotiates only `readytrader`. Query-string JWTs and tickets are refused; nonbrowser
-clients may use the authorization header. Tickets and budgets are process-local:
+clients may use the authorization header. A delayed 401 from a previous ticket
+request must not clear a newer session's token. Tickets and budgets are process-local:
 multiple workers need sticky routing and an independently reviewed shared budget
 store; aggregate limits otherwise multiply by worker count.
 

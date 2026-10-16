@@ -74,6 +74,24 @@ describe("apiFetch", () => {
     expect(getToken()).toBeNull();
   });
 
+  it("does not clear a newer token when a stale request returns 401", async () => {
+    setToken("old-token");
+    let finish: ((response: Response) => void) | undefined;
+    vi.mocked(fetch).mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          finish = resolve;
+        })
+    );
+
+    const pending = apiFetch("/api/auth/ws-ticket", { method: "POST" });
+    setToken("new-token");
+    finish?.(jsonResponse({ detail: "Token has expired" }, 401));
+
+    await expect(pending).rejects.toMatchObject({ status: 401 });
+    expect(getToken()).toBe("new-token");
+  });
+
   it("does not clear the token on a non-401 error", async () => {
     setToken("secret-token");
     vi.mocked(fetch).mockResolvedValue(jsonResponse({ detail: "Admin access required" }, 403));

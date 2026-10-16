@@ -93,6 +93,23 @@ describe("useWebSocket", () => {
     expect(MockWebSocket.instances).toHaveLength(0);
   });
 
+  it("does not log out a new session when an old ticket request returns 401", async () => {
+    setToken("old-jwt");
+    let finishOld: ((response: Response) => void) | undefined;
+    vi.stubGlobal("fetch", vi.fn()
+      .mockImplementationOnce(() => new Promise<Response>((done) => { finishOld = done; }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ticket: "new-ticket", expires_in: 30 }))));
+    const { rerender, result } = renderHook(({ token }) => useWebSocket(token, true), { initialProps: { token: "old-jwt" } });
+    expect(finishOld).toBeDefined();
+    setToken("new-jwt");
+    await act(async () => { rerender({ token: "new-jwt" }); });
+    await act(async () => { finishOld?.(new Response(JSON.stringify({ detail: "Token has expired" }), { status: 401 })); });
+    expect(getToken()).toBe("new-jwt");
+    expect(result.current.status).not.toBe("unauthorized");
+    expect(MockWebSocket.instances).toHaveLength(1);
+    expect(MockWebSocket.latest().protocols).toEqual(["readytrader", "ticket.new-ticket"]);
+  });
+
   it("ignores the previous session's ticket after the token changes", async () => {
     setToken("old-jwt");
     let finishOld: ((response: Response) => void) | undefined;

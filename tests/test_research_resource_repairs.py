@@ -158,6 +158,20 @@ def test_insight_validation_returns_error_envelope(tool_functions):
     assert out["error"]["code"] == "invalid_insight"
 
 
+def test_get_latest_insights_returns_invalid_insight_for_whitespace_symbol(tool_functions):
+    out = json.loads(tool_functions("get_latest_insights")("   "))
+    assert out["ok"] is False
+    assert out["error"]["code"] == "invalid_insight"
+    assert "symbol" in out["error"]["message"]
+
+
+def test_get_latest_insights_returns_invalid_insight_for_oversized_symbol(tool_functions):
+    out = json.loads(tool_functions("get_latest_insights")("B" * 65))
+    assert out["ok"] is False
+    assert out["error"]["code"] == "invalid_insight"
+    assert "symbol" in out["error"]["message"]
+
+
 @pytest.fixture
 def source_server():
     class Handler(BaseHTTPRequestHandler):

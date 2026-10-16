@@ -210,4 +210,8 @@ No MCP tool raises these; they only appear in HTTP responses. See
 
 - **`idempotency_persistence_required`**: live effects require a persistent SQLite claim store; in-memory databases are refused.
 - **`resource_busy`**: research concurrency capacity is full; wait before another request.
-- **`invalid_insight`**: an insight violates bounded fields, confidence or TTL requirements.
+- **`invalid_insight`**: an insight violates bounded fields, confidence or TTL
+  requirements. `get_latest_insights` also returns this when a supplied `symbol`
+  is whitespace-only or exceeds 64 UTF-8 bytes. HTTP `GET /api/insights`
+  translates the same store validation (including `limit` outside `[1, 100]`) to
+  HTTP 400 rather than 500.

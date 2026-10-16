@@ -35,7 +35,9 @@ file and the tests that enforce them.
 - **One fetch wrapper.** `src/lib/api.ts`'s `apiFetch<T>()` is the only place that
   calls `fetch()` against the API. It applies an 8s timeout and normalizes every
   failure (HTTP error body, non-JSON body, network error, timeout) into
-  `{status, code, message, suggestion}`. It clears the auth token on any 401. Do not
+  `{status, code, message, suggestion}`. It clears the auth token on a 401 only
+  when the Authorization token that request sent is still the current session
+  token — a late 401 from a previous session must not log out a newer one. Do not
   add a second fetch helper or call `fetch()` directly from a component/hook.
 - **`HealthProvider` is the sole source of mode/reachability.** Nothing else polls
   `/api/health` or independently decides "paper" vs "live" vs "unknown". A consumer
@@ -54,7 +56,8 @@ file and the tests that enforce them.
   `readytrader, ticket.<opaque>`; only `readytrader` is selected by the server.
   Never put the admin JWT or ticket in a URL. The server binds tickets to the
   issuing Origin and validates configured origins; expired sessions stop retrying.
-  Pending ticket responses from a previous session or unmounted hook are ignored.
+  Pending ticket responses from a previous session or unmounted hook are ignored,
+  including a delayed 401 that must not clear a newer session's token.
   Tickets are process-local: multi-worker APIs need sticky routing or a shared
   atomic ticket store; a ticket reaching another worker fails closed.
 - **No `dangerouslySetInnerHTML`, ever.** Proposal `rationale` and other
