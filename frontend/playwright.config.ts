@@ -38,7 +38,7 @@ export default defineConfig({
     {
       // The build must already exist (see package.json's "pree2e" script) -- this only
       // starts the already-built production server, matching how it runs in Docker.
-      command: `npm run start -- -p ${NEXT_PORT}`,
+      command: `npm run start -- -H 127.0.0.1 -p ${NEXT_PORT}`,
       url: BASE_URL,
       reuseExistingServer: false,
       timeout: 60_000,

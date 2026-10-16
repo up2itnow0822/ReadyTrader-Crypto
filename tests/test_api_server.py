@@ -281,7 +281,7 @@ class TestTradeHistoryEndpoint:
 
 
 class TestWebSocketAuth:
-    """WebSocket /ws must require JWT when API_AUTH_REQUIRED=true (SEC-001)."""
+    """WebSocket /ws requires a header JWT or single-use ticket when auth is on."""
 
     def test_ws_rejects_without_token_when_auth_required(self):
         from fastapi.testclient import TestClient
@@ -313,7 +313,7 @@ class TestWebSocketAuth:
                 with client.websocket_connect("/ws"):
                     pass
 
-    def test_ws_accepts_with_query_token_when_auth_required(self):
+    def test_ws_accepts_with_single_use_ticket_when_auth_required(self):
         from datetime import datetime, timedelta, timezone
 
         from fastapi.testclient import TestClient
@@ -354,5 +354,9 @@ class TestWebSocketAuth:
                 algorithm="HS256",
             )
             client = TestClient(api_server.app)
-            with client.websocket_connect(f"/ws?token={token}") as ws:
+            origin = "http://localhost:3000"
+            response = client.post("/api/auth/ws-ticket", headers={"Authorization": f"Bearer {token}", "Origin": origin})
+            assert response.status_code == 200
+            ticket = response.json()["ticket"]
+            with client.websocket_connect("/ws", headers={"Origin": origin}, subprotocols=["readytrader", f"ticket.{ticket}"]) as ws:
                 ws.send_text("ping")

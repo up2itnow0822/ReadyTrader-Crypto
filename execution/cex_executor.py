@@ -7,8 +7,10 @@ from typing import Any, Dict, Optional
 
 import ccxt
 
+from errors import AppError
+
 from .models import normalize_ccxt_order, normalize_market_type
-from .retry import with_retry
+from .retry import should_retry, with_retry
 
 
 @dataclass
@@ -234,17 +236,45 @@ class CexExecutor:
         except Exception:
             _ = False
 
-        # ccxt: create_order(symbol, type, side, amount, price=None, params={})
-        p = params or {}
-        if t == "market":
-            return with_retry(
-                f"{self.exchange_id}.create_order",
-                lambda: self._ex.create_order(s, t, sd, amount, None, p),
-            )
-        return with_retry(
-            f"{self.exchange_id}.create_order",
-            lambda: self._ex.create_order(s, t, sd, amount, price, p),
+        # Never retry a mutating create after a lost response. Even exchanges with
+        # client IDs may permit reuse after an order fills. Reconcile read-only.
+        p = dict(params or {})
+        try:
+            return self._ex.create_order(s, t, sd, amount, None if t == "market" else price, p)
+        except Exception as exc:
+            if not should_retry(exc):
+                raise
+            client_id = str(p.get("clientOrderId") or "")
+            if client_id:
+                try:
+                    existing = self.reconcile_order(client_order_id=client_id, symbol=s)
+                    if existing is not None:
+                        return existing
+                except Exception:
+                    # A failed lookup (including not-found) never proves no fill.
+                    pass
+            raise AppError(
+                "execution_outcome_uncertain",
+                "Order submission outcome is uncertain. Reconcile before any new order; no retry was sent.",
+                {"client_order_id": client_id, "exchange": self.exchange_id},
+            ) from exc
+
+    def reconcile_order(self, *, client_order_id: str, symbol: str) -> Dict[str, Any] | None:
+        """Read-only reconciliation for explicitly supported exchange semantics.
+
+        Unsupported exchanges do not get a guessed query or a second submission.
+        """
+        if self.exchange_id not in {"binance", "binanceus", "binanceusdm", "binancecoinm"}:
+            return None
+        if not self.supports("fetchOrder"):
+            return None
+        result = with_retry(
+            f"{self.exchange_id}.fetch_order_by_client_id",
+            lambda: self._ex.fetch_order(None, symbol, {"origClientOrderId": client_order_id}),
         )
+        if isinstance(result, dict) and result.get("id") and result.get("clientOrderId") == client_order_id and result.get("symbol") == symbol:
+            return result
+        return None
 
     def cancel_order(self, *, order_id: str, symbol: Optional[str] = None) -> Dict[str, Any]:
         self._require_auth("cancel_order")
@@ -349,4 +379,5 @@ class CexExecutor:
         return with_retry(
             f"{self.exchange_id}.edit_order",
             lambda: self._ex.edit_order(order_id, s, t, sd, amount, price, p),
+            safe_to_retry=False,
         )

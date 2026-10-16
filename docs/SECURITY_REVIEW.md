@@ -19,6 +19,8 @@ applicable items are verified.**
     regardless (see `docs/CUSTODY.md`)
   - [ ] Keystore file encrypted with strong passphrase (if applicable)
   - [ ] Remote signer URL uses HTTPS with valid certificate (if applicable)
+  - [ ] MPC native supply chain and linked binary independently validated; both parties verify canonical policy and independent exact-digest approvals
+  - [ ] MPC mTLS identities pinned, bootstrap disabled after approved ceremony, and partial-commit/manual-recovery procedures verified (see `mpc_signer/README.md`)
 
 - [ ] **Signer Address Pinning**
 

@@ -11,11 +11,10 @@ mode, seeds a handful of proposals directly into that process's own ExecutionSto
 serves it with uvicorn -- giving the frontend's Vitest/Playwright suites something real
 to talk to.
 
-It also adds ONE extra route, `POST /__test/seed`, so a spec can seed more proposals
-mid-run (e.g. a proposal that expires in a few seconds, seeded right before the
-assertion that watches it expire). That route is added here, on the already-constructed
-`api_server.app`, and only exists when THIS script runs the app -- it is never present
-when api_server.py is imported by the real application.
+It also adds test-only routes to seed proposals, reset the paper wallet, and reset
+login budgets between independent browser journeys. These routes are added here, on
+the already-constructed `api_server.app`, and only exist when THIS script runs the
+app -- they are never present when api_server.py is imported by the real application.
 
 Usage:
     python frontend/e2e/api_harness.py --port 8171            # API_AUTH_REQUIRED=false
@@ -127,9 +126,10 @@ def _serve_fixed_prices(container) -> None:
 def create_app(auth: bool, db_dir: Path):
     _configure_environment(auth, db_dir)
 
+    from fastapi import Body  # noqa: E402
+
     import api_server  # noqa: E402 -- must import only after env vars are set
     from execution_store import ExecutionStore  # noqa: E402
-    from fastapi import Body  # noqa: E402
 
     # A fresh store: nothing this process might otherwise load from an on-disk
     # proposal row belonging to a different session id leaks into the seeded set.
@@ -144,15 +144,21 @@ def create_app(auth: bool, db_dir: Path):
         kind = str(payload.get("kind") or "place_cex_order")
         proposal_payload = {"paper_mode": True, **(payload.get("payload") or dict(BTC_ORDER_PAYLOAD))}
         ttl_seconds = int(payload.get("ttl_seconds") or 120)
-        prop = api_server.global_container.execution_store.create(
-            kind=kind, payload=proposal_payload, ttl_seconds=ttl_seconds
-        )
+        prop = api_server.global_container.execution_store.create(kind=kind, payload=proposal_payload, ttl_seconds=ttl_seconds)
         return {"request_id": prop.request_id}
 
     @api_server.app.post("/__test/reset-wallet")
     async def _reset_wallet():  # pragma: no cover -- test-only route
         """Top the paper wallet back up (used after the resilience test restarts the process)."""
         api_server.global_container.paper_engine.deposit(AGENT_USER_ID, "USDT", STARTING_USDT)
+        return {"ok": True}
+
+    @api_server.app.post("/__test/reset-login-budget")
+    async def _reset_login_budget():  # pragma: no cover -- test-only route
+        """Isolate journeys without weakening login limits within a test or in product."""
+        from rate_limiter import FixedWindowRateLimiter
+
+        api_server.login_rate_limiter = FixedWindowRateLimiter()
         return {"ok": True}
 
     return api_server.app

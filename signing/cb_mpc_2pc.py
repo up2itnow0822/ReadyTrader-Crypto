@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import json
+import math
 import os
-import secrets
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
+from urllib.parse import urlsplit
 
 import requests
 import rlp
@@ -12,6 +15,7 @@ from eth_keys import keys
 from eth_utils import keccak
 
 from .base import SignedTx, Signer
+from .policy import SignerPolicyViolation, transaction_uint, validate_transaction_fees
 
 SECP256K1_N = int(
     "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141",
@@ -28,22 +32,17 @@ def _env(name: str) -> str:
 
 
 def _http_timeout() -> float:
-    return float((os.getenv("HTTP_TIMEOUT_SEC") or "10").strip())
+    value = float((os.getenv("HTTP_TIMEOUT_SEC") or "65").strip())
+    if not math.isfinite(value) or not 0 < value <= 90:
+        raise ValueError("HTTP_TIMEOUT_SEC must be finite and between 0 and 90")
+    return value
 
 
 def _to_int(v: Any, *, name: str) -> int:
-    if v is None:
-        raise ValueError(f"Missing required tx field: {name}")
-    if isinstance(v, bool):
-        raise ValueError(f"Invalid int field {name}: {v}")
-    if isinstance(v, int):
-        return v
-    if isinstance(v, str):
-        s = v.strip().lower()
-        if s.startswith("0x"):
-            return int(s, 16)
-        return int(s, 10)
-    raise ValueError(f"Invalid int field {name}: {type(v).__name__}")
+    try:
+        return transaction_uint(v, name)
+    except SignerPolicyViolation as exc:
+        raise ValueError(exc.message) from exc
 
 
 def _to_bytes32(b: bytes) -> bytes:
@@ -116,26 +115,69 @@ class _SignedTx(SignedTx):
     rawTransaction: bytes
 
 
+class MPCApprovalRequired(ValueError):
+    """Unsigned transaction details for an independent operator to inspect."""
+
+    def __init__(self, transaction: dict, digest32: bytes) -> None:
+        self.transaction = transaction
+        self.digest_hex = "0x" + digest32.hex()
+        super().__init__("MPC approval required: " + json.dumps({"transaction": transaction, "digest_hex": self.digest_hex}, sort_keys=True))
+
+
 class CoinbaseMpc2pcSigner(Signer):
-    """
-    MPC-backed EVM transaction signer using Coinbase cb-mpc (2-party ECDSA).
+    """MPC EVM signer with mTLS and separately issued, exact-digest approvals.
 
-    This signer does NOT hold a private key. It delegates ECDSA signing of the EVM
-    transaction hash to a 2-party MPC service and then assembles the raw signed
-    transaction locally.
-
-    Env:
-    - MPC_SIGNER_URL: base URL of the MPC leader service (mpc_signer), e.g. http://mpc0:8787
-    - HTTP_TIMEOUT_SEC: request timeout (default 10)
+    MPC_APPROVAL_DIR contains <digest-without-0x>.json operator approvals. This
+    client never creates approval authority; both parties independently verify it.
     """
 
     def __init__(self, url_env: str = "MPC_SIGNER_URL") -> None:
         self._base_url = _env(url_env).rstrip("/")
+        parsed = urlsplit(self._base_url)
+        if (
+            parsed.scheme != "https"
+            or not parsed.hostname
+            or parsed.username
+            or parsed.password
+            or parsed.query
+            or parsed.fragment
+            or parsed.path not in ("", "/")
+        ):
+            raise ValueError("MPC_SIGNER_URL must be an https origin without credentials")
+        self._session = requests.Session()
+        self._session.trust_env = False
+        self._session.cert = (_env("MPC_CLIENT_CERT"), _env("MPC_CLIENT_KEY"))
+        self._session.verify = _env("MPC_CA_CERT")
         self._cached_address: Optional[str] = None
+
+    def _approval(self, tx: Dict[str, Any], digest32: bytes) -> dict:
+        proof = tx.get("mpc_approval")
+        if proof is None:
+            directory = os.getenv("MPC_APPROVAL_DIR")
+            if not directory:
+                raise ValueError("MPC approval required; configure MPC_APPROVAL_DIR")
+            try:
+                path = Path(directory) / (digest32.hex() + ".json")
+                with path.open("rb") as stream:
+                    raw = stream.read(65537)
+                if len(raw) > 65536:
+                    raise ValueError("MPC approval exceeds size limit")
+                proof = json.loads(raw)
+            except (OSError, ValueError) as exc:
+                raise ValueError("MPC approval unavailable or invalid") from exc
+        if (
+            not isinstance(proof, dict)
+            or set(proof) != {"id", "expires_at", "wallet", "digest_hex", "signature_hex"}
+            or proof.get("digest_hex") != "0x" + digest32.hex()
+        ):
+            raise ValueError("MPC approval does not match transaction digest")
+        return proof
 
     def _get_address(self) -> str:
         timeout = _http_timeout()
-        r = requests.get(f"{self._base_url}/address", timeout=timeout)
+        r = self._session.get(f"{self._base_url}/address", timeout=timeout, allow_redirects=False)
+        if r.is_redirect:
+            raise ValueError("MPC redirects are forbidden")
         r.raise_for_status()
         data = r.json()
         addr = str(data.get("address") or "").strip()
@@ -149,10 +191,12 @@ class CoinbaseMpc2pcSigner(Signer):
         self._cached_address = self._get_address()
         return self._cached_address
 
-    def _mpc_sign_digest(self, digest32: bytes, *, session_id: str) -> bytes:
+    def _mpc_sign_transaction(self, transaction: dict, approval: dict) -> bytes:
         timeout = _http_timeout()
-        payload = {"session_id": session_id, "digest_hex": "0x" + digest32.hex()}
-        r = requests.post(f"{self._base_url}/sign_digest", json=payload, timeout=timeout)
+        payload = {"transaction": transaction, "approval": approval}
+        r = self._session.post(f"{self._base_url}/sign_transaction", json=payload, timeout=timeout, allow_redirects=False)
+        if r.is_redirect:
+            raise ValueError("MPC redirects are forbidden")
         r.raise_for_status()
         data = r.json()
         if not data.get("ok"):
@@ -166,17 +210,43 @@ class CoinbaseMpc2pcSigner(Signer):
         return sig
 
     def sign_transaction(self, tx: Dict[str, Any], *, chain_id: int | None = None) -> SignedTx:
-        # Determine tx type (legacy vs EIP-1559). Defaults to legacy if gasPrice present.
-        tx_type = tx.get("type")
-        if isinstance(tx_type, str) and tx_type.startswith("0x"):
-            tx_type = int(tx_type, 16)
-        if tx_type is None:
-            if "maxFeePerGas" in tx or "maxPriorityFeePerGas" in tx:
-                tx_type = 2
-            else:
-                tx_type = 0
-
-        cid = chain_id if chain_id is not None else _to_int(tx.get("chainId"), name="chainId")
+        allowed = {
+            "type",
+            "chainId",
+            "nonce",
+            "gas",
+            "gasPrice",
+            "maxFeePerGas",
+            "maxPriorityFeePerGas",
+            "to",
+            "from",
+            "value",
+            "data",
+            "accessList",
+            "idempotency_key",
+            "idempotencyKey",
+            "mpc_approval",
+        }
+        if set(tx) - allowed:
+            raise ValueError("Unsupported transaction fields")
+        try:
+            tx = validate_transaction_fees(tx)
+        except SignerPolicyViolation as exc:
+            raise ValueError(exc.message) from exc
+        tx_type = tx.get("type", 2 if "maxFeePerGas" in tx else 0)
+        if tx_type not in (0, 2):
+            raise ValueError("MPC supports only legacy and type-2 transactions")
+        cid = _to_int(chain_id if chain_id is not None else tx.get("chainId"), name="chainId")
+        if "chainId" in tx and _to_int(tx["chainId"], name="chainId") != cid:
+            raise ValueError("Conflicting chainId")
+        if cid <= 0 or _to_int(tx.get("gas"), name="gas") <= 0:
+            raise ValueError("chainId and gas must be positive")
+        if tx.get("accessList", []) != []:
+            raise ValueError("MPC does not support nonempty accessList")
+        if len(_to_address_bytes(tx.get("to"))) != 20:
+            raise ValueError("MPC disallows contract creation")
+        if _to_int(tx.get("nonce"), name="nonce") >= 2**64 or _to_int(tx.get("gas"), name="gas") >= 2**64:
+            raise ValueError("nonce and gas must fit uint64")
 
         # Build signing payload + hash
         if int(tx_type) == 0:
@@ -228,16 +298,30 @@ class CoinbaseMpc2pcSigner(Signer):
         else:
             raise ValueError(f"Unsupported tx type: {tx_type} (supported: 0, 2)")
 
-        # MPC sign the digest
-        sid = str(tx.get("idempotency_key") or tx.get("idempotencyKey") or "").strip()
-        if not sid:
-            sid = secrets.token_hex(12)
-        sig_der = self._mpc_sign_digest(digest32, session_id=sid)
+        transaction = {
+            "type": tx_type,
+            "chain_id": str(cid),
+            "nonce": str(nonce),
+            "gas": str(gas),
+            "to": "0x" + to_b.hex(),
+            "value": str(value),
+            "data": "0x" + data_b.hex(),
+            "gas_price": str(tx.get("gasPrice", 0)),
+            "max_fee_per_gas": str(tx.get("maxFeePerGas", 0)),
+            "max_priority_fee_per_gas": str(tx.get("maxPriorityFeePerGas", 0)),
+        }
+        try:
+            approval = self._approval(tx, digest32)
+        except ValueError as exc:
+            raise MPCApprovalRequired(transaction, digest32) from exc
+        expected_addr = self.get_address()
+        if str(approval["wallet"]).lower() != expected_addr.lower() or (tx.get("from") and str(tx["from"]).lower() != expected_addr.lower()):
+            raise ValueError("MPC approval wallet or transaction sender mismatch")
+        sig_der = self._mpc_sign_transaction(transaction, approval)
         r, s = decode_dss_signature(sig_der)
         r, s = _normalize_sig(int(r), int(s))
 
         # Determine recovery id by checking recovered address
-        expected_addr = self.get_address()
         recid = _find_recovery_id(digest32, r, s, expected_addr)
 
         # Assemble raw tx

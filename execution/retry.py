@@ -42,7 +42,7 @@ def should_retry(e: Exception) -> bool:
     return False
 
 
-def with_retry(op: str, fn: Callable[[], T]) -> T:
+def with_retry(op: str, fn: Callable[[], T], *, safe_to_retry: bool = True) -> T:
     """
     Run `fn` with standardized retry/backoff on transient CCXT errors.
 
@@ -51,7 +51,7 @@ def with_retry(op: str, fn: Callable[[], T]) -> T:
     - CEX_RETRY_BASE_DELAY_SEC (default 0.5)
     - CEX_RETRY_MAX_DELAY_SEC (default 5.0)
     """
-    max_attempts = max(1, _env_int("CEX_RETRY_MAX_ATTEMPTS", 3))
+    max_attempts = max(1, _env_int("CEX_RETRY_MAX_ATTEMPTS", 3)) if safe_to_retry else 1
     base = max(0.05, _env_float("CEX_RETRY_BASE_DELAY_SEC", 0.5))
     max_delay = max(base, _env_float("CEX_RETRY_MAX_DELAY_SEC", 5.0))
 
@@ -63,6 +63,8 @@ def with_retry(op: str, fn: Callable[[], T]) -> T:
             return fn()
         except Exception as e:
             last_exc = e
+            if not safe_to_retry and should_retry(e):
+                raise AppError("execution_outcome_uncertain", "Mutation outcome is uncertain; no retry was sent.", {"op": op, "attempts": 1}) from e
             if not should_retry(e) or attempt >= max_attempts:
                 ae = classify_exception(e)
                 raise AppError(

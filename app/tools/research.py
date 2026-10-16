@@ -1,3 +1,5 @@
+import threading
+from functools import wraps
 from typing import Optional
 
 from fastmcp import FastMCP
@@ -8,18 +10,44 @@ from app.core.jsonio import json_ok as _json_ok
 from app.tools.params import Integer, Number
 from intelligence import SourceError, financial_news, get_cached_sentiment, rss_news, social_sentiment_report
 
+_RESEARCH_SLOTS = threading.BoundedSemaphore(4)
+_BACKTEST_SLOTS = threading.BoundedSemaphore(1)
 
-def _rate_limit(tool_name: str) -> Optional[str]:
+
+def _rate_limit(tool_name: str, limit: int = 12) -> Optional[str]:
     # Shim to use the global rate limiter
     try:
-        global_container.rate_limiter.check(key=f"tool:{tool_name}", limit=120, window_seconds=60)
+        global_container.rate_limiter.check(key=f"tool:{tool_name}", limit=limit, window_seconds=60)
         return None
     except Exception as e:
         return _json_err("rate_limited", str(e))
 
 
+def tool_budget(*, limit: int = 12, backtest: bool = False):
+    """A stdio server is one trusted session; caller-controlled agent_id never creates a quota bucket."""
+
+    def decorate(fn):
+        @wraps(fn)
+        def bounded(*args, **kwargs):
+            refused = _rate_limit(fn.__name__, limit)
+            if refused:
+                return refused
+            slots = _BACKTEST_SLOTS if backtest else _RESEARCH_SLOTS
+            if not slots.acquire(blocking=False):
+                return _json_err("resource_busy", "Research concurrency budget exhausted; retry later")
+            try:
+                return fn(*args, **kwargs)
+            finally:
+                slots.release()
+
+        return bounded
+
+    return decorate
+
+
 def register_research_tools(mcp: FastMCP):
     @mcp.tool()
+    @tool_budget()
     def get_social_sentiment(symbol: str) -> str:
         """Score recent X/Reddit text for the symbol (-1 bearish .. +1 bullish) and cache it for the Risk Guardian.
         Answers not_configured when neither TWITTER_BEARER_TOKEN nor REDDIT_CLIENT_ID/SECRET is set, and
@@ -36,6 +64,7 @@ def register_research_tools(mcp: FastMCP):
         return _json_ok({"symbol": symbol, "social_sentiment": text, "sources": sources})
 
     @mcp.tool()
+    @tool_budget()
     def get_financial_news(symbol: str) -> str:
         """Headlines about the symbol from NewsAPI (needs NEWSAPI_KEY)."""
         try:
@@ -44,6 +73,7 @@ def register_research_tools(mcp: FastMCP):
             return _json_err(e.code, e.message, {"symbol": symbol})
 
     @mcp.tool()
+    @tool_budget()
     def get_free_news(symbol: str = "") -> str:
         """Get free market news from RSS feeds (CoinDesk, Cointelegraph); no key needed."""
         try:
@@ -52,24 +82,31 @@ def register_research_tools(mcp: FastMCP):
             return _json_err(e.code, e.message, {"symbol": symbol})
 
     @mcp.tool()
+    @tool_budget(limit=30)
     def post_market_insight(symbol: str, agent_id: str, signal: str, confidence: Number, reasoning: str, ttl_seconds: Integer = 3600) -> str:
         """[PHASE 3] Share a market insight with other agents."""
-        insight = global_container.insight_store.post_insight(symbol, agent_id, signal, confidence, reasoning, ttl_seconds)
-        return _json_ok({"insight": vars(insight)})
+        try:
+            insight = global_container.insight_store.post_insight(symbol, agent_id, signal, confidence, reasoning, ttl_seconds)
+            return _json_ok({"insight": vars(insight)})
+        except ValueError as e:
+            return _json_err("invalid_insight", str(e))
 
     @mcp.tool()
+    @tool_budget(limit=60)
     def get_latest_insights(symbol: str = "") -> str:
         """[PHASE 3] Get the most recent high-signal insights."""
         insights = global_container.insight_store.get_latest_insights(symbol if symbol else None)
         return _json_ok({"insights": [vars(i) for i in insights]})
 
     @mcp.tool()
+    @tool_budget(limit=6, backtest=True)
     def run_backtest_simulation(strategy_code: str, symbol: str, timeframe: str = "1h") -> str:
         """Run a strategy simulation against historical data."""
         result = global_container.backtest_engine.run(strategy_code, symbol, timeframe)
         return _json_ok({"result": result})
 
     @mcp.tool()
+    @tool_budget()
     def get_market_regime(symbol: str, timeframe: str = "1d") -> str:
         """Detect the current market regime (TRENDING, RANGING, VOLATILE)."""
         try:

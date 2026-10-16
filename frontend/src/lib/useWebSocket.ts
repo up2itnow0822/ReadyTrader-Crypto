@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { announce } from "./announce";
+import { ApiError, apiFetch } from "./api";
 import { getRuntimeConfig } from "./config";
 
 export type WsStatus = "connecting" | "open" | "closed" | "unauthorized";
@@ -18,8 +19,10 @@ export const WS_MIN_BACKOFF_MS = 1000;
 export const WS_MAX_BACKOFF_MS = 30000;
 
 /**
- * Connects to `${wsUrl}?token=...` (or `wsUrl` with no query string when there is no
- * token) with exponential backoff + jitter between 1s and 30s. A close with code 1008
+ * Exchanges the HTTP JWT for a fresh single-use ticket before each connection.
+ * The ticket is offered in a subprotocol header, never in the URL; the server only
+ * echoes `readytrader`. Anonymous dev connections need no ticket. Retries use
+ * exponential backoff + jitter between 1s and 30s. A close with code 1008
  * (the server's "auth rejected" code, see api_server.py's `/ws` handler) moves to
  * `unauthorized` and stops retrying -- the server will keep rejecting until the app
  * has a fresh token, and hammering it in a loop would just be noise.
@@ -33,7 +36,6 @@ export function useWebSocket(token: string | null, enabled: boolean): UseWebSock
   const socketRef = useRef<WebSocket | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptRef = useRef(0);
-  const stoppedRef = useRef(false);
   const lastAnnouncedRef = useRef<WsStatus | null>(null);
 
   const subscribe = useCallback((listener: MessageListener) => {
@@ -44,33 +46,49 @@ export function useWebSocket(token: string | null, enabled: boolean): UseWebSock
   }, []);
 
   useEffect(() => {
-    stoppedRef.current = false;
+    // A generation-local flag prevents an old session's pending ticket request
+    // from opening a socket after a token change, disable, or unmount.
+    let stopped = false;
     attemptRef.current = 0;
 
     if (!enabled) {
       return () => {
-        stoppedRef.current = true;
+        stopped = true;
       };
     }
 
     const scheduleReconnect = () => {
-      if (stoppedRef.current) return;
+      if (stopped) return;
       const backoff = Math.min(WS_MAX_BACKOFF_MS, WS_MIN_BACKOFF_MS * 2 ** attemptRef.current);
       const jitter = backoff * (0.5 + Math.random() * 0.5);
       attemptRef.current += 1;
       timerRef.current = setTimeout(connect, jitter);
     };
 
-    function connect() {
-      if (stoppedRef.current) return;
+    async function connect() {
+      if (stopped) return;
       const { wsUrl } = getRuntimeConfig();
-      const url = token ? `${wsUrl}?token=${encodeURIComponent(token)}` : wsUrl;
       setStatus("connecting");
 
       let socket: WebSocket;
       try {
-        socket = new WebSocket(url);
-      } catch {
+        let protocols: string[] | undefined;
+        if (token) {
+          const result = await apiFetch<{ ticket: string; expires_in: number }>("/api/auth/ws-ticket", { method: "POST" });
+          if (stopped) return;
+          if (!result || typeof result.ticket !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(result.ticket)) {
+            throw new Error("Invalid WebSocket ticket response");
+          }
+          protocols = ["readytrader", `ticket.${result.ticket}`];
+        }
+        socket = new WebSocket(wsUrl, protocols);
+      } catch (error) {
+        if (stopped) return;
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+          setStatus("unauthorized");
+          return;
+        }
+        setStatus("closed");
         scheduleReconnect();
         return;
       }
@@ -92,7 +110,7 @@ export function useWebSocket(token: string | null, enabled: boolean): UseWebSock
 
       socket.onclose = (event: CloseEvent) => {
         socketRef.current = null;
-        if (stoppedRef.current) return;
+        if (stopped) return;
         if (event.code === 1008) {
           setStatus("unauthorized");
           return;
@@ -109,7 +127,7 @@ export function useWebSocket(token: string | null, enabled: boolean): UseWebSock
     connect();
 
     return () => {
-      stoppedRef.current = true;
+      stopped = true;
       if (timerRef.current) clearTimeout(timerRef.current);
       const socket = socketRef.current;
       if (socket) {

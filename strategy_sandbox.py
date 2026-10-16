@@ -58,11 +58,13 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 MAX_SOURCE_CHARS = 20_000
 MAX_SERIES = 2_000
 MAX_POINTS_PER_SERIES = 20_000
-MAX_TOTAL_POINTS = 2_000_000  # across all series: bounds the request the parent builds and the reply budget
+MAX_TOTAL_POINTS = 500_000  # across all series: bounds the request the parent builds and the reply budget
 DEFAULT_TIMEOUT_S = 10.0
 PER_SERIES_TIMEOUT_S = 0.25
 MAX_TIMEOUT_S = 120.0
-ADDRESS_SPACE_BYTES = 1024 * 1024 * 1024
+ADDRESS_SPACE_BYTES = 512 * 1024 * 1024
+MAX_CONCURRENT_STRATEGIES = 2
+_SANDBOX_SLOTS = threading.BoundedSemaphore(MAX_CONCURRENT_STRATEGIES)
 MAX_OPEN_FILES = 32
 ALLOWED_IMPORTS = frozenset({"math"})
 FORBIDDEN_ATTRS = frozenset({"format", "format_map"})
@@ -431,7 +433,7 @@ def _kill(proc: "subprocess.Popen[bytes]") -> None:
             pass
 
 
-def run_strategy(
+def _run_strategy(
     source: str,
     series: Sequence[Sequence[Point]],
     *,
@@ -499,3 +501,13 @@ def run_strategy(
 
     params = reply.get("params")
     return StrategyResult(actions=actions, params=params if isinstance(params, dict) else {})
+
+
+def run_strategy(source: str, series: Sequence[Sequence[Point]], *, timeout_s: float | None = None) -> StrategyResult:
+    """Admit at most two strategy runs per server process, including parent-side preparation."""
+    if not _SANDBOX_SLOTS.acquire(blocking=False):
+        raise StrategyError("resource", "Strategy concurrency budget exhausted; retry after another run completes")
+    try:
+        return _run_strategy(source, series, timeout_s=timeout_s)
+    finally:
+        _SANDBOX_SLOTS.release()

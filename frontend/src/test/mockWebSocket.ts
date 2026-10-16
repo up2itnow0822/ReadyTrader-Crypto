@@ -9,6 +9,7 @@ export class MockWebSocket {
   static instances: MockWebSocket[] = [];
 
   url: string;
+  protocols?: string | string[];
   readyState = MockWebSocket.CONNECTING;
   onopen: (() => void) | null = null;
   onmessage: ((event: MessageEvent) => void) | null = null;
@@ -19,8 +20,9 @@ export class MockWebSocket {
     this.onclose?.({ code: code ?? 1000 } as CloseEvent);
   });
 
-  constructor(url: string) {
+  constructor(url: string, protocols?: string | string[]) {
     this.url = url;
+    this.protocols = protocols;
     MockWebSocket.instances.push(this);
   }
 

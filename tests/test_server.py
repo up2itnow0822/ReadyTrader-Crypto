@@ -1,5 +1,5 @@
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 # If FastMCP wraps them, we might need to access `.fn` or just call them if they act as proxies.
 # Assuming standard python decorators, they are callable.
@@ -17,54 +17,17 @@ def test_fetch_price():
 
 
 def test_swap_tokens_real():
-    # Mock DexHandler and Signer in global_container
-    with patch.object(global_container, "dex_handler") as mock_dex:
-        with patch.object(global_container, "signer") as mock_signer:
-            with (
-                patch.object(global_container, "policy_engine"),
-                patch.multiple(
-                    settings,
-                    PAPER_MODE=False,
-                    LIVE_TRADING_ENABLED=True,
-                    TRADING_HALTED=False,
-                    EXECUTION_MODE=ExecutionMode.DEX,
-                ),
-            ):
-                mock_dex.resolve_token.side_effect = ["0xFROM", "0xTO"]
-                mock_dex.build_swap_tx.return_value = {
-                    "tx": {
-                        "to": "0x0000000000000000000000000000000000000002",
-                        "data": "0x",
-                        "value": "0x0",
-                        "gas": "0x5208",
-                        "gasPrice": "0x3b9aca00",
-                    }
-                }
-
-                signed_mock = MagicMock()
-                signed_mock.rawTransaction = b"\x01\x02"
-                mock_signer.sign_transaction.return_value = signed_mock
-                mock_signer.get_address.return_value = "0x0000000000000000000000000000000000000001"
-
-                # Avoid network: mock nonce fetch + broadcast + decimals lookup
-                with patch("app.tools.execution.get_web3") as mock_get_web3:
-                    mock_w3 = MagicMock()
-                    mock_w3.eth.get_transaction_count.return_value = 123
-                    mock_get_web3.return_value = mock_w3
-                    with (
-                        patch("app.tools.execution.send_raw_transaction", return_value="0xHASH"),
-                        patch("app.tools.trading._dex_wallet_value_usd", return_value=100_000.0),
-                    ):
-                        with patch("app.tools.execution.erc20_decimals", return_value=6):
-                            # Run
-                            res_str = swap_tokens(from_token="USDC", to_token="WETH", amount=1.0, chain="ethereum")
-                            res = json.loads(res_str)
-
-                # Verify
-                assert res["ok"] is True
-                assert res["data"]["mode"] == "live"
-                assert res["data"]["venue"] == "dex"
-                assert res["data"]["tx_hash"] == "0xHASH"
+    """Opaque aggregator transactions cannot reach signing, even on an allowed router."""
+    with (
+        patch.object(global_container, "signer") as signer,
+        patch.object(global_container.dex_handler, "build_swap_tx") as builder,
+        patch.multiple(settings, PAPER_MODE=False, LIVE_TRADING_ENABLED=True, TRADING_HALTED=False, EXECUTION_MODE=ExecutionMode.DEX),
+    ):
+        res = json.loads(swap_tokens("USDC", "WETH", 1.0, chain="ethereum"))
+    assert res["ok"] is False
+    assert res["error"]["code"] == "unsupported_swap_semantics"
+    signer.sign_transaction.assert_not_called()
+    builder.assert_not_called()
 
 
 def test_place_cex_order_blocked_when_mode_dex():

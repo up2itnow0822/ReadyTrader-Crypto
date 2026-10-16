@@ -118,9 +118,14 @@ ______________________________________________________________________
 
 ## Execution (DEX/CEX)
 
+Live `place_cex_order`, `transfer_eth` and `replace_cex_order` require an explicit
+payload-bound idempotency key; approved proposals supply their request ID. A pending
+or uncertain result must be reconciled before any new submission. See
+[security repair operations](SECURITY_REPAIR_OPERATIONS.md).
+
 | Tool Name                                               | Description                                                    |
 | :------------------------------------------------------ | :------------------------------------------------------------- |
-| [`swap_tokens`](#swap_tokens)                           | Swap tokens on a DEX (paper mode or live).                     |
+| [`swap_tokens`](#swap_tokens)                           | Simulate swaps; opaque live aggregation is refused.            |
 | [`transfer_eth`](#transfer_eth)                         | Transfer native currency (ETH/BASE/ARB/OP native token).       |
 | [`place_cex_order`](#place_cex_order)                   | Place an order on a CEX using CCXT authenticated credentials.  |
 | [`get_cex_balance`](#get_cex_balance)                   | Fetch account balance from a centralized exchange.             |
@@ -142,61 +147,20 @@ ______________________________________________________________________
 **Signature:** `swap_tokens(from_token: str, to_token: str, amount: float, chain: str = "ethereum", rationale: str = "", idempotency_key: str = "") -> str`
 
 ```text
-Swap tokens on a DEX (paper mode or live). The Risk Guardian runs before every swap, in both
-modes (`docs/FALLING_KNIFE.md`): the part of a swap that adds exposure may be at most 5% of the
-account's value, and it fails closed if that account or the swap's USD value cannot be read.
+Paper swaps use the market-data rate (direct, inverted, or through USDT) and the
+Risk Guardian against the paper account. Invalid amounts, unavailable prices,
+and policy/risk refusals retain their normal error codes.
 
-In paper mode:
-  - Trades at the market rate for FROM/TO — found directly, inverted (TO/FROM), or through USDT
-    (FROM/USDT over TO/USDT) — from the market-data bus. `paper_price_required` if none of
-    those resolve.
-  - Checked against the paper account's value.
-In live mode:
-  - Checked against the signer wallet's value on `chain` (native coin + known tokens).
-  - Builds a swap transaction using 1inch aggregator
-  - Signs with configured signer (supports env_key, keystore, remote, MPC)
-  - Broadcasts via JSON-RPC to the blockchain
-  - If `EXECUTION_APPROVAL_MODE=approve_each`, the check above runs before a proposal is made
-    and again when the approval API executes it.
+Live aggregated swaps are contained: after live/policy gates they return
+unsupported_swap_semantics before a proposal, provider request, signing or broadcast.
+The existing API has no complete approved minimum-output/deadline contract and
+opaque aggregator calldata cannot be proven to implement the requested intent.
+This is intentionally unavailable functionality, not a claimed calldata verifier
+or simulation. Native transfers and supported CEX orders are separate paths.
 
-Parameters:
-- from_token: Source token symbol or contract address (e.g., "ETH", "USDC", "0x...")
-- to_token: Destination token symbol or contract address
-- amount: Amount to swap (in human-readable units, e.g., 1.5 ETH); must be a positive number
-- chain: Blockchain network ("ethereum", "base", "arbitrum", "optimism")
-- rationale: Optional reason for the trade (for audit trail)
-- idempotency_key: Optional unique key to prevent duplicate executions
-
-Returns:
-- JSON with transaction hash (live) or fill result (paper), plus `risk`: the Risk Guardian's
-  check ({allowed, reason, ...}, from `swap_check`)
-
-Supported Chains:
-- ethereum (chainId: 1)
-- base (chainId: 8453)
-- arbitrum (chainId: 42161)
-- optimism (chainId: 10)
-
-Safety Features:
-- Risk Guardian (position size, daily loss / drawdown, Falling Knife sentiment)
-- Policy validation (chain, token, amount limits)
-- Router address allowlist verification
-- Signer policy constraints
-- Idempotency protection against replay
-
-Error Codes:
-- invalid_amount: amount must be a positive number
-- paper_engine_missing: Paper mode but the paper engine is not initialized
-- paper_price_required: Paper mode, and no market rate for the pair (direct, inverted, or via USDT)
-- risk_blocked: The Risk Guardian refused the swap (`error.data.risk` has the numbers)
-- live_trading_disabled: LIVE_TRADING_ENABLED=false
-- trading_halted: TRADING_HALTED=true
-- execution_mode_blocked: Blocked by EXECUTION_MODE for the dex venue
-- chain_not_allowed: Chain not in ALLOW_CHAINS
-- token_not_allowed: Token not in ALLOW_TOKENS
-- trade_amount_too_large: Exceeds MAX_TRADE_AMOUNT (or a per-token MAX_TRADE_AMOUNT_<TOKEN>)
-- router_not_allowed / signer_address_not_allowed / sign_*: other policy allowlists, when configured
-- execution_error: Unexpected failure (anything not covered by a code above)
+Parameters retain their existing signature for paper callers: token pair, amount,
+chain, rationale and optional paper idempotency_key. A live result is never a swap
+transaction hash under this containment.
 ```
 
 ### `transfer_eth`
@@ -213,7 +177,7 @@ Parameters:
 - to_address: Recipient wallet address (0x...)
 - amount: Amount to transfer in native units (e.g., 0.1 for 0.1 ETH)
 - chain: Blockchain network ("ethereum", "base", "arbitrum", "optimism")
-- idempotency_key: Optional unique key to prevent duplicate transfers
+- idempotency_key: Required for live transfers (1–256 characters), bound to the exact payload
 
 Returns:
 - JSON with transaction hash and confirmation
@@ -576,15 +540,15 @@ Error Codes:
 
 ### `replace_cex_order`
 
-**Signature:** `replace_cex_order(exchange: str, order_id: str, symbol: str, side: str, amount: float, order_type: str = "limit", price: float | None = None, market_type: str = "spot") -> str`
+**Signature:** `replace_cex_order(exchange: str, order_id: str, symbol: str, side: str, amount: float, order_type: str = "limit", price: float | None = None, market_type: str = "spot", idempotency_key: str = "") -> str`
 
 ```text
 Replace (edit) an existing order on a centralized exchange. Live exchange accounts only —
 paper orders fill immediately and never rest on an exchange, so there is nothing to replace.
 
-Atomically cancels the existing order and places a new one with updated
-parameters. Useful for adjusting limit prices without losing queue position.
-Note: not all exchanges support this operation.
+Requests an exchange-specific edit. Queue priority and atomicity depend on the exchange.
+An explicit 1–256-character idempotency_key is required before any live effect.
+Ambiguous create/edit results are never automatically resent.
 
 If `EXECUTION_APPROVAL_MODE=approve_each`, this tool is refused outright with
 `approval_required` (a replacement is a new order and cannot go through the proposal flow the

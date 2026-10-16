@@ -137,11 +137,16 @@ def test_remote_signer_unrecognised_tls_flag_fails_closed(flag):
 
 
 def test_settings_tls_flag_uses_the_same_fail_closed_rule():
-    from app.core.settings import Settings
+    from app.core.settings import Settings, SettingsValidationError
 
-    for flag, expected in (("", True), ("true", True), ("treu", True), ("FALSE", False), ("off", False)):
+    for flag, expected in (("true", True), ("FALSE", False), ("off", False)):
         with patch.dict("os.environ", {"REMOTE_SIGNER_REQUIRE_TLS": flag}):
             assert Settings().REMOTE_SIGNER_REQUIRE_TLS is expected, flag
+    # Strict startup validation now refuses malformed flags rather than silently correcting them.
+    for flag in ("", "treu"):
+        with patch.dict("os.environ", {"REMOTE_SIGNER_REQUIRE_TLS": flag}):
+            with pytest.raises(SettingsValidationError, match="REMOTE_SIGNER_REQUIRE_TLS"):
+                Settings()
 
 
 def test_remote_signer_refuses_redirects_without_following_them():

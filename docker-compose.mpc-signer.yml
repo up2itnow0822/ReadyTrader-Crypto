@@ -1,3 +1,4 @@
+# Runtime only. DKG requires an explicit, isolated ceremony override; see mpc_signer/README.md.
 services:
   mpc-party-0:
     build:
@@ -8,20 +9,35 @@ services:
       MPC_HTTP_LISTEN: "0.0.0.0:8787"
       MPC_PARTY0_ADDR: "0.0.0.0:9787"
       MPC_PARTY1_ADDR: "mpc-party-1:9787"
-      MPC_PEER_HTTP_URL: "http://mpc-party-1:8787"
+      MPC_PEER_HTTP_URL: "https://mpc-party-1:8787"
       MPC_CA_CERT: "/certs/ca.crt"
       MPC_CERT: "/certs/party0.crt"
       MPC_KEY: "/certs/party0.key"
       MPC_PARTY0_CERT: "/certs/party0.crt"
       MPC_PARTY1_CERT: "/certs/party1.crt"
+      MPC_WORKLOAD_CERT: "/certs/workload.crt"
       MPC_KEYSHARE_PATH: "/data/mpc_keyshare.bin"
-    ports:
-      - "8787:8787"
+      MPC_REPLAY_DIR: "/data/approvals"
+      MPC_POLICY_FILE: "/policy/policy.json"
+      MPC_APPROVAL_PUBLIC_KEY: "${MPC_APPROVAL_PUBLIC_KEY:?Set the independent operator Ed25519 public key}"
+      MPC_CEREMONY_ENABLED: "false"
     volumes:
-      - ./mpc_signer/certs:/certs:ro
+      - ./mpc_signer/certs/ca.crt:/certs/ca.crt:ro
+      - ./mpc_signer/certs/party0.crt:/certs/party0.crt:ro
+      - ./mpc_signer/certs/party1.crt:/certs/party1.crt:ro
+      - ./mpc_signer/certs/party0.key:/certs/party0.key:ro
+      - ./mpc_signer/certs/workload.crt:/certs/workload.crt:ro
+      - ./mpc_signer/policy.party0.json:/policy/policy.json:ro
       - mpc_party0_data:/data
-    depends_on:
-      - mpc-party-1
+    networks: [mpc-private]
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=16m"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    mem_limit: 1g
+    cpus: 2
+    depends_on: [mpc-party-1]
 
   mpc-party-1:
     build:
@@ -38,11 +54,30 @@ services:
       MPC_PARTY0_CERT: "/certs/party0.crt"
       MPC_PARTY1_CERT: "/certs/party1.crt"
       MPC_KEYSHARE_PATH: "/data/mpc_keyshare.bin"
+      MPC_REPLAY_DIR: "/data/approvals"
+      MPC_POLICY_FILE: "/policy/policy.json"
+      MPC_APPROVAL_PUBLIC_KEY: "${MPC_APPROVAL_PUBLIC_KEY:?Set the independent operator Ed25519 public key}"
+      MPC_CEREMONY_ENABLED: "false"
     volumes:
-      - ./mpc_signer/certs:/certs:ro
+      - ./mpc_signer/certs/ca.crt:/certs/ca.crt:ro
+      - ./mpc_signer/certs/party0.crt:/certs/party0.crt:ro
+      - ./mpc_signer/certs/party1.crt:/certs/party1.crt:ro
+      - ./mpc_signer/certs/party1.key:/certs/party1.key:ro
+      - ./mpc_signer/policy.party1.json:/policy/policy.json:ro
       - mpc_party1_data:/data
+    networks: [mpc-private]
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=16m"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    mem_limit: 1g
+    cpus: 2
 
 volumes:
   mpc_party0_data:
   mpc_party1_data:
 
+networks:
+  mpc-private:
+    internal: true

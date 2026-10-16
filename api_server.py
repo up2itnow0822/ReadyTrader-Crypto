@@ -1,9 +1,12 @@
 import asyncio
 import contextvars
+import hashlib
+import ipaddress
 import json
 import logging
 import os
 import secrets
+import threading
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -12,7 +15,7 @@ from typing import Optional, Set
 from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from starlette.responses import JSONResponse
 
 # Import core components from the main server
@@ -26,7 +29,7 @@ from execution.evm import get_web3
 from execution_store import ProposalError
 from marketdata.store import TickerSnapshot
 from observability import build_log_context, log_event
-from rate_limiter import RateLimitError
+from rate_limiter import FixedWindowRateLimiter, RateLimitError
 
 # JWT support (optional, for multi-user scenarios)
 try:
@@ -117,6 +120,18 @@ async def security_headers_middleware(request: Request, call_next):
 # -----------------------------------------------------------------------------
 # Rate Limiting Middleware
 # -----------------------------------------------------------------------------
+def _client_rate_key(request: Request) -> str:
+    """Use only the ASGI peer (never caller-supplied forwarding headers); group IPv6 /64s."""
+    host = request.client.host if request.client else "unknown"
+    try:
+        address = ipaddress.ip_address(host)
+        if isinstance(address, ipaddress.IPv6Address):
+            return str(ipaddress.ip_network(f"{address}/64", strict=False))
+        return str(address)
+    except ValueError:
+        return hashlib.sha256(host.encode()).hexdigest()
+
+
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
     """Apply rate limiting to all HTTP requests."""
@@ -124,7 +139,7 @@ async def rate_limit_middleware(request: Request, call_next):
         return await call_next(request)
 
     # Get client identifier (IP or authenticated user)
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = _client_rate_key(request)
     auth_header = request.headers.get("authorization", "")
 
     # Use authenticated user ID if available, else IP
@@ -312,12 +327,60 @@ global_container.marketdata_ws_store.subscribe(broadcast_tick)
 
 
 def _ws_token_from_request(websocket: WebSocket) -> str | None:
-    """Extract JWT from Authorization header or ?token= query (browser WS clients)."""
+    """Non-browser clients may use a bearer header, never a JWT in a URL."""
     auth = websocket.headers.get("authorization") or websocket.headers.get("Authorization")
     if auth and auth.lower().startswith("bearer "):
         return auth.split(" ", 1)[1].strip() or None
-    token = websocket.query_params.get("token")
-    return token.strip() if token else None
+    return None
+
+
+WS_TICKET_TTL_SECONDS = 30
+WS_TICKET_MAX_ENTRIES = 1024
+
+
+class WebSocketTicketStore:
+    """Process-local, bounded, single-use capabilities. Restarts invalidate all tickets.
+
+    Multi-worker deployments need sticky routing or a shared atomic capability store.
+    A ticket reaching a different worker is refused, never accepted without validation.
+    """
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._tickets: dict[str, tuple[float, str | None]] = {}
+
+    def issue(self, *, origin: str | None) -> str:
+        now = time.monotonic()
+        with self._lock:
+            self._tickets = {key: value for key, value in self._tickets.items() if value[0] > now}
+            if len(self._tickets) >= WS_TICKET_MAX_ENTRIES:
+                raise HTTPException(status_code=429, detail="WebSocket ticket capacity reached", headers={"Retry-After": "30"})
+            ticket = secrets.token_urlsafe(32)
+            digest = hashlib.sha256(ticket.encode()).hexdigest()
+            self._tickets[digest] = (now + WS_TICKET_TTL_SECONDS, origin)
+        return ticket
+
+    def consume(self, ticket: str, *, origin: str | None) -> bool:
+        if not ticket or len(ticket) > 128:
+            return False
+        digest = hashlib.sha256(ticket.encode()).hexdigest()
+        with self._lock:
+            issued = self._tickets.pop(digest, None)
+        return issued is not None and issued[0] > time.monotonic() and issued[1] == origin
+
+
+websocket_tickets = WebSocketTicketStore()
+
+
+def _websocket_origin_allowed(origin: str | None) -> bool:
+    # No Origin means a non-browser client; browser-issued tickets remain Origin-bound.
+    if origin is None:
+        return True
+    if origin == "null":
+        return False
+    if settings.DEV_MODE and settings.CORS_ALLOW_ALL:
+        return True
+    return origin in settings.CORS_ORIGINS
 
 
 def _decode_access_token(token: str) -> dict | None:
@@ -335,19 +398,32 @@ async def websocket_endpoint(websocket: WebSocket):
     """
     Real-time ticker stream.
 
-    When API_AUTH_REQUIRED=true, clients must pass a valid JWT via
-    `Authorization: Bearer <token>` or `?token=<jwt>`.
+    Browsers exchange their HTTP JWT for a short-lived, single-use ticket first,
+    then offer `readytrader, ticket.<opaque>` subprotocols (no credential in the URL).
+    Non-browser clients may still pass `Authorization: Bearer <token>`.
     """
     _REQUEST_ID.set(str(uuid.uuid4()))  # one log request_id per connection
+    origin = websocket.headers.get("origin")
+    if not _websocket_origin_allowed(origin) or "token" in websocket.query_params or "ticket" in websocket.query_params:
+        await websocket.close(code=1008)
+        log_event("api_ws_auth_rejected", ctx=_ctx(), data={"reason": "invalid_origin_or_legacy_query"})
+        return
+    protocols = websocket.scope.get("subprotocols", [])
+    tickets = [protocol[len("ticket.") :] for protocol in protocols if protocol.startswith("ticket.")]
+    subprotocol = None
     if settings.API_AUTH_REQUIRED:
-        token = _ws_token_from_request(websocket)
-        payload = _decode_access_token(token) if token else None
-        if not payload:
+        if tickets:
+            authenticated = len(tickets) == 1 and "readytrader" in protocols and websocket_tickets.consume(tickets[0], origin=origin)
+            subprotocol = "readytrader"
+        else:
+            token = _ws_token_from_request(websocket)
+            authenticated = bool(_decode_access_token(token)) if token else False
+        if not authenticated:
             await websocket.close(code=1008)
             log_event("api_ws_auth_rejected", ctx=_ctx(), data={"reason": "missing_or_invalid_token"})
             return
 
-    await websocket.accept()
+    await websocket.accept(subprotocol=subprotocol)
     active_connections.add(websocket)
     log_event("api_client_connected", ctx=_ctx(), data={"active_connections": len(active_connections)})
     try:
@@ -377,8 +453,8 @@ async def health_check():
 # Authentication Endpoints
 # -----------------------------------------------------------------------------
 class LoginRequest(BaseModel):
-    username: str
-    password: str
+    username: str = Field(max_length=256)
+    password: str = Field(max_length=1024)
 
 
 class TokenResponse(BaseModel):
@@ -387,8 +463,19 @@ class TokenResponse(BaseModel):
     expires_in: int
 
 
+login_rate_limiter = FixedWindowRateLimiter()
+_login_workers = threading.BoundedSemaphore(2)
+
+
+def _login_limit_response() -> JSONResponse:
+    from errors import RateLimitError as RTRateLimitError
+
+    error = RTRateLimitError(key="login", limit=5, window_seconds=60, current_count=0)
+    return JSONResponse(status_code=429, content=json_error_response(error), headers={"Retry-After": "60"})
+
+
 @app.post("/api/auth/login", response_model=TokenResponse)
-async def login(request: LoginRequest):
+def login(request: LoginRequest, http_request: Request):
     """
     Authenticate and receive a JWT token.
 
@@ -399,6 +486,26 @@ async def login(request: LoginRequest):
     In dev mode:
     - Falls back to plaintext API_ADMIN_PASSWORD if hash not set
     """
+    # Login's small budgets are always enforced, even if general API limiting is disabled.
+    # Username/IP rotation cannot bypass the process-wide bound on expensive bcrypt work.
+    username_key = hashlib.sha256(request.username.strip().casefold().encode()).hexdigest()
+    try:
+        for key, limit in ((f"login:ip:{_client_rate_key(http_request)}", 5), (f"login:user:{username_key}", 5), ("login:all", 20)):
+            login_rate_limiter.check(key=key, limit=limit, window_seconds=60)
+    except RateLimitError:
+        return _login_limit_response()
+
+    if not _login_workers.acquire(blocking=False):
+        return _login_limit_response()
+    try:
+        return _login_with_credentials(request)
+    finally:
+        _login_workers.release()
+
+
+def _login_with_credentials(request: LoginRequest):
+    # Called only by the synchronous FastAPI handler: bcrypt runs in its worker pool,
+    # never on the ASGI event loop. The semaphore bounds concurrent password checks.
     admin_user = settings.API_ADMIN_USERNAME
     admin_pass_hash = settings.API_ADMIN_PASSWORD_HASH
     admin_pass_plain = os.getenv("API_ADMIN_PASSWORD", "")
@@ -430,6 +537,18 @@ async def login(request: LoginRequest):
 
     token = create_access_token(user_id=request.username, additional_claims={"role": "admin"})
     return TokenResponse(access_token=token, expires_in=JWT_EXPIRATION_HOURS * 3600)
+
+
+@app.post("/api/auth/ws-ticket")
+def create_websocket_ticket(request: Request, token_payload: Optional[dict] = Depends(verify_token)):
+    """Exchange an authenticated HTTP access token for a WebSocket-only capability."""
+    if not token_payload:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    origin = request.headers.get("origin")
+    if not _websocket_origin_allowed(origin):
+        raise HTTPException(status_code=403, detail="Origin not allowed")
+    ticket = websocket_tickets.issue(origin=origin)
+    return JSONResponse(content={"ticket": ticket, "expires_in": WS_TICKET_TTL_SECONDS}, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/api/auth/me")

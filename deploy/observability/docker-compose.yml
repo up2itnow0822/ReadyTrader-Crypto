@@ -6,7 +6,7 @@
 #
 # Access:
 #   - Prometheus: http://localhost:9090
-#   - Grafana: http://localhost:3001 (admin/admin)
+#   - Grafana: http://localhost:3001 (operator-provided Docker secret; no default password)
 #
 # Prerequisites:
 #   - ReadyTrader API running on localhost:8000
@@ -17,7 +17,7 @@ services:
     container_name: readytrader-prometheus
     restart: unless-stopped
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus-alerts.yml:/etc/prometheus/rules/readytrader-alerts.yml:ro
@@ -40,11 +40,13 @@ services:
     container_name: readytrader-grafana
     restart: unless-stopped
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3001:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin_password
       - GF_USERS_ALLOW_SIGN_UP=false
+    secrets:
+      - grafana_admin_password
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana-provisioning:/etc/grafana/provisioning:ro
@@ -62,7 +64,7 @@ services:
     container_name: readytrader-alertmanager
     restart: unless-stopped
     ports:
-      - "9093:9093"
+      - "127.0.0.1:9093:9093"
     volumes:
       - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager_data:/alertmanager
@@ -76,3 +78,9 @@ volumes:
   prometheus_data:
   grafana_data:
   alertmanager_data:
+
+# Supply a high-entropy password file outside the repository. Configure the release
+# and production proxy access controls separately; never publish Grafana directly.
+secrets:
+  grafana_admin_password:
+    file: ${GRAFANA_ADMIN_PASSWORD_FILE:?Set a private high-entropy Grafana password file}

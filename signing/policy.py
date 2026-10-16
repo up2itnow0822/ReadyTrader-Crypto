@@ -92,6 +92,53 @@ def _hex_data_len(data_hex: Any) -> Optional[int]:
     return len(s) // 2
 
 
+def transaction_uint(value: Any, field: str) -> int:
+    """Parse EVM integer quantities without truncation or permissive fallback."""
+    try:
+        if isinstance(value, bool) or not isinstance(value, (int, str)):
+            raise ValueError
+        number = int(value, 16 if value.startswith(("0x", "0X")) else 10) if isinstance(value, str) else value
+        if number < 0 or number >= 2**256:
+            raise ValueError
+        return number
+    except (ValueError, TypeError):
+        raise SignerPolicyViolation("invalid_transaction_quantity", f"{field} must be a nonnegative EVM integer.", {"field": field}) from None
+
+
+def validate_transaction_fees(tx: Dict[str, Any], *, max_gas_price_wei: int | None = None) -> Dict[str, Any]:
+    """Normalize and validate legacy/type-2 fee semantics before policy or hashing.
+
+    Fee-less partial transactions are retained for existing signer callers, but when a
+    cap is configured the fee must be explicit. Unknown typed envelopes fail closed.
+    """
+    out = dict(tx)
+    dynamic = "maxFeePerGas" in tx or "maxPriorityFeePerGas" in tx
+    kind = transaction_uint(tx["type"], "type") if "type" in tx else (2 if dynamic else 0)
+    if kind not in (0, 1, 2):
+        raise SignerPolicyViolation("unsupported_transaction_type", "Unsupported transaction fee semantics.", {})
+    if "type" in tx:
+        out["type"] = kind
+    if dynamic or kind == 2:
+        if kind != 2 or "gasPrice" in tx or not all(k in tx for k in ("maxFeePerGas", "maxPriorityFeePerGas")):
+            raise SignerPolicyViolation("invalid_transaction_fees", "Type-2 fees require both caps and no gasPrice.", {})
+        out["type"] = 2
+        for field in ("maxFeePerGas", "maxPriorityFeePerGas"):
+            out[field] = transaction_uint(tx[field], field)
+        if out["maxPriorityFeePerGas"] > out["maxFeePerGas"]:
+            raise SignerPolicyViolation("invalid_transaction_fees", "Priority fee exceeds maximum fee.", {})
+        prices = (out["maxFeePerGas"], out["maxPriorityFeePerGas"])
+    elif "gasPrice" in tx:
+        out["gasPrice"] = transaction_uint(tx["gasPrice"], "gasPrice")
+        prices = (out["gasPrice"],)
+    elif max_gas_price_wei is not None:
+        raise SignerPolicyViolation("invalid_transaction_fees", "Explicit transaction fees are required by the gas-price limit.", {})
+    else:
+        prices = ()
+    if max_gas_price_wei is not None and any(p > max_gas_price_wei for p in prices):
+        raise SignerPolicyViolation("gas_price_too_large", "Transaction worst-case gas price exceeds policy limit.", {"max_gas_price_wei": max_gas_price_wei})
+    return out
+
+
 def validate_tx_against_policy(tx: Dict[str, Any], *, chain_id: int | None, cfg: SignerPolicyConfig) -> None:
     if cfg.disallow_contract_creation and not tx.get("to"):
         raise SignerPolicyViolation(
@@ -139,17 +186,7 @@ def validate_tx_against_policy(tx: Dict[str, Any], *, chain_id: int | None, cfg:
                 {"gas": gas, "max_gas": int(cfg.max_gas)},
             )
 
-    if cfg.max_gas_price_wei is not None:
-        try:
-            gp = int(tx.get("gasPrice") or 0)
-        except Exception:
-            gp = 0
-        if gp and gp > int(cfg.max_gas_price_wei):
-            raise SignerPolicyViolation(
-                "gas_price_too_large",
-                "Transaction gasPrice exceeds signer policy limit.",
-                {"gas_price_wei": gp, "max_gas_price_wei": int(cfg.max_gas_price_wei)},
-            )
+    validate_transaction_fees(tx, max_gas_price_wei=cfg.max_gas_price_wei)
 
     if cfg.max_data_bytes is not None:
         dl = _hex_data_len(tx.get("data"))
@@ -174,6 +211,7 @@ class PolicyEnforcedSigner(Signer):
         return self._inner.get_address()
 
     def sign_transaction(self, tx: Dict[str, Any], *, chain_id: int | None = None) -> SignedTx:
+        tx = validate_transaction_fees(tx, max_gas_price_wei=self._cfg.max_gas_price_wei)
         validate_tx_against_policy(tx, chain_id=chain_id, cfg=self._cfg)
         return self._inner.sign_transaction(tx, chain_id=chain_id)
 

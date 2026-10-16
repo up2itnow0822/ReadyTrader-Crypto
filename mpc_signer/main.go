@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/pem"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -15,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,6 +26,7 @@ import (
 	"github.com/coinbase/cb-mpc/demos-go/cb-mpc-go/api/mpc"
 	"github.com/coinbase/cb-mpc/demos-go/cb-mpc-go/api/transport/mtls"
 	"golang.org/x/crypto/sha3"
+	"readytrader-crypto/mpc_signer/control"
 )
 
 type config struct {
@@ -63,15 +67,14 @@ func envDefault(name, def string) string {
 
 func loadConfig() config {
 	roleRaw := mustEnv("MPC_ROLE_INDEX")
-	var role int
-	_, err := fmt.Sscanf(roleRaw, "%d", &role)
+	role, err := strconv.Atoi(roleRaw)
 	if err != nil || (role != 0 && role != 1) {
 		log.Fatalf("Invalid MPC_ROLE_INDEX=%q (expected 0 or 1)", roleRaw)
 	}
 
 	cfg := config{
-		RoleIndex:     role,
-		HTTPListenAddr: envDefault("MPC_HTTP_LISTEN", "0.0.0.0:8787"),
+		RoleIndex:      role,
+		HTTPListenAddr: envDefault("MPC_HTTP_LISTEN", "127.0.0.1:8787"),
 		Party0Addr:     mustEnv("MPC_PARTY0_ADDR"),
 		Party1Addr:     mustEnv("MPC_PARTY1_ADDR"),
 		CaCertPath:     mustEnv("MPC_CA_CERT"),
@@ -244,7 +247,9 @@ func buildMessenger(cfg config) (*mtls.MTLSMessenger, []string, error) {
 		return nil, nil, fmt.Errorf("read CA cert: %w", err)
 	}
 	caPool := x509.NewCertPool()
-	caPool.AppendCertsFromPEM(caCert)
+	if !caPool.AppendCertsFromPEM(caCert) {
+		return nil, nil, fmt.Errorf("invalid CA certificate")
+	}
 
 	party0CertPEM, err := os.ReadFile(cfg.Party0Cert)
 	if err != nil {
@@ -417,271 +422,199 @@ func (s *state) runSign(sessionID []byte, digest32 []byte) ([]byte, error) {
 	return resp.Signature, nil
 }
 
-// ---- HTTP handlers ----
-
-func writeJSON(w http.ResponseWriter, status int, obj any) {
-	w.Header().Set("content-type", "application/json")
-	w.WriteHeader(status)
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	_ = enc.Encode(obj)
-}
-
-func readJSON(r *http.Request, dst any) error {
-	b, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+// nativeWorker is reachable only through a local child-process pipe. No raw
+// digest operation is exposed by either HTTP listener.
+func nativeWorker(cfg config) error {
+	var req control.WorkerRequest
+	dec := json.NewDecoder(io.LimitReader(os.Stdin, 65536))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		return err
+	}
+	stopWatchdog, err := control.ArmWorkerDeadline(req.DeadlineUnixNano)
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(b, dst)
+	defer stopWatchdog()
+	st := &state{cfg: cfg}
+	result := control.WorkerResult{}
+	if req.Operation == "dkg" {
+		if req.StagePath == "" {
+			return errors.New("stage path required")
+		}
+		st.cfg.KeySharePath = req.StagePath
+	} else if err := st.loadKeyShareIfPresent(); err != nil {
+		return err
+	}
+	switch req.Operation {
+	case "sign", "dkg":
+		messenger, names, err := buildMessenger(cfg)
+		if err != nil {
+			return err
+		}
+		st.messenger = messenger
+		st.pnames = names
+		defer messenger.Close()
+		if req.Operation == "dkg" {
+			if err := st.runKeyGen(); err != nil {
+				return err
+			}
+		} else {
+			digest, err := decodeHex32(req.DigestHex)
+			if err != nil {
+				return err
+			}
+			session, err := hex.DecodeString(req.SessionID)
+			if err != nil || len(session) != 32 {
+				return errors.New("invalid signing session")
+			}
+			sig, err := st.runSign(session, digest)
+			if err != nil {
+				return err
+			}
+			result.SignatureHex = hex.EncodeToString(sig)
+		}
+	case "address":
+	default:
+		return errors.New("unknown worker operation")
+	}
+	pub, addr, err := st.publicKeyAndAddress()
+	if err != nil {
+		return err
+	}
+	result.Identity = control.Identity{Address: addr, PublicKeyHex: pub}
+	encoded, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(req.ResultPath, encoded, 0600)
 }
-
-type startReq struct {
-	SessionID string `json:"session_id"`
-	DigestHex string `json:"digest_hex"`
+func certPin(path string) (string, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	block, _ := pem.Decode(raw)
+	if block == nil {
+		return "", errors.New("invalid certificate PEM")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(cert.Raw)
+	return hex.EncodeToString(sum[:]), nil
 }
-
+func publicApprovalKey(name string) ed25519.PublicKey {
+	raw, err := hex.DecodeString(mustEnv(name))
+	if err != nil || len(raw) != 32 {
+		log.Fatalf("%s must contain a 32-byte Ed25519 public key", name)
+	}
+	return ed25519.PublicKey(raw)
+}
 func main() {
 	cfg := loadConfig()
-
-	st := &state{cfg: cfg}
-	if err := st.loadKeyShareIfPresent(); err != nil {
-		log.Fatalf("failed to load key share: %v", err)
+	if len(os.Args) == 2 && os.Args[1] == "--mpc-worker" {
+		if err := nativeWorker(cfg); err != nil {
+			os.Exit(1)
+		}
+		return
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Initialize messenger in background so HTTP server can come up and report status.
-	go st.buildMessengerWithRetry(ctx)
-
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, map[string]any{"ok": true, "status": st.statusJSON()})
-	})
-	mux.HandleFunc("/internal/status", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, st.statusJSON())
-	})
-
-	// Address endpoint (used by ReadyTrader-Crypto RemoteSigner).
-	mux.HandleFunc("/address", func(w http.ResponseWriter, r *http.Request) {
-		st.mu.Lock()
-		loaded := st.keyShareLoaded
-		st.mu.Unlock()
-		if !loaded {
-			writeJSON(w, 409, map[string]any{"error": "key_not_initialized"})
-			return
-		}
-		pubHex, addr, err := st.publicKeyAndAddress()
-		if err != nil {
-			writeJSON(w, 500, map[string]any{"error": err.Error()})
-			return
-		}
-		writeJSON(w, 200, map[string]any{"address": addr, "public_key_uncompressed_hex": pubHex})
-	})
-
-	// Leader-only orchestration endpoints
-	mux.HandleFunc("/dkg", func(w http.ResponseWriter, r *http.Request) {
-		if cfg.RoleIndex != 0 {
-			writeJSON(w, 403, map[string]any{"error": "leader_only"})
-			return
-		}
-		st.mu.Lock()
-		loaded := st.keyShareLoaded
-		st.mu.Unlock()
-		if loaded {
-			pubHex, addr, err := st.publicKeyAndAddress()
-			if err != nil {
-				writeJSON(w, 500, map[string]any{"error": err.Error()})
-				return
-			}
-			writeJSON(w, 200, map[string]any{"ok": true, "already_initialized": true, "address": addr, "public_key_uncompressed_hex": pubHex})
-			return
-		}
-
-		// Kick follower keygen asynchronously, then run locally.
-		if err := postJSON(cfg.PeerHTTPURL+"/internal/start_dkg", map[string]any{}, 5*time.Second); err != nil {
-			writeJSON(w, 502, map[string]any{"error": "peer_start_failed", "detail": err.Error()})
-			return
-		}
-		if err := st.runKeyGen(); err != nil {
-			writeJSON(w, 500, map[string]any{"error": err.Error()})
-			return
-		}
-		// Wait for follower to report key loaded.
-		if err := waitPeerReady(cfg.PeerHTTPURL, 30*time.Second); err != nil {
-			writeJSON(w, 502, map[string]any{"error": "peer_not_ready", "detail": err.Error()})
-			return
-		}
-
-		pubHex, addr, err := st.publicKeyAndAddress()
-		if err != nil {
-			writeJSON(w, 500, map[string]any{"error": err.Error()})
-			return
-		}
-		writeJSON(w, 200, map[string]any{"ok": true, "address": addr, "public_key_uncompressed_hex": pubHex})
-	})
-
-	mux.HandleFunc("/sign_digest", func(w http.ResponseWriter, r *http.Request) {
-		if cfg.RoleIndex != 0 {
-			writeJSON(w, 403, map[string]any{"error": "leader_only"})
-			return
-		}
-		var req startReq
-		if err := readJSON(r, &req); err != nil {
-			writeJSON(w, 400, map[string]any{"error": "bad_json", "detail": err.Error()})
-			return
-		}
-		digest, err := decodeHex32(req.DigestHex)
-		if err != nil {
-			writeJSON(w, 400, map[string]any{"error": "bad_digest", "detail": err.Error()})
-			return
-		}
-		sid := []byte(req.SessionID)
-		if len(sid) == 0 {
-			sid = []byte(fmt.Sprintf("sid-%d", time.Now().UnixNano()))
-		}
-
-		// Ensure DKG completed
-		st.mu.Lock()
-		loaded := st.keyShareLoaded
-		st.mu.Unlock()
-		if !loaded {
-			writeJSON(w, 409, map[string]any{"error": "key_not_initialized"})
-			return
-		}
-
-		// Kick follower signing in background, then sign locally (blocking).
-		if err := postJSON(cfg.PeerHTTPURL+"/internal/start_sign", map[string]any{
-			"session_id":  string(sid),
-			"digest_hex":  "0x" + hex.EncodeToString(digest),
-		}, 5*time.Second); err != nil {
-			writeJSON(w, 502, map[string]any{"error": "peer_start_failed", "detail": err.Error()})
-			return
-		}
-
-		sigDER, err := st.runSign(sid, digest)
-		if err != nil {
-			writeJSON(w, 500, map[string]any{"error": err.Error()})
-			return
-		}
-		writeJSON(w, 200, map[string]any{"ok": true, "signature_der_hex": "0x" + hex.EncodeToString(sigDER)})
-	})
-
-	// Follower-only internal control endpoints: start DKG / sign in background.
-	mux.HandleFunc("/internal/start_dkg", func(w http.ResponseWriter, r *http.Request) {
-		if cfg.RoleIndex != 1 {
-			writeJSON(w, 403, map[string]any{"error": "follower_only"})
-			return
-		}
-		st.mu.Lock()
-		loaded := st.keyShareLoaded
-		st.mu.Unlock()
-		if loaded {
-			writeJSON(w, 200, map[string]any{"ok": true, "already_initialized": true})
-			return
-		}
-		go func() {
-			st.clearErr()
-			if err := st.runKeyGen(); err != nil {
-				st.setErr(err)
-			}
-		}()
-		writeJSON(w, 200, map[string]any{"ok": true, "started": true})
-	})
-
-	mux.HandleFunc("/internal/start_sign", func(w http.ResponseWriter, r *http.Request) {
-		if cfg.RoleIndex != 1 {
-			writeJSON(w, 403, map[string]any{"error": "follower_only"})
-			return
-		}
-		var req startReq
-		if err := readJSON(r, &req); err != nil {
-			writeJSON(w, 400, map[string]any{"error": "bad_json", "detail": err.Error()})
-			return
-		}
-		digest, err := decodeHex32(req.DigestHex)
-		if err != nil {
-			writeJSON(w, 400, map[string]any{"error": "bad_digest", "detail": err.Error()})
-			return
-		}
-		sid := []byte(req.SessionID)
-		if len(sid) == 0 {
-			writeJSON(w, 400, map[string]any{"error": "missing_session_id"})
-			return
-		}
-		go func() {
-			st.clearErr()
-			_, err := st.runSign(sid, digest)
-			if err != nil {
-				st.setErr(err)
-			}
-		}()
-		writeJSON(w, 200, map[string]any{"ok": true})
-	})
-
-	srv := &http.Server{
-		Addr:              cfg.HTTPListenAddr,
-		Handler:           mux,
-		ReadHeaderTimeout: 10 * time.Second,
-	}
-
-	l, err := net.Listen("tcp", cfg.HTTPListenAddr)
+	cert, err := tls.LoadX509KeyPair(cfg.CertPath, cfg.KeyPath)
 	if err != nil {
-		log.Fatalf("listen: %v", err)
+		log.Fatal("invalid control TLS certificate/key")
 	}
-	log.Printf("mpc_signer HTTP listening on %s (role=%d)", cfg.HTTPListenAddr, cfg.RoleIndex)
-	log.Fatal(srv.Serve(l))
-}
-
-func postJSON(url string, payload any, timeout time.Duration) error {
-	b, _ := json.Marshal(payload)
-	req, err := http.NewRequest("POST", url, strings.NewReader(string(b)))
+	ca, err := os.ReadFile(cfg.CaCertPath)
 	if err != nil {
-		return err
+		log.Fatal("missing control TLS CA")
 	}
-	req.Header.Set("content-type", "application/json")
-	c := &http.Client{Timeout: timeout}
-	resp, err := c.Do(req)
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM(ca) {
+		log.Fatal("invalid control TLS CA")
+	}
+	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS13, Certificates: []tls.Certificate{cert}, ClientCAs: pool, ClientAuth: tls.RequireAndVerifyClientCert}
+	peerCertPath := cfg.Party0Cert
+	if cfg.RoleIndex == 0 {
+		peerCertPath = cfg.Party1Cert
+	}
+	peerPin, err := certPin(peerCertPath)
 	if err != nil {
-		return err
+		log.Fatal("invalid expected peer certificate")
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return fmt.Errorf("peer status %d: %s", resp.StatusCode, string(body))
-	}
-	return nil
-}
-
-func waitPeerReady(peerBase string, timeout time.Duration) error {
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		st, err := fetchPeerStatus(peerBase, 2*time.Second)
-		if err == nil {
-			if v, ok := st["key_share_loaded"].(bool); ok && v {
-				return nil
-			}
+	// Normal chain+hostname verification is retained in addition to the exact pin.
+	peerTLS := &tls.Config{MinVersion: tls.VersionTLS13, RootCAs: pool, Certificates: []tls.Certificate{cert}, VerifyConnection: func(c tls.ConnectionState) error {
+		if len(c.PeerCertificates) == 0 {
+			return errors.New("missing peer certificate")
 		}
-		time.Sleep(250 * time.Millisecond)
-	}
-	return fmt.Errorf("timed out waiting for peer key_share_loaded")
-}
-
-func fetchPeerStatus(peerBase string, timeout time.Duration) (map[string]any, error) {
-	c := &http.Client{Timeout: timeout}
-	resp, err := c.Get(peerBase + "/internal/status")
+		sum := sha256.Sum256(c.PeerCertificates[0].Raw)
+		if hex.EncodeToString(sum[:]) != peerPin {
+			return errors.New("peer certificate mismatch")
+		}
+		return nil
+	}}
+	peer := control.HTTPPeer{RuntimeURL: cfg.PeerHTTPURL, Client: &http.Client{Timeout: 60 * time.Second, Transport: &http.Transport{TLSClientConfig: peerTLS, MaxConnsPerHost: 2, MaxIdleConnsPerHost: 1, IdleConnTimeout: 15 * time.Second, ResponseHeaderTimeout: 10 * time.Second}}}
+	policyFile, err := os.Open(mustEnv("MPC_POLICY_FILE"))
 	if err != nil {
-		return nil, err
+		log.Fatal("MPC policy unavailable")
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("peer status code %d", resp.StatusCode)
+	var policy control.Policy
+	decoder := json.NewDecoder(io.LimitReader(policyFile, 65537))
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&policy)
+	_ = policyFile.Close()
+	if err != nil || policy.CheckConfig() != nil {
+		log.Fatal("MPC policy invalid")
 	}
-	var out map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return nil, err
+	executable, err := os.Executable()
+	if err != nil {
+		log.Fatal(err)
 	}
-	return out, nil
+	backend := &control.ProcessBackend{Executable: executable, KeySharePath: cfg.KeySharePath}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	err = backend.Load(ctx)
+	cancel()
+	if err != nil {
+		log.Fatal("existing key share could not be loaded")
+	}
+	server := &control.Server{Role: cfg.RoleIndex, Authorizer: control.Authorizer{Policy: policy, ApprovalKey: publicApprovalKey("MPC_APPROVAL_PUBLIC_KEY"), ReplayDir: envDefault("MPC_REPLAY_DIR", filepath.Join(filepath.Dir(cfg.KeySharePath), "approvals"))}, Backend: backend, PeerPin: peerPin, Timeout: 60 * time.Second}
+	if cfg.RoleIndex == 0 {
+		server.WorkloadPin, err = certPin(mustEnv("MPC_WORKLOAD_CERT"))
+		if err != nil {
+			log.Fatal("invalid workload certificate")
+		}
+	}
+	ceremonyFlag := envDefault("MPC_CEREMONY_ENABLED", "false")
+	if ceremonyFlag != "true" && ceremonyFlag != "false" {
+		log.Fatal("MPC_CEREMONY_ENABLED must be true or false")
+	}
+	server.CeremonyEnabled = ceremonyFlag == "true"
+	if server.CeremonyEnabled {
+		server.OperatorPin, err = certPin(mustEnv("MPC_OPERATOR_CERT"))
+		if err != nil {
+			log.Fatal("invalid operator certificate")
+		}
+		server.CeremonyKeys = []ed25519.PublicKey{publicApprovalKey("MPC_CEREMONY_PUBLIC_KEY_1"), publicApprovalKey("MPC_CEREMONY_PUBLIC_KEY_2")}
+		if string(server.CeremonyKeys[0]) == string(server.CeremonyKeys[1]) {
+			log.Fatal("independent ceremony operators required")
+		}
+		if cfg.RoleIndex == 0 {
+			peer.BootstrapURL = mustEnv("MPC_PEER_BOOTSTRAP_URL")
+		}
+	}
+	server.Peer = peer
+	serve := func(addr string, handler http.Handler) error {
+		listener, err := net.Listen("tcp", addr)
+		if err != nil {
+			return err
+		}
+		defer listener.Close()
+		srv := control.NewHTTPServer(addr, handler, tlsConfig, 60*time.Second)
+		return srv.ServeTLS(control.LimitListener(listener, 32), "", "")
+	}
+	if server.CeremonyEnabled {
+		addr := envDefault("MPC_BOOTSTRAP_LISTEN", "127.0.0.1:8788")
+		go func() { log.Fatal(serve(addr, server.Handler(true))) }()
+	}
+	log.Printf("MPC authenticated control plane listening on %s (role=%d)", cfg.HTTPListenAddr, cfg.RoleIndex)
+	log.Fatal(serve(cfg.HTTPListenAddr, server.Handler(false)))
 }
-

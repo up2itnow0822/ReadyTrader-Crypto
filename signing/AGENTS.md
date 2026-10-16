@@ -14,6 +14,7 @@ ReadyTrader-Crypto signing subsystem. Used by execution tools when not in null/p
 - `env_private_key` is development-only: forbidden when `PAPER_MODE=false` or `LIVE_TRADING_ENABLED=true`
 - Live/production prefers `remote`, `keystore`, or `cb_mpc_2pc`
 - `SIGNER_POLICY_ENABLED=true` required posture for live (settings warn/enforce via ops pack)
+- `cb_mpc_2pc` requires HTTPS/mTLS, a mandatory policy on both signer parties, and an independently issued exact-digest Ed25519 approval. `MPC_APPROVAL_DIR` supplies proofs; application trade approval is not signing authority. Only native/ERC-20 transfer/approve semantics are supported; see `mpc_signer/README.md` for migration and unverified native-build prerequisites.
 - Factory entry: `signing/factory.py` → `get_signer()`
 
 ## Work Guidance
@@ -24,7 +25,7 @@ ReadyTrader-Crypto signing subsystem. Used by execution tools when not in null/p
 
 ## Verification
 
-- `pytest tests/test_remote_signer.py tests/test_signer_policy.py tests/test_settings_validation.py -q`
+- `pytest tests/test_remote_signer.py tests/test_signer_policy.py tests/test_settings_validation.py tests/test_mpc_security.py -q`
 
 ## Child DOX Index
 

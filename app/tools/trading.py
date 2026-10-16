@@ -65,13 +65,15 @@ def split_symbol(symbol: Any) -> Tuple[Optional[str], Optional[str]]:
 
 
 def market_price(symbol: str) -> Optional[float]:
-    """The market-data bus's last price for `symbol` (in its quote currency), or None. Never invented."""
+    """A sane price, with freshness/anomaly evidence preserved for every live risk decision."""
     try:
-        ticker = global_container.marketdata_bus.fetch_ticker(symbol).data or {}
-        price = float(ticker.get("last") or ticker.get("close") or 0.0)
+        result = global_container.marketdata_bus.fetch_ticker(symbol)
+        if not settings.PAPER_MODE or settings.LIVE_TRADING_ENABLED:
+            return result.acceptable_price()
+        ticker = result.data or {}
+        return _positive(ticker.get("last") or ticker.get("close"))
     except Exception:
         return None
-    return price if math.isfinite(price) and price > 0 else None
 
 
 def usd_price(asset: str) -> Optional[float]:
@@ -92,36 +94,57 @@ def _paper_equity_usd() -> Optional[float]:
     if engine is None:
         return None
     try:
-        for asset in engine.get_balances(PAPER_USER):
+        for asset, quantity in engine.get_balances(PAPER_USER).items():
+            if _nonnegative(quantity) is None:
+                return None
             if asset.upper() not in USD_STABLES:
                 price = usd_price(asset)
                 if price is not None:
                     engine.mark_price_usd(asset, price)
-        return float(engine.get_portfolio_value_usd(PAPER_USER))
+        return _nonnegative(engine.get_portfolio_value_usd(PAPER_USER))
     except Exception:
         return None
 
 
 def _live_totals(exchange: str, market_type: str) -> Optional[Dict[str, float]]:
-    """Total balance per asset on the exchange account, or None when it cannot be read."""
+    """Validated total balance per asset, or None for unreadable/malformed account state."""
     try:
-        balance = CexExecutor(exchange_id=exchange, market_type=market_type, auth=True).fetch_balance() or {}
-        totals = balance.get("total") or {}
-        return {str(k).upper(): float(v or 0.0) for k, v in totals.items()}
+        balance = CexExecutor(exchange_id=exchange, market_type=market_type, auth=True).fetch_balance()
+        totals = balance.get("total")
+        if not isinstance(totals, dict):
+            return None
+        result: Dict[str, float] = {}
+        for asset, quantity in totals.items():
+            quantity = _nonnegative(quantity)
+            name = str(asset).strip().upper()
+            if quantity is None or not name or name in result:
+                return None
+            result[name] = quantity
+        return result
     except Exception:
         return None
 
 
-def _value_usd(totals: Dict[str, float]) -> float:
-    """Value of an exchange account's balances; an asset the bus cannot price is left out (so the
-    account looks smaller and the size rule stricter, never looser)."""
+def _value_usd(totals: Dict[str, float]) -> Optional[float]:
+    """Conservative account value: omit unpriced assets, never accept invalid arithmetic."""
     total = 0.0
     for asset, qty in totals.items():
-        if not qty:
+        qty = _nonnegative(qty)
+        if qty is None:
+            return None
+        if qty == 0:
             continue
         price = usd_price(asset)
         if price is not None:
-            total += qty * price
+            price = _positive(price)
+            if price is None:
+                return None
+            value = _nonnegative(qty * price)
+            if value is None:
+                return None
+            total += value
+            if not math.isfinite(total):
+                return None
     return total
 
 
@@ -138,11 +161,21 @@ def _dex_wallet_value_usd(chain: str) -> Optional[float]:
             if price is None:
                 continue
             if str(address).lower() == NATIVE_COIN_ADDRESS:
-                qty = w3.eth.get_balance(owner) / 1e18
+                raw_quantity = _nonnegative(w3.eth.get_balance(owner))
+                decimals = 18
             else:
                 contract = w3.eth.contract(address=w3.to_checksum_address(address), abi=ERC20_MIN_ABI)
-                qty = contract.functions.balanceOf(owner).call() / (10 ** erc20_decimals(chain, address))
-            total += float(qty) * price
+                raw_quantity = _nonnegative(contract.functions.balanceOf(owner).call())
+                decimals = erc20_decimals(chain, address)
+            if raw_quantity is None or isinstance(decimals, bool) or not isinstance(decimals, int) or not 0 <= decimals <= 255:
+                return None
+            qty = _nonnegative(raw_quantity / (10**decimals))
+            price = _positive(price)
+            if qty is None or price is None:
+                return None
+            total += qty * price
+            if not math.isfinite(total):
+                return None
         return total
     except Exception:
         return None
@@ -160,6 +193,13 @@ def exposure_added(side: str, amount: float, position: Optional[float]) -> float
 
 
 def _account_state(exchange: str, market_type: str, base: Optional[str], contract: bool = False) -> Dict[str, Any]:
+    try:
+        return _read_account_state(exchange, market_type, base, contract)
+    except Exception:
+        return {"equity_usd": None, "position": None, "daily_pnl_pct": None, "drawdown_pct": None, "unmeasured": []}
+
+
+def _read_account_state(exchange: str, market_type: str, base: Optional[str], contract: bool = False) -> Dict[str, Any]:
     """equity_usd, position (base units held; None when unknown), daily_pnl_pct, drawdown_pct and the
     rules that could not be measured, for the mode the server runs in. `contract` is True for a
     derivatives symbol (BTC/USDT:USDT): its position is never a spot balance."""
@@ -170,12 +210,13 @@ def _account_state(exchange: str, market_type: str, base: Optional[str], contrac
         if engine:
             engine.mark_day_open(PAPER_USER)  # the daily-loss baseline, once per UTC day
         metrics = engine.get_risk_metrics(PAPER_USER) if engine else {}
-        position = float(engine.get_balance(PAPER_USER, base)) if engine and base else None
+        position = _nonnegative(engine.get_balance(PAPER_USER, base)) if engine and base else None
         return {
             "equity_usd": equity,
             "position": position,
-            "daily_pnl_pct": float(metrics.get("daily_pnl_pct", 0.0)),
-            "drawdown_pct": float(metrics.get("drawdown_pct", 0.0)),
+            "daily_pnl_pct": _finite(metrics.get("daily_pnl_pct", 0.0)),
+            "drawdown_pct": _nonnegative(metrics.get("drawdown_pct", 0.0)),
+            "invalid_position": bool(engine and base and position is None),
             "unmeasured": [],
         }
     totals = _live_totals(exchange, market_type)
@@ -201,14 +242,33 @@ def _guardian(
     sentiment: Dict[str, Any],
     missing: Optional[str],
 ) -> Dict[str, Any]:
+    # Invalid upstream or derived numerics never reach the Guardian, even for apparent exits.
+    equity = _nonnegative(state.get("equity_usd"))
+    amount = _nonnegative(amount_usd_added) if amount_usd_added is not None else (None if increases_exposure else 0.0)
+    daily_pnl = _finite(state.get("daily_pnl_pct"))
+    drawdown = _nonnegative(state.get("drawdown_pct"))
+    score = _finite(sentiment.get("score"))
+    if (
+        equity is None
+        or amount is None
+        or daily_pnl is None
+        or drawdown is None
+        or score is None
+        or not -1 <= score <= 1
+        or state.get("invalid_position")
+        or (state.get("position") is not None and _nonnegative(state["position"]) is None)
+    ):
+        return {"allowed": False, "reason": missing or "Risk Guardian cannot validate invalid account, price, or exposure data."}
+    if increases_exposure and (missing or equity <= 0):
+        return {"allowed": False, "reason": missing or "The account has no value to size this order against."}
     result = global_container.risk_guardian.validate_trade(
         side=side,
         symbol=symbol,
-        amount_usd=amount_usd_added or 0.0,
-        portfolio_value=state["equity_usd"] or 0.0,
-        sentiment_score=sentiment["score"],
-        daily_loss_pct=state["daily_pnl_pct"],
-        current_drawdown_pct=state["drawdown_pct"],
+        amount_usd=amount,
+        portfolio_value=equity,
+        sentiment_score=score,
+        daily_loss_pct=daily_pnl,
+        current_drawdown_pct=drawdown,
         increases_exposure=increases_exposure,
     )
     allowed = bool(result.get("allowed", False))
@@ -220,12 +280,24 @@ def _guardian(
     return {"allowed": allowed, "reason": reason}
 
 
-def _positive(value: Any) -> Optional[float]:
+def _finite(value: Any) -> Optional[float]:
+    if isinstance(value, bool):
+        return None
     try:
         number = float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return None
-    return number if math.isfinite(number) and number > 0 else None
+    return number if math.isfinite(number) else None
+
+
+def _nonnegative(value: Any) -> Optional[float]:
+    number = _finite(value)
+    return number if number is not None and number >= 0 else None
+
+
+def _positive(value: Any) -> Optional[float]:
+    number = _finite(value)
+    return number if number is not None and number > 0 else None
 
 
 def pre_trade_check(
@@ -282,9 +354,9 @@ def pre_trade_check(
 
     contract = ":" in str(symbol or "")
     state = _account_state(exchange, market_type, base, contract)
-    market = market_price(symbol)
+    market = _positive(market_price(symbol))
     reference = (max(market, limit) if limit else market) if market else None
-    quote_usd = usd_price(quote) if quote else None
+    quote_usd = _positive(usd_price(quote)) if quote else None
     added = exposure_added(side_norm, units, state["position"])
     acquires_quote = side_norm == "sell" and bool(quote) and quote not in CASH_QUOTES
     increases = added > 0 or acquires_quote
@@ -292,9 +364,9 @@ def pre_trade_check(
     # into a crypto quote (selling ETH on ETH/BTC buys BTC).
     bought = PRICE_ALIASES.get(quote, quote) if acquires_quote else symbol
     sentiment = _sentiment_context(bought)
-    unit_usd = reference * quote_usd if (reference and quote_usd) else None
-    acquired_usd = (units * unit_usd if unit_usd is not None else None) if acquires_quote else 0.0
-    added_usd = added * unit_usd + acquired_usd if (unit_usd is not None and acquired_usd is not None) else None
+    unit_usd = _positive(reference * quote_usd) if (reference and quote_usd) else None
+    acquired_usd = (_nonnegative(units * unit_usd) if unit_usd is not None else None) if acquires_quote else 0.0
+    added_usd = _nonnegative(added * unit_usd + acquired_usd) if (unit_usd is not None and acquired_usd is not None) else None
     missing = None
     if market is None and increases:
         missing = f"No market price for {symbol}: the Risk Guardian values orders at the market, so an order that adds exposure waits for market data."
@@ -318,8 +390,8 @@ def pre_trade_check(
         **verdict,
         "reference_price": reference,
         "market_price": market,
-        "equity_usd": state["equity_usd"],
-        "position_units": state["position"],
+        "equity_usd": _nonnegative(state["equity_usd"]),
+        "position_units": _nonnegative(state["position"]),
         "exposure_added_units": added,
         "acquired_quote_usd": acquired_usd,
         "exposure_added_usd": added_usd,
@@ -340,6 +412,19 @@ def swap_check(from_token: str, to_token: str, amount: float, rate: Optional[flo
     """
     src, dst = str(from_token or "").strip().upper(), str(to_token or "").strip().upper()
     sentiment = _sentiment_context(PRICE_ALIASES.get(dst, dst))
+    units = _positive(amount)
+    valid_rate = _positive(rate) if rate is not None else None
+    if units is None or (rate is not None and valid_rate is None):
+        return {
+            "allowed": False,
+            "reason": "Risk Guardian requires a finite positive swap amount and any supplied rate.",
+            "rate": valid_rate,
+            "equity_usd": None,
+            "exposure_added_usd": None,
+            "sentiment": sentiment,
+            "falling_knife": falling_knife_rules(),
+            "inactive_rules": [],
+        }
     if settings.PAPER_MODE:
         state = _account_state("paper", "spot", None)
     else:
@@ -351,8 +436,8 @@ def swap_check(from_token: str, to_token: str, amount: float, rate: Optional[flo
             "unmeasured": ["daily_loss_limit", "max_drawdown"],
         }
     increases = dst not in USD_STABLES
-    src_usd = usd_price(src)
-    added_usd = float(amount) * src_usd if (increases and src_usd is not None) else (0.0 if not increases else None)
+    src_usd = _positive(usd_price(src))
+    added_usd = _nonnegative(units * src_usd) if (increases and src_usd is not None) else (0.0 if not increases else None)
     missing = None
     if added_usd is None:
         missing = f"Could not value {src} in USD for the position-size check; retry when market data is available."
@@ -371,8 +456,8 @@ def swap_check(from_token: str, to_token: str, amount: float, rate: Optional[flo
     )
     return {
         **verdict,
-        "rate": rate,
-        "equity_usd": state["equity_usd"],
+        "rate": valid_rate,
+        "equity_usd": _nonnegative(state["equity_usd"]),
         "exposure_added_usd": added_usd,
         "sentiment": sentiment,
         "falling_knife": falling_knife_rules(),
