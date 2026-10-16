@@ -20,6 +20,8 @@ ReadyTrader-Crypto documentation tree. Keep contracts accurate to code in `app/c
   one pass. Files here are never rewritten after the fact — a later pass adds a new dated file
   and updates the pointers in `../UAT.md` and this file instead
 - `SECURITY_REVIEW.md` / `CUSTODY.md` / `RUNBOOK.md` — production ops
+- `SECURITY_REPAIR_VERIFICATION.md` — finding-by-finding regression ledger and explicit local validation limits, not a clean-scan certification.
+- `SECURITY_REPAIR_OPERATIONS.md` — security-repair migration boundaries, operator-only controls, and unsupported paths; keep limitations explicit rather than implying live deployment or credential rotation.
 - `SENTIMENT.md` — feed setup plus the Falling Knife score contract (scale, threshold, no-data semantics); keep in step with `intelligence/sentiment.py` and the `sentiment` block of `validate_trade_risk`
 - `STRATEGY_SANDBOX.md` — strategy contract, isolation layers, limits, and stated (non-)guarantees for `run_backtest_simulation` / the stress lab; keep in step with `strategy_sandbox.py`
 - `ARCHITECTURE.md#approval-gate` — how `EXECUTION_APPROVAL_MODE=approve_each` and `POST /api/approve-trade` work, including the shared proposal session (`EXECUTION_SESSION_ID`) and the mode check; keep in step with `execution_store.py` and `api_server.py`

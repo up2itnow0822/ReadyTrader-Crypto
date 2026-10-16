@@ -92,7 +92,13 @@ class Recorder:
 
 
 @pytest.fixture
-def live(monkeypatch):
+def live(monkeypatch, tmp_path):
+    from idempotency_store import IdempotencyStore
+
+    # Exercise durable claims within each case without replaying another test or
+    # an earlier pytest run's accepted order from the process-wide container.
+    monkeypatch.setenv("READYTRADER_IDEMPOTENCY_DB_PATH", str(tmp_path / "idempotency.db"))
+    monkeypatch.setattr(ex.global_container, "idempotency_store", IdempotencyStore())
     Recorder.calls = []
     _set_mode(
         monkeypatch,
@@ -156,9 +162,9 @@ def test_live_order_is_sized_against_the_exchange_account(live):
     # Account: 100,000 USDT + 0.5 BTC (25,000) = 125,000; 5% is 6,250.
     big = _j(ex.place_cex_order("BTC/USDT", "buy", 0.2, "limit", 50_000.0))  # 10,000
     assert big["ok"] is False and big["error"]["code"] == "risk_blocked"
-    ok = _j(ex.place_cex_order("BTC/USDT", "buy", 0.1, "limit", 50_000.0))  # 5,000
+    ok = _j(ex.place_cex_order("BTC/USDT", "buy", 0.1, "limit", 50_000.0, idempotency_key="uat-account-buy"))  # 5,000
     assert ok["ok"] is True, ok
-    exit_ = _j(ex.place_cex_order("BTC/USDT", "sell", 0.5, "limit", 50_000.0))  # sells what is held
+    exit_ = _j(ex.place_cex_order("BTC/USDT", "sell", 0.5, "limit", 50_000.0, idempotency_key="uat-account-sell"))  # sells what is held
     assert exit_["ok"] is True, exit_
 
 
@@ -263,7 +269,7 @@ def test_live_replace_passes_policy_and_the_guardian(live, monkeypatch):
     out = _j(ex.replace_cex_order("binance", "1", "BTC/USDT", "buy", 5.0, "limit", 50_000.0))
     assert out["error"]["code"] == "risk_blocked"
     assert not [c for c in live.calls if c[0] == "replace_order"]
-    ok = _j(ex.replace_cex_order("binance", "1", "BTC/USDT", "buy", 0.01, "limit", 50_000.0))
+    ok = _j(ex.replace_cex_order("binance", "1", "BTC/USDT", "buy", 0.01, "limit", 50_000.0, idempotency_key="uat-replace"))
     assert ok["ok"] is True and [c for c in live.calls if c[0] == "replace_order"]
 
 
@@ -630,9 +636,9 @@ def test_social_sentiment_says_when_every_configured_source_failed(monkeypatch):
     monkeypatch.setenv("TWITTER_BEARER_TOKEN", "test-token")
     for var in ("REDDIT_CLIENT_ID", "REDDIT_CLIENT_SECRET"):
         monkeypatch.delenv(var, raising=False)
-    tweepy = MagicMock()
-    tweepy.Client.return_value.search_recent_tweets.side_effect = RuntimeError("401 Unauthorized")
-    monkeypatch.setattr(core, "tweepy", tweepy)
+    bounded_session = MagicMock()
+    bounded_session.return_value.__enter__.return_value.get.side_effect = RuntimeError("401 Unauthorized")
+    monkeypatch.setattr(core, "_BoundedSession", bounded_session)
     try:
         out = _call_tool(register_research_tools, "get_social_sentiment", {"symbol": "BTC"})
     finally:
@@ -770,7 +776,7 @@ def test_falling_knife_judges_the_asset_a_crypto_quoted_sell_buys(paper, offline
 def test_paper_refuses_contract_symbols_and_live_sends_normalised_orders(paper, live, monkeypatch):
     # REV2-07
     assert paper.execute_trade_result(USER, "sell", "BTC/USDT:USDT", 0.01, 50_000.0)["code"] == "invalid_symbol"
-    out = _j(ex.place_cex_order("BTC/USDT", " SELL ", 0.5, "LIMIT", 50_000.0))
+    out = _j(ex.place_cex_order("BTC/USDT", " SELL ", 0.5, "LIMIT", 50_000.0, idempotency_key="uat-normalised-order"))
     assert out["ok"] is True, out
     sent = [c[1] for c in live.calls if c[0] == "place_order"][-1]
     assert (sent["side"], sent["order_type"]) == ("sell", "limit")

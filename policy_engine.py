@@ -4,6 +4,8 @@ import os
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Set
 
+from signing.policy import SignerPolicyViolation, validate_transaction_fees
+
 
 @dataclass
 class PolicyError(Exception):
@@ -217,6 +219,9 @@ class PolicyEngine:
         gas: int | None,
         gas_price_wei: int | None,
         data_hex: str | None,
+        max_fee_per_gas_wei: int | None = None,
+        max_priority_fee_per_gas_wei: int | None = None,
+        tx_type: int | None = None,
     ) -> None:
         """
         Phase 5: signer-side intent guardrails (defense in depth).
@@ -264,13 +269,19 @@ class PolicyEngine:
                 data={"gas": int(gas or 0), "max_sign_gas": int(max_gas)},
             )
 
-        max_gp = _env_int("MAX_SIGN_GAS_PRICE_WEI", None)
-        if max_gp is not None and (gas_price_wei or 0) > int(max_gp):
-            raise PolicyError(
-                code="sign_gas_price_too_large",
-                message="Transaction gasPrice exceeds MAX_SIGN_GAS_PRICE_WEI.",
-                data={"gas_price_wei": int(gas_price_wei or 0), "max_sign_gas_price_wei": int(max_gp)},
-            )
+        fee_fields = {}
+        for field, value in (
+            ("gasPrice", gas_price_wei),
+            ("maxFeePerGas", max_fee_per_gas_wei),
+            ("maxPriorityFeePerGas", max_priority_fee_per_gas_wei),
+            ("type", tx_type),
+        ):
+            if value is not None:
+                fee_fields[field] = value
+        try:
+            validate_transaction_fees(fee_fields, max_gas_price_wei=_env_int("MAX_SIGN_GAS_PRICE_WEI", None))
+        except SignerPolicyViolation as exc:
+            raise PolicyError("sign_" + exc.code, exc.message, exc.data) from exc
 
         max_data = _env_int("MAX_SIGN_DATA_BYTES", None)
         if max_data is not None and data_hex is not None:

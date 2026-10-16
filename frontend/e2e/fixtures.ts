@@ -1,6 +1,6 @@
-import { test as base, expect } from "@playwright/test";
+import { test as base, expect, type Page } from "@playwright/test";
 
-import { TEST_ADMIN_PASSWORD, TEST_ADMIN_USERNAME } from "./constants";
+import { API_URL, TEST_ADMIN_PASSWORD, TEST_ADMIN_USERNAME } from "./constants";
 
 interface Fixtures {
   /** Auto-applied: fails the test if the page logged a console error, threw an
@@ -16,9 +16,20 @@ interface Fixtures {
 // test; only this one browser-generated, expected-in-a-negative-test line is exempt.
 const BENIGN_RESOURCE_LOAD_ERROR = /^Failed to load resource: the server responded with a status of \d{3} /;
 
+// Each test owns a fresh Page. Reset once per journey, not once per login attempt,
+// so brute-force/lockout checks within a test still exercise real product limits.
+const preparedPages = new WeakSet<Page>();
+async function prepareLoginBudget(page: Page): Promise<void> {
+  if (preparedPages.has(page)) return;
+  const response = await page.request.post(`${API_URL}/__test/reset-login-budget`);
+  expect(response.ok(), "The test-only harness must reset the journey's login budget").toBe(true);
+  preparedPages.add(page);
+}
+
 export const test = base.extend<Fixtures>({
   consoleWatcher: [
     async ({ page }, use) => {
+      await prepareLoginBudget(page);
       const errors: string[] = [];
 
       page.on("console", (msg) => {
@@ -58,7 +69,9 @@ export const test = base.extend<Fixtures>({
 export { expect };
 
 /** Logs in through the real UI form and waits for the dashboard to appear. */
-export async function loginAsAdmin(page: import("@playwright/test").Page): Promise<void> {
+export async function loginAsAdmin(page: Page): Promise<void> {
+  // Also covers the resilience journey, which intentionally skips consoleWatcher.
+  await prepareLoginBudget(page);
   await page.goto("/");
   await page.getByLabel("Username").fill(TEST_ADMIN_USERNAME);
   await page.getByLabel("Password").fill(TEST_ADMIN_PASSWORD);

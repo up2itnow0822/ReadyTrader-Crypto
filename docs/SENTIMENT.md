@@ -9,7 +9,7 @@ ReadyTrader-Crypto empowers AI agents with both "Hands" (execution) and "Eyes" (
 | **RSS Market News**    | Basic     | Free           | None                 | General market awareness from CoinDesk/Cointelegraph. |
 | **Fear & Greed Index** | Basic     | Free           | None                 | Overall market sentiment (Alternative.me).            |
 | **CryptoPanic**        | Pro       | Free/Paid      | API Key              | Aggregated hot news across the industry.              |
-| **X (Twitter)**        | Social    | Free (Limited) | Bearer Token         | Real-time social buzz for specific tokens.            |
+| **X (Twitter)**        | Social    | Plan-dependent | Bearer Token         | Real-time social buzz for specific tokens.            |
 | **Reddit**             | Community | Free           | Client ID + Secret   | Deep-dives into subreddit discussions.                |
 | **NewsAPI**            | Financial | Free (Trial)   | API Key              | High-tier financial reporting (Bloomberg, Reuters).   |
 
@@ -43,6 +43,14 @@ To see what people are saying about a specific token ($BTC, $SOL):
    ```bash
    TWITTER_BEARER_TOKEN=your_bearer_token_here
    ```
+
+Recent search calls the [official X API](https://docs.x.com/x-api/posts/search-recent-posts)
+directly, using the existing bearer token and account access. It requests at most ten
+English non-retweets through the bounded source transport; no Tweepy/OAuthlib SDK
+is required. Invalid, partial, rate-limited or failed responses mark the source
+unavailable, not neutral news. Blank text does not count as a contributor.
+TwitterAPI.io is a separate provider with its own API key and is not selected by
+this configuration; never put its key in `TWITTER_BEARER_TOKEN`.
 
 ### 4. Reddit Sentiment
 

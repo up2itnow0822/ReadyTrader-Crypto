@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging  # Added logging
+import math
 import os
 import threading
 import time
@@ -18,6 +19,31 @@ class MarketDataResult:
     source: str
     data: Any
     meta: Dict[str, Any]
+
+    def acceptable_price(self) -> float:
+        """Return a price only while its original freshness and anomaly evidence is valid."""
+        if self.meta.get("stale") is not False or self.meta.get("outlier") is not False:
+            raise ValueError("marketdata_not_acceptable: missing or failed quality metadata")
+        timestamp = self.meta.get("timestamp_ms")
+        max_age = self.meta.get("max_age_ms")
+        if not _finite_number(timestamp) or not _finite_number(max_age) or float(max_age) <= 0:
+            raise ValueError("marketdata_not_acceptable: missing or invalid freshness bounds")
+        age = _now_ms() - float(timestamp)
+        if not 0 <= age <= float(max_age):
+            raise ValueError("marketdata_not_acceptable: stale or future timestamp")
+        ok, reason = _sane_ticker(self.data)
+        if not ok:
+            raise ValueError(f"marketdata_not_acceptable: {reason}")
+        return float(self.data["last"])
+
+
+def _finite_number(value: Any) -> bool:
+    if value is None or isinstance(value, bool):
+        return False
+    try:
+        return math.isfinite(float(value))
+    except (TypeError, ValueError, OverflowError):
+        return False
 
 
 def _now_ms() -> int:
@@ -90,14 +116,14 @@ def _max_age_ms_for(provider_id: str) -> int:
 
 def _sane_ticker(t: Dict[str, Any]) -> Tuple[bool, str]:
     try:
-        last = float(t.get("last") or 0.0)
-        if last <= 0.0:
+        last = t.get("last")
+        if not _finite_number(last) or float(last) <= 0.0:
             return False, "invalid_last"
         bid = t.get("bid")
         ask = t.get("ask")
-        if bid is not None and float(bid) <= 0.0:
+        if bid is not None and (not _finite_number(bid) or float(bid) <= 0.0):
             return False, "invalid_bid"
-        if ask is not None and float(ask) <= 0.0:
+        if ask is not None and (not _finite_number(ask) or float(ask) <= 0.0):
             return False, "invalid_ask"
         if bid is not None and ask is not None and float(ask) < float(bid):
             return False, "ask_lt_bid"
@@ -112,7 +138,7 @@ def _extract_ts_ms(t: Dict[str, Any]) -> Optional[int]:
         ts = t.get("timestamp")
     if ts is None:
         ts = t.get("ingested_at_ms")
-    if ts is None:
+    if not _finite_number(ts):
         return None
     try:
         return int(ts)
@@ -141,8 +167,16 @@ class MarketDataBus:
         sym = (symbol or "").strip().upper()
         now_ms = _now_ms()
 
-        # Operator config: optionally fail closed for execution usage.
-        enforce_fresh = os.getenv("MARKETDATA_FAIL_CLOSED", "false").strip().lower() == "true"
+        # Live data cannot fall back to stale/anomalous quotes, regardless of mutable env flags.
+        from app.core.config import settings
+        from app.core.settings import _parse_bool
+
+        enforce_fresh = (
+            settings.LIVE_TRADING_ENABLED
+            or not settings.PAPER_MODE
+            or settings.MARKETDATA_FAIL_CLOSED
+            or _parse_bool(os.getenv("MARKETDATA_FAIL_CLOSED", "false"))
+        )
 
         # Outlier detection config
         outlier_pct = _env_float("MARKETDATA_OUTLIER_MAX_PCT", 20.0)
@@ -150,6 +184,7 @@ class MarketDataBus:
 
         providers = sorted(self._providers, key=lambda p: self._priority.get(p.provider_id, 9))
         candidates: List[Dict[str, Any]] = []
+        candidate_tickers: Dict[str, Dict[str, Any]] = {}
         chosen: Optional[Dict[str, Any]] = None
         last_err: Exception | None = None
 
@@ -157,11 +192,15 @@ class MarketDataBus:
             pid = p.provider_id
             try:
                 t = p.fetch_ticker(sym)
+                # A provider may produce a quote while its network request is in flight.
+                # Measure freshness after it returns, not against request-start time.
+                now_ms = _now_ms()
                 ok, reason = _sane_ticker(t)
+                candidate_tickers[pid] = t
                 ts_ms = _extract_ts_ms(t)
                 age_ms = (now_ms - ts_ms) if ts_ms is not None else None
                 max_age_ms = _max_age_ms_for(pid)
-                stale = (age_ms is None) or (age_ms > max_age_ms)
+                stale = (age_ms is None) or not (0 <= age_ms <= max_age_ms)
                 cand = {
                     "provider_id": pid,
                     "priority": self._priority.get(pid, 9),
@@ -198,7 +237,7 @@ class MarketDataBus:
             best_age = None
             best_ticker = None
             best_ts = None
-            # We may not have the actual ticker for every candidate; refetch best if needed.
+            # Keep the exact validated observation; never refetch after choosing a candidate.
             for c in candidates:
                 if not c.get("ok"):
                     continue
@@ -219,10 +258,8 @@ class MarketDataBus:
                         best_pid, best_age = pid, age
 
             if best_pid is not None:
-                # refetch to return the full payload
-                p2 = next((p for p in providers if p.provider_id == best_pid), None)
-                if p2 is not None:
-                    best_ticker = p2.fetch_ticker(sym)
+                if best_pid in candidate_tickers:
+                    best_ticker = candidate_tickers[best_pid]
                     best_ts = _extract_ts_ms(best_ticker)
                     best_age = (now_ms - best_ts) if best_ts is not None else None
                     chosen = {
@@ -237,10 +274,11 @@ class MarketDataBus:
 
         ticker = chosen["ticker"]
         provider_id = str(chosen["provider_id"])
-        age_ms = chosen.get("age_ms")
         ts_ms = chosen.get("timestamp_ms")
+        now_ms = _now_ms()
+        age_ms = (now_ms - ts_ms) if ts_ms is not None else None
         max_age_ms = _max_age_ms_for(provider_id)
-        stale = (age_ms is None) or (age_ms > max_age_ms)
+        stale = (age_ms is None) or not (0 <= age_ms <= max_age_ms)
 
         # Cheap outlier check vs last good value
         outlier = False
@@ -277,7 +315,10 @@ class MarketDataBus:
             "outlier_reason": outlier_reason,
             "candidates": candidates,
         }
-        return MarketDataResult(source=provider_id, data=ticker, meta=meta)
+        result = MarketDataResult(source=provider_id, data=ticker, meta=meta)
+        if enforce_fresh:
+            result.acceptable_price()
+        return result
 
     def fetch_ohlcv(self, symbol: str, timeframe: str, limit: int) -> MarketDataResult:
         last_err: Exception | None = None

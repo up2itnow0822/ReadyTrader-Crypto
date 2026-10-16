@@ -31,6 +31,18 @@ services:
       target: api
     container_name: readytrader-api-live
     restart: unless-stopped
+    # Bound the whole service, including concurrent strategy sandbox children.
+    mem_limit: 2g
+    memswap_limit: 2g
+    cpus: 2.0
+    pids_limit: 128
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=128m
     ports:
       - "${API_PORT:-8000}:8000"
     environment:
@@ -99,6 +111,7 @@ services:
 
       # === MARKET DATA ===
       - MARKETDATA_EXCHANGES=${MARKETDATA_EXCHANGES:-binance,kraken,coinbase}
+      - MARKETDATA_FAIL_CLOSED=true
 
       # === PERSISTENCE ===
       - AUDIT_DB_PATH=/app/data/audit.db
@@ -127,7 +140,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 2G
+          cpus: '2.0'
+          pids: 128
         reservations:
           memory: 512M
 
@@ -141,6 +156,18 @@ services:
       target: mcp
     container_name: readytrader-mcp-live
     restart: unless-stopped
+    # Bound the whole service, including concurrent strategy sandbox children.
+    mem_limit: 2g
+    memswap_limit: 2g
+    cpus: 2.0
+    pids_limit: 128
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=128m
     stdin_open: true
     tty: true
     environment:
@@ -188,6 +215,7 @@ services:
       - CEX_COINBASE_API_KEY=${CEX_COINBASE_API_KEY}
       - CEX_COINBASE_API_SECRET=${CEX_COINBASE_API_SECRET}
       - MARKETDATA_EXCHANGES=${MARKETDATA_EXCHANGES:-binance,kraken,coinbase}
+      - MARKETDATA_FAIL_CLOSED=true
 
       # Persistence (shared with the api service, which approves this server's proposals)
       - AUDIT_DB_PATH=/app/data/audit.db

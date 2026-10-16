@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 import pytest
 
@@ -41,7 +42,12 @@ def offline_market_prices():
         key = str(symbol or "").strip().upper()
         if key not in FIXED_TEST_PRICES:
             raise ValueError(f"no test price for {symbol!r}")
-        return MarketDataResult(source="test_fixed", data={"symbol": key, "last": FIXED_TEST_PRICES[key]}, meta={})
+        now_ms = int(time.time() * 1000)
+        return MarketDataResult(
+            source="test_fixed",
+            data={"symbol": key, "last": FIXED_TEST_PRICES[key], "timestamp_ms": now_ms},
+            meta={"timestamp_ms": now_ms, "age_ms": 0, "max_age_ms": 30_000, "stale": False, "outlier": False},
+        )
 
     # Its own MonkeyPatch, so a test's monkeypatch.undo() does not put the network back. Some
     # integration fixtures reload app.core.container, so the container the tools hold and the module's

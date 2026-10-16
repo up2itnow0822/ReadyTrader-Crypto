@@ -95,13 +95,15 @@ followed: a signer that answers 3xx is refused, so point `SIGNER_REMOTE_URL` at 
 
 ### 4) `SIGNER_TYPE=cb_mpc_2pc` (Coinbase cb-mpc, Self-Hosted MPC)
 
-- Uses a 2-party MPC signer service (see `mpc_signer/`) configured via `MPC_SIGNER_URL`
-- No private key exists in a single process; signing is distributed across two parties
-- Recommended for "degen" multi-venue users who want a single wallet with strong compromise resistance
+- Uses a two-party MPC signer service with pinned mutual TLS and mandatory signer-side policy.
+- Each transaction needs an independent operator's single-use approval bound to its canonical digest. Application approval alone is not signing authority.
+- The bundled native dependency is incomplete. Keep live use halted until the native supply chain, linked binary and fund-free two-party ceremony/signing checks are independently validated.
+- See [MPC migration and ceremony protocol](../mpc_signer/README.md) for exact certificate, policy, approval and manual-recovery requirements. Do not reuse the former plaintext/raw-digest endpoints.
 
 ```bash
 SIGNER_TYPE=cb_mpc_2pc
-MPC_SIGNER_URL=http://mpc-party-0:8787
+MPC_SIGNER_URL=https://mpc-party-0:8787
+# Operator-provided mTLS and proof paths are required; see the signer README.
 ```
 
 ______________________________________________________________________

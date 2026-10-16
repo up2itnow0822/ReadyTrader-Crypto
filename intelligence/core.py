@@ -1,5 +1,9 @@
+import base64
+import json
 import os
 import re
+import subprocess  # nosec B404
+import sys
 import threading
 import time
 from collections.abc import Collection
@@ -10,11 +14,6 @@ import requests
 from .sentiment import MIN_DIRECTIONAL, MIN_TEXTS, SentimentReading, score_texts
 
 # Optional imports for Real APIs
-try:
-    import tweepy
-except ImportError:
-    tweepy = None
-
 try:
     import praw
 except ImportError:
@@ -41,11 +40,141 @@ class SourceError(Exception):
         self.message = message
 
 
+MAX_SOURCE_BYTES = 1024 * 1024
+MAX_SOURCE_SECONDS = 10.0
+MAX_SOURCE_REQUEST_BYTES = 16 * 1024
+_SOURCE_SLOTS = threading.BoundedSemaphore(4)
+
+# A requests read timeout only measures inactivity, including before headers. A dedicated,
+# killable worker gives the parent an absolute deadline even for DNS or slow header drips.
+# Only this fixed program runs; credentials travel on stdin, never argv or inherited env.
+_HTTP_WORKER = r"""
+import base64
+import json
+import os
+import sys
+import time
+
+if os.name == "posix":
+    import resource
+    for name, value in (("RLIMIT_AS", 256 * 1024 * 1024), ("RLIMIT_CPU", 10),
+                        ("RLIMIT_NOFILE", 64), ("RLIMIT_FSIZE", 0), ("RLIMIT_CORE", 0)):
+        resource.setrlimit(getattr(resource, name), (value, value))
+import requests
+
+try:
+    spec = json.loads(sys.stdin.buffer.read(65537))
+    deadline = time.monotonic() + spec["seconds"]
+    headers = spec["headers"]
+    headers["Accept-Encoding"] = "identity"
+    with requests.Session() as session:
+        session.trust_env = False
+        with session.request(spec["method"], spec["url"], headers=headers,
+                             data=base64.b64decode(spec["body"]), stream=True,
+                             allow_redirects=False, timeout=(spec["seconds"], spec["seconds"])) as response:
+            if not 200 <= response.status_code < 300:
+                raise ValueError("source status")
+            header_bytes = json.dumps(dict(response.headers)).encode("utf-8")
+            if len(header_bytes) > 16384:
+                raise ValueError("headers too large")
+            if response.headers.get("Content-Encoding", "identity").lower() not in ("", "identity"):
+                raise ValueError("compressed response refused")
+            length = response.headers.get("Content-Length")
+            if length is not None and (not length.isdecimal() or int(length) > spec["cap"]):
+                raise ValueError("response too large")
+            body = bytearray()
+            for chunk in response.iter_content(chunk_size=8192):
+                if time.monotonic() > deadline or len(body) + len(chunk) > spec["cap"]:
+                    raise ValueError("source budget exceeded")
+                body.extend(chunk)
+            result = {"status": response.status_code, "headers": dict(response.headers),
+                      "body": base64.b64encode(body).decode("ascii")}
+            sys.stdout.write(json.dumps(result))
+except Exception:
+    # Never echo URLs, auth headers, response bodies, or source exceptions.
+    sys.exit(1)
+"""
+
+
+class _BoundedSession(requests.Session):
+    """Requests-compatible transport for direct calls and SDKs, with one total session budget."""
+
+    def __init__(self):
+        super().__init__()
+        self.trust_env = False
+        self._deadline = time.monotonic() + MAX_SOURCE_SECONDS
+
+    def send(self, request, **kwargs):
+        seconds = min(MAX_SOURCE_SECONDS, self._deadline - time.monotonic())
+        if seconds <= 0:
+            raise SourceError("source_unavailable", "Intelligence source deadline exceeded")
+        body = request.body or b""
+        if isinstance(body, str):
+            body = body.encode("utf-8")
+        if not isinstance(body, bytes) or len(body) > MAX_SOURCE_REQUEST_BYTES:
+            raise SourceError("source_unavailable", "Intelligence request exceeds its byte budget")
+        spec = {
+            "method": request.method,
+            "url": request.url,
+            "headers": dict(request.headers),
+            "body": base64.b64encode(body).decode("ascii"),
+            "seconds": seconds,
+            "cap": MAX_SOURCE_BYTES,
+        }
+        payload = json.dumps(spec).encode("utf-8")
+        if len(payload) > MAX_SOURCE_REQUEST_BYTES:
+            raise SourceError("source_unavailable", "Intelligence request exceeds its byte budget")
+        if not _SOURCE_SLOTS.acquire(blocking=False):
+            raise SourceError("source_unavailable", "Intelligence source concurrency budget exhausted")
+        try:
+            # Worker output is bounded by its byte/header caps before encoding, and stderr is discarded.
+            env = {"SYSTEMROOT": os.environ["SYSTEMROOT"]} if "SYSTEMROOT" in os.environ else {}
+            result = subprocess.run(  # nosec B603
+                [sys.executable, "-I", "-c", _HTTP_WORKER],
+                input=payload,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                env=env,
+                timeout=seconds,
+                check=False,
+            )
+            if result.returncode != 0 or time.monotonic() > self._deadline:
+                raise ValueError("source budget or request failed")
+            reply = json.loads(result.stdout)
+            content = base64.b64decode(reply["body"], validate=True)
+            if len(content) > MAX_SOURCE_BYTES:
+                raise ValueError("source byte budget exceeded")
+            response = requests.Response()
+            response.status_code = reply["status"]
+            response.headers.update(reply["headers"])
+            # PRAW can sleep on upstream x-ratelimit metadata before invoking this transport.
+            # Fail on an exhausted quota, and do not pass arbitrary sleep instructions to SDKs.
+            remaining = response.headers.get("x-ratelimit-remaining")
+            if remaining is not None and not float(remaining) > 0:
+                raise ValueError("source rate limit exhausted")
+            for name in ("x-ratelimit-reset", "x-ratelimit-used", "x-ratelimit-remaining", "retry-after"):
+                response.headers.pop(name, None)
+            response._content = content
+            response._content_consumed = True
+            response.encoding = requests.utils.get_encoding_from_headers(response.headers)
+            response.url = request.url
+            response.request = request
+            return response
+        except (OSError, ValueError, KeyError, subprocess.TimeoutExpired) as exc:
+            raise SourceError("source_unavailable", "Intelligence source exceeded its budget or could not be read") from exc
+        finally:
+            _SOURCE_SLOTS.release()
+
+
+def _fetch_bytes(url: str) -> bytes:
+    with _BoundedSession() as session:
+        return session.get(url).content
+
+
 def fear_greed_index() -> str:
     """The Crypto Fear & Greed Index from alternative.me. Raises SourceError when it cannot be read."""
     try:
-        response = requests.get("https://api.alternative.me/fng/", timeout=10)
-        data = response.json()
+        data = json.loads(_fetch_bytes("https://api.alternative.me/fng/"))
         item = data["data"][0]
         return f"Fear & Greed Index: {item['value']} ({item['value_classification']})"
     except Exception as e:
@@ -67,8 +196,7 @@ def market_news() -> str:
         raise SourceError("not_configured", "Market news needs CRYPTOPANIC_API_KEY (https://cryptopanic.com/developers/api/).")
     try:
         url = f"https://cryptopanic.com/api/v1/posts/?auth_token={api_key}&kind=news&filter=hot"
-        response = requests.get(url, timeout=10)
-        data = response.json()
+        data = json.loads(_fetch_bytes(url))
     except Exception as e:
         raise SourceError("source_unavailable", f"CryptoPanic did not answer: {type(e).__name__}") from e
     if "results" not in data:
@@ -108,7 +236,7 @@ def rss_news(symbol: str = "") -> str:
 
     for name, url in feeds:
         try:
-            feed = feedparser.parse(url)
+            feed = feedparser.parse(_fetch_bytes(url))
             if getattr(feed, "bozo", False) and not feed.entries:
                 raise ValueError(str(getattr(feed, "bozo_exception", "unreadable feed")))
             # Take top 3 from each
@@ -253,19 +381,39 @@ SourceResult = Tuple[List[str], str, str]
 
 
 def _recent_tweets(asset: str) -> SourceResult:
-    bearer = os.getenv("TWITTER_BEARER_TOKEN")
-    if not (bearer and tweepy):
+    bearer = (os.getenv("TWITTER_BEARER_TOKEN") or "").strip()
+    if not bearer:
         return [], "Twitter: API Key missing.", "not_configured"
     try:
-        client = tweepy.Client(bearer_token=bearer)
-        tweets = client.search_recent_tweets(query=f"{asset} -is:retweet lang:en", max_results=10)
-        texts = [t.text for t in tweets.data or []]
+        # Keep the existing app-only token and query semantics without an OAuth SDK.
+        # The transport enforces the same deadline, byte limits and no-redirect policy.
+        with _BoundedSession() as session:
+            response = session.get(
+                "https://api.x.com/2/tweets/search/recent",
+                headers={"Authorization": f"Bearer {bearer}"},
+                params={"query": f"{asset} -is:retweet lang:en", "max_results": 10},
+            )
+            response.raise_for_status()
+            payload = response.json()
+        if not isinstance(payload, dict) or payload.get("errors"):
+            raise ValueError("invalid search response")
+        rows = payload.get("data")
+        if (rows is None and "data" not in payload) or rows == []:
+            meta = payload.get("meta")
+            if not isinstance(meta, dict) or type(meta.get("result_count")) is not int or meta["result_count"] != 0:
+                raise ValueError("invalid empty search response")
+            rows = []
+        if not isinstance(rows, list) or len(rows) > 10:
+            raise ValueError("invalid search result list")
+        if any(not isinstance(row, dict) or not isinstance(row.get("text"), str) for row in rows):
+            raise ValueError("invalid search result text")
+        texts = [row["text"] for row in rows if row["text"].strip()]
         if not texts:
             return [], "Twitter (Real): No recent tweets found.", "ok"
         preview = " | ".join(t[:50] + "..." for t in texts[:2])
         return texts, f"Twitter (Real): Found {len(texts)} recent tweets. Preview: {preview}", "ok"
     except Exception as e:
-        return [], f"Twitter Error: {str(e)}", "error"
+        return [], f"Twitter Error: {type(e).__name__}", "error"
 
 
 def _recent_reddit_titles(asset: str) -> SourceResult:
@@ -274,13 +422,19 @@ def _recent_reddit_titles(asset: str) -> SourceResult:
     if not (client_id and client_secret and praw):
         return [], "Reddit: API Keys missing.", "not_configured"
     try:
-        reddit = praw.Reddit(client_id=client_id, client_secret=client_secret, user_agent="agent_zero_crypto_bot/1.0")
+        reddit = praw.Reddit(
+            client_id=client_id,
+            client_secret=client_secret,
+            user_agent="agent_zero_crypto_bot/1.0",
+            requestor_kwargs={"session": _BoundedSession()},
+            ratelimit_seconds=0,
+        )
         titles = [p.title for p in reddit.subreddit("cryptocurrency").search(asset, limit=5, time_filter="day")]
         if not titles:
             return [], "Reddit (Real): No recent posts found.", "ok"
         return titles, f"Reddit (Real): Found {len(titles)} posts in r/CC. Preview: {' | '.join(titles[:2])}", "ok"
     except Exception as e:
-        return [], f"Reddit Error: {str(e)}", "error"
+        return [], f"Reddit Error: {type(e).__name__}", "error"
 
 
 def _describe(reading: SentimentReading) -> str:
@@ -350,7 +504,7 @@ def financial_news(symbol: str) -> str:
     if not api_key or not NewsApiClient:
         raise SourceError("not_configured", "Financial news needs NEWSAPI_KEY (https://newsapi.org/).")
     try:
-        newsapi = NewsApiClient(api_key=api_key)
+        newsapi = NewsApiClient(api_key=api_key, session=_BoundedSession())
         articles = newsapi.get_everything(q=f"{symbol} crypto", language="en", sort_by="relevancy", page_size=3)
     except Exception as e:
         raise SourceError("source_unavailable", f"NewsAPI did not answer: {type(e).__name__}") from e

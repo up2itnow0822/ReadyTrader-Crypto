@@ -7,10 +7,12 @@ from app.core.container import global_container
 from app.core.jsonio import json_err as _json_err
 from app.core.jsonio import json_ok as _json_ok
 from app.tools.params import Integer
+from app.tools.research import tool_budget
 
 
 def register_market_tools(mcp: FastMCP):
     @mcp.tool()
+    @tool_budget()
     def get_sentiment() -> str:
         """Get the current Crypto Fear & Greed Index (alternative.me; no key needed)."""
         from intelligence import SourceError, fear_greed_index
@@ -21,6 +23,7 @@ def register_market_tools(mcp: FastMCP):
             return _json_err(e.code, e.message)
 
     @mcp.tool()
+    @tool_budget()
     def get_news() -> str:
         """Hot crypto market news from CryptoPanic (needs CRYPTOPANIC_API_KEY)."""
         from intelligence import SourceError, market_news

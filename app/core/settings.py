@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 import tomllib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
@@ -71,11 +71,35 @@ class SettingsValidationError(Exception):
         super().__init__(f"Invalid configuration for {field}={value!r}: {message}")
 
 
-def _parse_bool(value: str | None, default: bool = False) -> bool:
-    """Parse a boolean from environment variable."""
-    if value is None or value.strip() == "":
-        return default
-    return value.strip().lower() in ("true", "1", "yes", "on")
+def _parse_bool(value: Any) -> bool:
+    """Accept only documented boolean spellings; typos must never weaken a gate."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "on"}:
+            return True
+        if normalized in {"false", "0", "no", "off"}:
+            return False
+    raise ValueError("expected true/false, 1/0, yes/no, or on/off")
+
+
+def _env_bool(name: str, default: bool) -> Any:
+    # Defer parsing until all fields exist, so startup reports all malformed settings together.
+    value = os.getenv(name)
+    return default if value is None else value
+
+
+def _marketdata_fail_closed_default() -> Any:
+    value = os.getenv("MARKETDATA_FAIL_CLOSED")
+    if value is not None:
+        return value
+    try:
+        live = _parse_bool(_env_bool("LIVE_TRADING_ENABLED", False))
+        paper = _parse_bool(_env_bool("PAPER_MODE", True))
+    except ValueError:
+        return True  # The invalid mode itself will refuse startup during aggregate validation.
+    return live or not paper
 
 
 def _parse_int(value: str | None, default: int | None = None) -> int | None:
@@ -180,36 +204,24 @@ class Settings:
     VERSION: str = field(default_factory=_get_version_from_pyproject)
 
     # Core mode settings
-    PAPER_MODE: bool = field(default_factory=lambda: _parse_bool(os.getenv("PAPER_MODE"), True))
-    LIVE_TRADING_ENABLED: bool = field(default_factory=lambda: _parse_bool(os.getenv("LIVE_TRADING_ENABLED"), False))
+    PAPER_MODE: bool = field(default_factory=lambda: _env_bool("PAPER_MODE", True))
+    LIVE_TRADING_ENABLED: bool = field(default_factory=lambda: _env_bool("LIVE_TRADING_ENABLED", False))
     # Default halted: operator must explicitly set TRADING_HALTED=false to trade.
-    TRADING_HALTED: bool = field(default_factory=lambda: _parse_bool(os.getenv("TRADING_HALTED"), True))
-    DEV_MODE: bool = field(default_factory=lambda: _parse_bool(os.getenv("DEV_MODE"), False))
+    TRADING_HALTED: bool = field(default_factory=lambda: _env_bool("TRADING_HALTED", True))
+    DEV_MODE: bool = field(default_factory=lambda: _env_bool("DEV_MODE", False))
 
     # Execution settings
-    EXECUTION_MODE: ExecutionMode = field(
-        default_factory=lambda: ExecutionMode(os.getenv("EXECUTION_MODE", "auto").strip().lower())
-        if os.getenv("EXECUTION_MODE", "auto").strip().lower() in [e.value for e in ExecutionMode]
-        else ExecutionMode.AUTO
-    )
+    EXECUTION_MODE: ExecutionMode = field(default_factory=lambda: os.getenv("EXECUTION_MODE", "auto"))
 
-    EXECUTION_APPROVAL_MODE: ApprovalMode = field(
-        default_factory=lambda: ApprovalMode(os.getenv("EXECUTION_APPROVAL_MODE", "auto").strip().lower())
-        if os.getenv("EXECUTION_APPROVAL_MODE", "auto").strip().lower() in [e.value for e in ApprovalMode]
-        else ApprovalMode.AUTO
-    )
+    EXECUTION_APPROVAL_MODE: ApprovalMode = field(default_factory=lambda: os.getenv("EXECUTION_APPROVAL_MODE", "auto"))
 
     # Risk settings
-    RISK_PROFILE: RiskProfile = field(
-        default_factory=lambda: RiskProfile(os.getenv("RISK_PROFILE", "conservative").strip().lower())
-        if os.getenv("RISK_PROFILE", "conservative").strip().lower() in [e.value for e in RiskProfile]
-        else RiskProfile.CONSERVATIVE
-    )
+    RISK_PROFILE: RiskProfile = field(default_factory=lambda: os.getenv("RISK_PROFILE", "conservative"))
 
     # API server settings
     API_PORT: int = field(default_factory=lambda: _parse_int(os.getenv("API_PORT"), 8000) or 8000)
     API_HOST: str = field(default_factory=lambda: os.getenv("API_HOST", "0.0.0.0").strip())  # nosec B104 - intentional for container binding
-    API_AUTH_REQUIRED: bool = field(default_factory=lambda: _parse_bool(os.getenv("API_AUTH_REQUIRED"), False))
+    API_AUTH_REQUIRED: bool = field(default_factory=lambda: _env_bool("API_AUTH_REQUIRED", False))
     API_JWT_SECRET: str | None = field(default_factory=lambda: os.getenv("API_JWT_SECRET"))
     API_JWT_EXPIRATION_HOURS: int = field(default_factory=lambda: _parse_int(os.getenv("API_JWT_EXPIRATION_HOURS"), 24) or 24)
     API_ADMIN_USERNAME: str = field(default_factory=lambda: os.getenv("API_ADMIN_USERNAME", "admin").strip())
@@ -220,16 +232,12 @@ class Settings:
     CORS_ALLOW_ALL: bool = field(default_factory=lambda: os.getenv("CORS_ORIGINS", "*").strip() == "*")
 
     # Rate limiting
-    RATE_LIMIT_ENABLED: bool = field(default_factory=lambda: _parse_bool(os.getenv("RATE_LIMIT_ENABLED"), True))
+    RATE_LIMIT_ENABLED: bool = field(default_factory=lambda: _env_bool("RATE_LIMIT_ENABLED", True))
     RATE_LIMIT_DEFAULT_PER_MIN: int = field(default_factory=lambda: _parse_int(os.getenv("RATE_LIMIT_DEFAULT_PER_MIN"), 120) or 120)
     RATE_LIMIT_EXECUTION_PER_MIN: int = field(default_factory=lambda: _parse_int(os.getenv("RATE_LIMIT_EXECUTION_PER_MIN"), 20) or 20)
 
     # Signer settings
-    SIGNER_TYPE: SignerType = field(
-        default_factory=lambda: SignerType(os.getenv("SIGNER_TYPE", "env_private_key").strip().lower())
-        if os.getenv("SIGNER_TYPE", "env_private_key").strip().lower() in [e.value for e in SignerType]
-        else SignerType.ENV_PRIVATE_KEY
-    )
+    SIGNER_TYPE: SignerType = field(default_factory=lambda: os.getenv("SIGNER_TYPE", "env_private_key"))
     PRIVATE_KEY: str | None = field(default_factory=lambda: os.getenv("PRIVATE_KEY"))
     KEYSTORE_PATH: str | None = field(default_factory=lambda: os.getenv("KEYSTORE_PATH"))
     KEYSTORE_PASSWORD: str | None = field(default_factory=lambda: os.getenv("KEYSTORE_PASSWORD"))
@@ -237,14 +245,14 @@ class Settings:
     MPC_SIGNER_URL: str | None = field(default_factory=lambda: os.getenv("MPC_SIGNER_URL"))
 
     # Signer policy
-    SIGNER_POLICY_ENABLED: bool = field(default_factory=lambda: _parse_bool(os.getenv("SIGNER_POLICY_ENABLED"), False))
+    SIGNER_POLICY_ENABLED: bool = field(default_factory=lambda: _env_bool("SIGNER_POLICY_ENABLED", False))
     SIGNER_ALLOWED_CHAIN_IDS: FrozenSet[int] = field(default_factory=lambda: _parse_csv_int_set(os.getenv("SIGNER_ALLOWED_CHAIN_IDS")))
     SIGNER_ALLOWED_TO_ADDRESSES: FrozenSet[str] = field(default_factory=lambda: _parse_csv_set(os.getenv("SIGNER_ALLOWED_TO_ADDRESSES")))
     SIGNER_MAX_VALUE_WEI: int | None = field(default_factory=lambda: _parse_int(os.getenv("SIGNER_MAX_VALUE_WEI")))
     SIGNER_MAX_GAS: int | None = field(default_factory=lambda: _parse_int(os.getenv("SIGNER_MAX_GAS")))
     SIGNER_MAX_GAS_PRICE_WEI: int | None = field(default_factory=lambda: _parse_int(os.getenv("SIGNER_MAX_GAS_PRICE_WEI")))
     SIGNER_MAX_DATA_BYTES: int | None = field(default_factory=lambda: _parse_int(os.getenv("SIGNER_MAX_DATA_BYTES")))
-    SIGNER_DISALLOW_CONTRACT_CREATION: bool = field(default_factory=lambda: _parse_bool(os.getenv("SIGNER_DISALLOW_CONTRACT_CREATION"), False))
+    SIGNER_DISALLOW_CONTRACT_CREATION: bool = field(default_factory=lambda: _env_bool("SIGNER_DISALLOW_CONTRACT_CREATION", False))
 
     # Policy allowlists
     ALLOW_CHAINS: FrozenSet[str] = field(default_factory=lambda: _parse_csv_set(os.getenv("ALLOW_CHAINS")))
@@ -276,7 +284,7 @@ class Settings:
     MARKETDATA_MAX_AGE_MS_EXCHANGE_WS: int = field(default_factory=lambda: _parse_int(os.getenv("MARKETDATA_MAX_AGE_MS_EXCHANGE_WS"), 15000) or 15000)
     MARKETDATA_OUTLIER_MAX_PCT: float = field(default_factory=lambda: _parse_float(os.getenv("MARKETDATA_OUTLIER_MAX_PCT"), 20.0) or 20.0)
     MARKETDATA_OUTLIER_WINDOW_MS: int = field(default_factory=lambda: _parse_int(os.getenv("MARKETDATA_OUTLIER_WINDOW_MS"), 10000) or 10000)
-    MARKETDATA_FAIL_CLOSED: bool = field(default_factory=lambda: _parse_bool(os.getenv("MARKETDATA_FAIL_CLOSED"), False))
+    MARKETDATA_FAIL_CLOSED: bool = field(default_factory=_marketdata_fail_closed_default)
 
     # Persistence paths
     AUDIT_DB_PATH: str | None = field(default_factory=lambda: os.getenv("AUDIT_DB_PATH"))
@@ -309,11 +317,7 @@ class Settings:
     # Remote signer timeouts
     REMOTE_SIGNER_TIMEOUT_SEC: int = field(default_factory=lambda: _parse_int(os.getenv("REMOTE_SIGNER_TIMEOUT_SEC"), 30) or 30)
     REMOTE_SIGNER_RETRY_COUNT: int = field(default_factory=lambda: _parse_int(os.getenv("REMOTE_SIGNER_RETRY_COUNT"), 3) or 3)
-    # Fail-closed: only an explicit false/0/no/off disables TLS for the remote signer; blank
-    # or unrecognised values keep it required (same rule as signing/remote_signer.py).
-    REMOTE_SIGNER_REQUIRE_TLS: bool = field(
-        default_factory=lambda: (os.getenv("REMOTE_SIGNER_REQUIRE_TLS") or "").strip().lower() not in ("false", "0", "no", "off")
-    )
+    REMOTE_SIGNER_REQUIRE_TLS: bool = field(default_factory=lambda: _env_bool("REMOTE_SIGNER_REQUIRE_TLS", True))
 
     def __post_init__(self) -> None:
         """Validate settings after initialization."""
@@ -324,6 +328,29 @@ class Settings:
         import warnings
 
         errors: list[str] = []
+        for definition in fields(self):
+            if definition.type == "bool":
+                try:
+                    setattr(self, definition.name, _parse_bool(getattr(self, definition.name)))
+                except ValueError as error:
+                    errors.append(f"{definition.name}: {error}")
+        for name, enum in (
+            ("EXECUTION_MODE", ExecutionMode),
+            ("EXECUTION_APPROVAL_MODE", ApprovalMode),
+            ("RISK_PROFILE", RiskProfile),
+            ("SIGNER_TYPE", SignerType),
+        ):
+            value = getattr(self, name)
+            try:
+                normalized = value.value if isinstance(value, Enum) else str(value).strip().lower()
+                setattr(self, name, enum(normalized))
+            except (TypeError, ValueError):
+                errors.append(f"{name}: expected one of {', '.join(member.value for member in enum)}")
+        if errors:
+            raise SettingsValidationError("MULTIPLE", None, "; ".join(errors))
+
+        if (self.LIVE_TRADING_ENABLED or not self.PAPER_MODE) and not self.MARKETDATA_FAIL_CLOSED:
+            errors.append("MARKETDATA_FAIL_CLOSED must be true when LIVE_TRADING_ENABLED=true or PAPER_MODE=false")
 
         # Production / live fail-closed (paper MCP may still boot without JWT)
         production_live = (not self.DEV_MODE) and (self.LIVE_TRADING_ENABLED or not self.PAPER_MODE)

@@ -19,42 +19,21 @@ from app.core.jsonio import json_err as _json_err
 from app.core.jsonio import json_ok as _json_ok
 from app.tools.params import Integer, Number
 from app.tools.trading import market_price, pre_trade_check, swap_check, usd_price
+from errors import AppError
 from execution.cex_executor import CexExecutor
 from execution.evm import (
     chain_id_for,
-    erc20_decimals,
     get_web3,
     is_hex_address,
     send_raw_transaction,
     to_atomic,
 )
 from execution.router import venue_allowed
+from idempotency_store import IdempotencyError
 from observability.audit import now_ms
 from policy_engine import PolicyError
 
 logger = logging.getLogger(__name__)
-
-
-def _parse_int(v: Any, default: int = 0) -> int:
-    """
-    Parse numeric fields coming from APIs (often hex strings like "0x0").
-    """
-    if v is None:
-        return int(default)
-    if isinstance(v, bool):
-        raise ValueError("boolean is not a valid int")
-    if isinstance(v, int):
-        return v
-    if isinstance(v, float):
-        return int(v)
-    if isinstance(v, str):
-        s = v.strip()
-        if s == "":
-            return int(default)
-        if s.lower().startswith("0x"):
-            return int(s, 16)
-        return int(s, 10)
-    return int(v)
 
 
 class LiveGateRefused(ValueError):
@@ -76,7 +55,7 @@ def _json_internal_error(
     if isinstance(exc, LiveGateRefused):
         logger.info("%s: %s", exc.code, exc)
         return _json_err(exc.code, str(exc), data)
-    if isinstance(exc, PolicyError):
+    if isinstance(exc, (PolicyError, IdempotencyError)) or (isinstance(exc, AppError) and exc.code == "execution_outcome_uncertain"):
         logger.info("%s: %s", exc.code, exc.message)
         return _json_err(exc.code, exc.message, {**(data or {}), **(exc.data or {})})
     logger.exception("%s: %s", code, exc)
@@ -202,10 +181,8 @@ def swap_tokens(
     """
     Swap tokens on a DEX (paper mode or live).
 
-    Live mode:
-    - builds a swap transaction using 1inch
-    - signs with configured signer (supports remote signer)
-    - broadcasts via JSON-RPC
+    Live aggregated swaps are refused until their full semantics can be verified.
+    Paper swaps remain available at market-data prices.
     """
     symbol = f"{from_token}/{to_token}"
     try:
@@ -243,122 +220,56 @@ def swap_tokens(
 
     try:
         _require_live_allowed(venue="dex")
-        # Policy, then the Risk Guardian: before a proposal is made and again when an approved
-        # proposal executes.
         global_container.policy_engine.validate_swap(chain=chain, from_token=from_token, to_token=to_token, amount=amount)
-        check = swap_check(from_token, to_token, amount, None, chain=chain)
-        if not check["allowed"]:
-            return _risk_blocked(check, venue="dex", mode="live", symbol=symbol)
-        proposed = _maybe_propose(
-            "swap_tokens",
-            {
-                "from_token": from_token,
-                "to_token": to_token,
-                "amount": amount,
-                "chain": chain,
-                "rationale": rationale,
-                "idempotency_key": idempotency_key,
-            },
+        # Containment, not a simulated intent verifier. No live proposal, provider
+        # request, signing, or broadcast is safe under the current opaque API.
+        return _json_err(
+            "unsupported_swap_semantics",
+            "Live aggregated swaps are disabled until canonical approved intent and full router semantics can be verified. Paper swaps remain available.",
+            {"venue": "dex", "mode": "live"},
         )
-        if proposed:
-            return proposed
-
-        if idempotency_key:
-            cached = global_container.idempotency_store.get(idempotency_key)
-            if cached is not None:
-                return _json_ok({"venue": "dex", "mode": "live", "idempotency_key": idempotency_key, **cached})
-
-        chain_id = chain_id_for(chain)
-        signer = global_container.signer
-        user_address = signer.get_address()
-        global_container.policy_engine.validate_signer_address(address=user_address)
-
-        token_in = _resolve_token(chain, from_token)
-        token_out = _resolve_token(chain, to_token)
-
-        # Convert amount -> atomic units
-        NATIVE = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-        if token_in.lower() == NATIVE:
-            decimals = 18
-        else:
-            decimals = erc20_decimals(chain, token_in)
-        amount_atomic = to_atomic(amount, decimals)
-
-        slippage = float((os.getenv("DEX_SLIPPAGE_PCT") or "1.0").strip() or "1.0")
-        swap_payload = global_container.dex_handler.build_swap_tx(
-            chain,
-            token_in,
-            token_out,
-            str(amount_atomic),
-            user_address,
-            slippage=slippage,
-        )
-        if not isinstance(swap_payload, dict):
-            raise ValueError("1inch returned non-object payload")
-        if swap_payload.get("error"):
-            raise ValueError(str(swap_payload.get("error")))
-        tx = swap_payload.get("tx")
-        if not isinstance(tx, dict):
-            raise ValueError("1inch payload missing tx")
-
-        router_to = str(tx.get("to") or "").strip()
-        if not router_to:
-            raise ValueError("Swap tx missing 'to' (router address)")
-
-        global_container.policy_engine.validate_router_address(chain=chain, router_address=router_to, context={"from_token": from_token, "to_token": to_token})
-        global_container.policy_engine.validate_sign_tx(
-            chain_id=chain_id,
-            to_address=router_to,
-            value_wei=_parse_int(tx.get("value"), 0),
-            gas=_parse_int(tx.get("gas"), 0) if tx.get("gas") is not None else None,
-            gas_price_wei=_parse_int(tx.get("gasPrice"), 0) if tx.get("gasPrice") is not None else None,
-            data_hex=str(tx.get("data") or ""),
-        )
-
-        # Ensure fields required for signing
-        w3 = get_web3(chain)
-        tx = dict(tx)
-
-        tx["chainId"] = int(chain_id)
-
-        # Normalize numeric fields that frequently arrive as hex strings from APIs
-
-        if "value" in tx:
-            tx["value"] = _parse_int(tx.get("value"), 0)
-
-        if "gas" in tx:
-            tx["gas"] = _parse_int(tx.get("gas"), 0)
-
-        if "gasPrice" in tx:
-            tx["gasPrice"] = _parse_int(tx.get("gasPrice"), 0)
-        if not tx.get("nonce"):
-            tx["nonce"] = w3.eth.get_transaction_count(Web3.to_checksum_address(user_address))
-
-        signed = signer.sign_transaction(tx, chain_id=chain_id)
-        tx_hash = send_raw_transaction(chain, signed.rawTransaction)
-
-        summary = {
-            "chain": chain,
-            "from_token": from_token,
-            "to_token": to_token,
-            "amount": amount,
-            "tx_hash": tx_hash,
-            "idempotency_key": idempotency_key,
-        }
-        global_container.audit_log.append(
-            ts_ms=now_ms(),
-            request_id=idempotency_key or f"dex:{tx_hash}",
-            tool="swap_tokens",
-            ok=True,
-            mode="live",
-            venue="dex",
-            summary=summary,
-        )
-        if idempotency_key:
-            global_container.idempotency_store.set(idempotency_key, summary)
-        return _json_ok({"venue": "dex", "mode": "live", **summary})
     except Exception as e:
         return _json_internal_error("execution_error", "Execution failed.", e)
+
+
+def _execution_claim(key: str, payload: Dict[str, Any], *, existing_only: bool = False) -> Dict[str, Any] | None:
+    store = global_container.idempotency_store
+    claim = store.lookup(key, payload) if existing_only else store.reserve(key, payload)
+    if claim is None:
+        return None
+    if not claim["acquired"] and claim["state"] != "completed":
+        error = IdempotencyError(
+            "execution_pending" if claim["state"] == "pending" else "execution_outcome_uncertain",
+            "Execution is already pending or uncertain. Reconcile the original operation; do not submit a new key.",
+        )
+        error.data = {"idempotency_key": key, "state": claim["state"], "client_order_id": claim["client_order_id"], "evidence": claim["evidence"]}
+        raise error
+    return claim
+
+
+def _uncertain_execution(key: str, claim: Dict[str, Any] | None, exc: Exception, effect_started: bool) -> Exception:
+    if claim and claim.get("acquired"):
+        try:
+            global_container.idempotency_store.mark_uncertain(key, claim["owner"])
+        except Exception:
+            # A durable pending claim also prevents resend after storage failure.
+            logger.error("Unable to mark execution uncertain; retain pending claim for reconciliation.")
+        if effect_started:
+            return AppError(
+                "execution_outcome_uncertain",
+                "Execution may have reached the venue. Reconcile before any new order or transfer.",
+                {"idempotency_key": key, "client_order_id": claim["client_order_id"], "evidence": claim.get("evidence", {})},
+            )
+    return exc
+
+
+def _audit_execution(**kwargs: Any) -> None:
+    # A diagnostic write must not turn a durably recorded success into a failure
+    # that encourages another irreversible operation.
+    try:
+        global_container.audit_log.append(**kwargs)
+    except Exception as exc:
+        logger.error("Execution audit append failed (%s); durable result retained.", type(exc).__name__)
 
 
 def transfer_eth(to_address: str, amount: Number, chain: str = "ethereum", idempotency_key: str = "") -> str:
@@ -374,7 +285,13 @@ def transfer_eth(to_address: str, amount: Number, chain: str = "ethereum", idemp
         amount = float("nan")
     if not math.isfinite(amount) or amount <= 0:
         return _json_err("invalid_amount", "amount must be a positive number", {"to_address": to_address, "chain": chain})
+    claim = None
+    effect_started = False
     try:
+        payload = {"kind": "transfer_eth", "chain": chain.strip().lower(), "to_address": to_address.strip().lower(), "amount": amount}
+        previous = _execution_claim(idempotency_key, payload, existing_only=True)
+        if previous is not None:
+            return _json_ok({"venue": "dex", "mode": "live", **previous["result"]})
         _require_live_allowed(venue="dex")
         # Policy first, so an operator is never asked to approve a transfer that would be refused.
         global_container.policy_engine.validate_transfer_native(chain=chain, to_address=to_address, amount=amount)
@@ -385,10 +302,9 @@ def transfer_eth(to_address: str, amount: Number, chain: str = "ethereum", idemp
         if proposed:
             return proposed
 
-        if idempotency_key:
-            cached = global_container.idempotency_store.get(idempotency_key)
-            if cached is not None:
-                return _json_ok({"venue": "dex", "mode": "live", "idempotency_key": idempotency_key, **cached})
+        claim = _execution_claim(idempotency_key, payload)
+        if not claim["acquired"]:
+            return _json_ok({"venue": "dex", "mode": "live", **claim["result"]})
 
         chain_id = chain_id_for(chain)
         w3 = get_web3(chain)
@@ -398,7 +314,7 @@ def transfer_eth(to_address: str, amount: Number, chain: str = "ethereum", idemp
 
         to_checksum = w3.to_checksum_address(to_address)
         value_wei = int(to_atomic(amount, 18))
-        nonce = w3.eth.get_transaction_count(w3.to_checksum_address(from_addr))
+        nonce = w3.eth.get_transaction_count(w3.to_checksum_address(from_addr), "pending")
         gas = 21000
         gas_price = int(w3.eth.gas_price)
 
@@ -419,6 +335,10 @@ def transfer_eth(to_address: str, amount: Number, chain: str = "ethereum", idemp
             data_hex="0x",
         )
         signed = signer.sign_transaction(tx, chain_id=chain_id)
+        evidence = {"chain": chain, "tx_hash": Web3.to_hex(Web3.keccak(signed.rawTransaction)), "nonce": nonce, "from_address": from_addr}
+        global_container.idempotency_store.record_evidence(idempotency_key, claim["owner"], evidence)
+        claim["evidence"] = evidence
+        effect_started = True
         tx_hash = send_raw_transaction(chain, signed.rawTransaction)
 
         summary = {
@@ -428,7 +348,8 @@ def transfer_eth(to_address: str, amount: Number, chain: str = "ethereum", idemp
             "tx_hash": tx_hash,
             "idempotency_key": idempotency_key,
         }
-        global_container.audit_log.append(
+        global_container.idempotency_store.complete(idempotency_key, claim["owner"], summary)
+        _audit_execution(
             ts_ms=now_ms(),
             request_id=idempotency_key or f"native:{tx_hash}",
             tool="transfer_eth",
@@ -437,11 +358,9 @@ def transfer_eth(to_address: str, amount: Number, chain: str = "ethereum", idemp
             venue="dex",
             summary=summary,
         )
-        if idempotency_key:
-            global_container.idempotency_store.set(idempotency_key, summary)
         return _json_ok({"venue": "dex", "mode": "live", **summary})
     except Exception as e:
-        return _json_internal_error("transfer_error", "Transfer failed.", e)
+        return _json_internal_error("transfer_error", "Transfer failed.", _uncertain_execution(idempotency_key, claim, e, effect_started))
 
 
 def _order_args(symbol: str, side: Any, amount: Any, order_type: Any, price: Any, market_type: Any = "spot") -> Tuple[Optional[str], Dict[str, Any]]:
@@ -495,7 +414,7 @@ def place_cex_order(
 
     In paper mode, this routes to the paper engine and does NOT require CEX credentials.
     """
-    if settings.EXECUTION_MODE == "dex":
+    if settings.PAPER_MODE and settings.EXECUTION_MODE == "dex":
         return _json_err("execution_mode_blocked", "CEX execution disabled by EXECUTION_MODE=dex")
 
     error, args = _order_args(symbol, side, amount, order_type, price, market_type)
@@ -539,7 +458,22 @@ def place_cex_order(
             return _json_err(res["code"], res["message"], {"venue": "cex", "mode": "paper", "symbol": symbol})
         return _json_ok({"venue": "cex", "mode": "paper", "result": res["message"], "fill": res["fill"], "risk": check})
 
+    claim = None
+    effect_started = False
     try:
+        payload = {
+            "kind": "place_cex_order",
+            "exchange": exchange.strip().lower(),
+            "market_type": market_type.strip().lower(),
+            "symbol": symbol.strip().upper(),
+            "side": side_norm,
+            "amount": amount,
+            "order_type": order_type_norm,
+            "price": explicit,
+        }
+        previous = _execution_claim(idempotency_key, payload, existing_only=True)
+        if previous is not None:
+            return _json_ok({"venue": "cex", "mode": "live", **previous["result"]})
         _require_live_allowed(venue="cex")
         # The policy and the Risk Guardian run before a proposal is made (so an operator is never
         # asked to approve an order that would be refused) and again when an approved proposal
@@ -572,13 +506,13 @@ def place_cex_order(
         if proposed:
             return proposed
 
-        if idempotency_key:
-            cached = global_container.idempotency_store.get(idempotency_key)
-            if cached is not None:
-                return _json_ok({"venue": "cex", "mode": "live", "idempotency_key": idempotency_key, **cached})
+        claim = _execution_claim(idempotency_key, payload)
+        if not claim["acquired"]:
+            return _json_ok({"venue": "cex", "mode": "live", **claim["result"]})
 
         ex = CexExecutor(exchange_id=exchange, market_type=market_type, auth=True)
-        params = {"clientOrderId": idempotency_key} if idempotency_key else None
+        params = {"clientOrderId": claim["client_order_id"]}
+        effect_started = True
         order = ex.place_order(
             symbol=symbol,
             side=side_norm,
@@ -598,7 +532,8 @@ def place_cex_order(
             "price": price,
             "order": normalized,
         }
-        global_container.audit_log.append(
+        global_container.idempotency_store.complete(idempotency_key, claim["owner"], summary)
+        _audit_execution(
             ts_ms=now_ms(),
             request_id=idempotency_key or f"cex:{exchange}:{normalized.get('id')}",
             tool="place_cex_order",
@@ -609,11 +544,9 @@ def place_cex_order(
             market_type=market_type,
             summary=summary,
         )
-        if idempotency_key:
-            global_container.idempotency_store.set(idempotency_key, summary)
         return _json_ok({"venue": "cex", "mode": "live", **summary})
     except Exception as e:
-        return _json_internal_error("cex_error", "Exchange operation failed.", e)
+        return _json_internal_error("cex_error", "Exchange operation failed.", _uncertain_execution(idempotency_key, claim, e, effect_started))
 
 
 def get_cex_balance(exchange: str = "binance", market_type: str = "spot") -> str:
@@ -796,13 +729,14 @@ def replace_cex_order(
     order_type: str = "limit",
     price: Number | None = None,
     market_type: str = "spot",
+    idempotency_key: str = "",
 ) -> str:
     """
     Replace (edit) an existing order on a centralized exchange.
 
-    Atomically cancels the existing order and places a new one with updated
-    parameters. Useful for adjusting limit prices without losing queue position.
-    Note: not all exchanges support this operation.
+    Exchange-specific edit semantics apply; atomicity and queue position are not
+    guaranteed. Live edits require an idempotency_key and are never retried after
+    an uncertain response. Not all exchanges support this operation.
     """
     refused = _paper_mode_refusal("replace_cex_order")
     if refused:
@@ -810,7 +744,20 @@ def replace_cex_order(
     error, args = _order_args(symbol, side, amount, order_type, price, market_type)
     if error:
         return error
+    claim = None
+    effect_started = False
     try:
+        payload = {
+            "kind": "replace_cex_order",
+            "exchange": exchange.strip().lower(),
+            "market_type": market_type.strip().lower(),
+            "order_id": order_id,
+            "symbol": symbol.strip().upper(),
+            **args,
+        }
+        previous = _execution_claim(idempotency_key, payload, existing_only=True)
+        if previous is not None:
+            return _json_ok(previous["result"])
         _require_live_allowed(venue="cex")
         if settings.EXECUTION_APPROVAL_MODE == "approve_each" and not _APPROVED_EXECUTION.get():
             # A replacement is a new order. It used to skip the approval gate entirely.
@@ -832,7 +779,14 @@ def replace_cex_order(
         check = pre_trade_check(symbol, args["side"], args["amount"], args["price"], exchange=exchange, market_type=market_type, order_type=args["order_type"])
         if not check["allowed"]:
             return _risk_blocked(check, venue="cex", mode="live", symbol=symbol)
+        claim = _execution_claim(idempotency_key, payload)
+        if not claim["acquired"]:
+            return _json_ok(claim["result"])
+        evidence = {"exchange": exchange, "symbol": symbol, "order_id": order_id}
+        global_container.idempotency_store.record_evidence(idempotency_key, claim["owner"], evidence)
+        claim["evidence"] = evidence
         ex = CexExecutor(exchange_id=exchange, market_type=market_type, auth=True)
+        effect_started = True
         res = ex.replace_order(
             order_id=order_id,
             symbol=symbol,
@@ -842,9 +796,22 @@ def replace_cex_order(
             price=float(price) if price is not None else None,
             params=None,
         )
-        return _json_ok({"exchange": exchange, "market_type": market_type, "order": ex.normalize_order(res)})
+        summary = {"exchange": exchange, "market_type": market_type, "order": ex.normalize_order(res)}
+        global_container.idempotency_store.complete(idempotency_key, claim["owner"], summary)
+        _audit_execution(
+            ts_ms=now_ms(),
+            request_id=idempotency_key,
+            tool="replace_cex_order",
+            ok=True,
+            mode="live",
+            venue="cex",
+            exchange=exchange,
+            market_type=market_type,
+            summary=summary,
+        )
+        return _json_ok(summary)
     except Exception as e:
-        return _json_internal_error("cex_error", "Exchange operation failed.", e)
+        return _json_internal_error("cex_error", "Exchange operation failed.", _uncertain_execution(idempotency_key, claim, e, effect_started))
 
 
 def wait_for_cex_order(

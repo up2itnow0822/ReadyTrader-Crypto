@@ -48,6 +48,15 @@ file and the tests that enforce them.
 - **Token storage.** The JWT lives in memory + `sessionStorage`
   (`readytrader.auth.token`, in `src/lib/authStore.ts`) only. Never `localStorage`,
   never a cookie, never logged.
+- **WebSocket capabilities, not JWT URLs.** `useWebSocket` uses `apiFetch` to POST
+  `/api/auth/ws-ticket` before every authenticated connection or reconnect. The
+  30-second, single-use ticket is sent in `Sec-WebSocket-Protocol` as
+  `readytrader, ticket.<opaque>`; only `readytrader` is selected by the server.
+  Never put the admin JWT or ticket in a URL. The server binds tickets to the
+  issuing Origin and validates configured origins; expired sessions stop retrying.
+  Pending ticket responses from a previous session or unmounted hook are ignored.
+  Tickets are process-local: multi-worker APIs need sticky routing or a shared
+  atomic ticket store; a ticket reaching another worker fails closed.
 - **No `dangerouslySetInnerHTML`, ever.** Proposal `rationale` and other
   operator-supplied/agent-supplied text are untrusted and are rendered as plain text
   (React's default escaping) — see `ApprovalCard.tsx` and its XSS test. If a future
@@ -101,6 +110,8 @@ file and the tests that enforce them.
 - New dependencies: keep `npm audit` at zero findings, including
   `devDependencies`. Check before adding, not after. `npm audit --omit=dev` is
   not the gate — it hides eslint/tsc toolchain advisories.
+- `package.json` `overrides` aliases `fast-glob` to `tinyglobby` because every `braces` release is
+  flagged (GHSA-vfj7-8cjw-p6xm, no patched version); drop it once `braces` has a fix.
 - Ports for local dev/e2e must come from the 3100-3199 (Next) / 8100-8199 (API)
   ranges used by this repo's other worktrees, to avoid colliding with a sibling
   worktree's servers.
@@ -130,9 +141,12 @@ Run from `frontend/`:
   `frontend/playwright-report/` (`PW_REPORT_DIR` overrides). Deliberately `workers: 1` / `fullyParallel: false` —
   one spec kills and restarts the harness process to test reconnection, and several
   specs assert exact request counts.
+  The test-only `/__test/reset-login-budget` route is called once per fresh test
+  Page by `e2e/fixtures.ts`; login limits remain active inside each journey and in
+  every product API process. Never add a product flag to disable login throttling.
 - Backend contract check after any API-facing change: from the repo root,
-  `pytest tests/test_api_health_contract.py` (the one new backend test file this
-  worktree is allowed to add) plus the full suite to confirm no regression.
+  `pytest tests/test_api_health_contract.py tests/test_api_security_repairs.py`
+  plus the full suite to confirm no regression.
 
 ## Child DOX Index
 

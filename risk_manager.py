@@ -1,3 +1,4 @@
+import math
 from typing import Any, Dict, Optional
 
 MAX_DRAWDOWN_PCT = 0.10
@@ -31,7 +32,21 @@ class RiskGuardian:
         Without it (the advisory validate_trade_risk tool) a BUY is taken to add exposure and a SELL
         not.
         """
-        adds_exposure = (str(side).lower() == "buy") if increases_exposure is None else bool(increases_exposure)
+        side = str(side).strip().lower()
+        if side not in {"buy", "sell"} or (increases_exposure is not None and not isinstance(increases_exposure, bool)):
+            return {"allowed": False, "reason": "Risk Guardian requires a valid side and exposure classification."}
+        numbers = (amount_usd, portfolio_value, sentiment_score, daily_loss_pct, current_drawdown_pct)
+        try:
+            if any(isinstance(value, bool) or not math.isfinite(float(value)) for value in numbers):
+                raise ValueError("non-finite risk input")
+            amount_usd, portfolio_value, sentiment_score, daily_loss_pct, current_drawdown_pct = map(float, numbers)
+        except (TypeError, ValueError, OverflowError):
+            return {"allowed": False, "reason": "Risk Guardian requires finite numeric account and trade inputs."}
+        if amount_usd < 0 or portfolio_value < 0 or current_drawdown_pct < 0 or not -1 <= sentiment_score <= 1:
+            return {"allowed": False, "reason": "Risk Guardian received an invalid amount, portfolio value, drawdown, or sentiment."}
+        adds_exposure = (side == "buy") if increases_exposure is None else increases_exposure
+        if adds_exposure and portfolio_value <= 0:
+            return {"allowed": False, "reason": "Risk Guardian cannot size new exposure against a zero-value portfolio."}
         halted = "Orders that add exposure are halted; orders that reduce or close a position are allowed."
 
         # Rule 0: account state. A drawdown of 10% from the account's best value, or a 5% loss today,
@@ -45,7 +60,7 @@ class RiskGuardian:
         # account's value.
         if portfolio_value > 0:
             trade_pct = amount_usd / portfolio_value
-            if trade_pct > MAX_POSITION_PCT:
+            if not math.isfinite(trade_pct) or trade_pct > MAX_POSITION_PCT:
                 return {"allowed": False, "reason": f"Position size too large ({trade_pct:.1%}). Max allowed is {MAX_POSITION_PCT:.0%}."}
 
         # Rule 2: "Don't Catch Falling Knives" (sentiment). A measured bull-bear spread below -0.5

@@ -1,0 +1,12 @@
+{
+  "allowed_chain_ids": ["1"],
+  "allowed_destinations": [],
+  "allowed_token_contracts": [],
+  "allowed_token_recipients": [],
+  "allowed_spenders": [],
+  "max_value_wei": "0",
+  "max_token_amount": "0",
+  "max_gas": 21000,
+  "max_fee_per_gas": "0",
+  "max_total_fee_wei": "0"
+}

@@ -18,6 +18,7 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.lock.txt
       - name: Verify locked Python dependencies
+        id: python_deps
         run: |
           python -m venv .venv
           .venv/bin/python -m pip install --upgrade pip
@@ -26,13 +27,45 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24.19.0"
       - name: Install frontend dependencies
+        id: frontend_deps
         run: npm ci --prefix frontend
       - name: Audit frontend dependencies
+        id: frontend_audit
         run: npm audit --prefix frontend
-      - name: Run quality and security gates
-        run: |
-          PATH="$PWD/.venv/bin:$PATH" make check
-          PATH="$PWD/.venv/bin:$PATH" make security
-          .venv/bin/pip-audit -r requirements.lock.txt
+      - name: Run quality gates
+        id: quality
+        if: ${{ !cancelled() && steps.python_deps.outcome == 'success' && steps.frontend_deps.outcome == 'success' }}
+        run: PATH="$PWD/.venv/bin:$PATH" make check
+      - name: Run security gates
+        id: security
+        if: ${{ !cancelled() && steps.python_deps.outcome == 'success' && steps.frontend_deps.outcome == 'success' }}
+        run: PATH="$PWD/.venv/bin:$PATH" make security
+      - name: Typecheck frontend
+        id: frontend_types
+        if: ${{ !cancelled() && steps.python_deps.outcome == 'success' && steps.frontend_deps.outcome == 'success' }}
+        run: npm run typecheck --prefix frontend
+      - name: Test frontend
+        id: frontend_tests
+        if: ${{ !cancelled() && steps.python_deps.outcome == 'success' && steps.frontend_deps.outcome == 'success' }}
+        run: npm run test --prefix frontend
+      - name: Build frontend
+        id: frontend_build
+        if: ${{ !cancelled() && steps.python_deps.outcome == 'success' && steps.frontend_deps.outcome == 'success' }}
+        run: npm run build --prefix frontend
+      - name: Audit locked Python dependencies
+        id: python_audit
+        if: ${{ !cancelled() && steps.python_deps.outcome == 'success' }}
+        run: .venv/bin/pip-audit -r requirements.lock.txt
+      - name: Install browser test runtime
+        id: browser_install
+        if: ${{ !cancelled() && steps.python_deps.outcome == 'success' && steps.frontend_deps.outcome == 'success' }}
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Test browser journeys
+        id: frontend_e2e
+        if: ${{ !cancelled() && steps.python_deps.outcome == 'success' && steps.frontend_deps.outcome == 'success' && steps.browser_install.outcome == 'success' }}
+        env:
+          PW_PYTHON_PATH: ${{ github.workspace }}/.venv/bin/python
+        run: env -u NODE_ENV npm run e2e --prefix frontend

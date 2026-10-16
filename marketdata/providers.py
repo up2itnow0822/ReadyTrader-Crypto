@@ -95,6 +95,9 @@ class CcxtMarketDataProvider(MarketDataProvider):
 
     def fetch_ticker(self, symbol: str) -> Dict[str, Any]:
         raw = self.exchange_provider.fetch_ticker(symbol)
+        # Reject booleans before float() erases their invalid source type.
+        if any(isinstance(raw.get(field), bool) for field in ("last", "bid", "ask")):
+            raise ValueError("Invalid boolean ticker price")
         # Ensure canonical keys for bus scoring.
         last = float(raw.get("last") or 0.0)
         bid = raw.get("bid")

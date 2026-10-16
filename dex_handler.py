@@ -82,31 +82,18 @@ class DexHandler:
         from_address: str,
         slippage: float = 1.0,
     ) -> Dict[str, Any]:
-        """
-        Build transaction data for a swap.
-        """
-        if not self.api_key:
-            return {"error": "ONEINCH_API_KEY not set"}
+        """Live aggregation is contained until an audited intent verifier exists.
 
-        chain_id = self._get_chain_id(chain)
-        url = f"{self.BASE_URL}/{chain_id}/swap"
-
-        params = {
-            "src": token_in,
-            "dst": token_out,
-            "amount": amount,
-            "from": from_address,
-            "slippage": slippage,
-            "disableEstimate": "true",  # Handle gas estimation separately if needed
+        A router allowlist and decoded outer selector do not constrain arbitrary
+        route executors, permits, recipients, output floors, or deadlines. Never
+        return signable third-party calldata under this incomplete contract.
+        """
+        return {
+            "code": "unsupported_swap_semantics",
+            "error": (
+                "Live aggregated swaps are disabled: canonical approved intent and full router semantics cannot be verified. Paper swaps remain available."
+            ),
         }
-
-        timeout = float(os.getenv("HTTP_TIMEOUT_SEC", "10"))
-        try:
-            response = requests.get(url, headers=self.headers, params=params, timeout=timeout)
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-            return {"error": f"1inch Swap Error: {str(e)}"}
 
     def check_allowance(self, chain: str, token_address: str, wallet_address: str) -> Dict[str, Any]:
         """

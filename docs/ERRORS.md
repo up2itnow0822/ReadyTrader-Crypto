@@ -49,55 +49,94 @@ field as authoritative and check server logs (`event=tool_error` per `RUNBOOK.md
 
 ### Execution tool errors (MCP)
 
+- **`unsupported_swap_semantics`**: live aggregated swaps are unavailable until a complete canonical approved intent and router verifier exist. No proposal, signing or broadcast occurs; paper swaps remain supported.
+
+- **`idempotency_key_required`**: a live order, replacement or transfer needs a 1–256-character key before any irreversible effect.
+
+- **`idempotency_conflict`**: this key already names a different canonical execution payload.
+
+- **`idempotency_legacy_record`**: the key predates payload binding; reconcile its old result rather than replaying it.
+
+- **`execution_pending`**: an existing durable claim owns this operation; wait and inspect it, never submit a new key to bypass it.
+
+- **`execution_outcome_uncertain`**: the operation may have reached the venue. Reconcile using returned client-order ID or native transaction hash/sender nonce. A not-found lookup alone does not prove no execution.
+
+- **`idempotency_claim_lost`**: only the original claim owner can record a terminal outcome; investigate persistence before proceeding.
+
 - **Argument validation** (before any tool runs)
+
   - Meaning: an argument of the wrong type (text that is not a number, or `true`/`false` for an
     amount, price, limit, value or score) is refused by the MCP argument validation; the client
     gets a tool error naming the argument (`true` used to be taken as 1).
+
 - **`paper_engine_missing`**
+
   - Meaning: `PAPER_MODE=true` but the paper engine failed to initialize.
   - Fix: check `data/paper.db` is writable; restart the process.
+
 - **`paper_mode_not_supported`**
+
   - Meaning: the tool works on a live exchange account or chain: `transfer_eth`, the private-WS
     tools, and the exchange-order tools (`get_cex_order`, `cancel_cex_order`,
     `cancel_all_cex_orders`, `list_cex_open_orders`, `list_cex_orders`, `get_cex_my_trades`,
     `replace_cex_order`, `wait_for_cex_order`). Paper orders fill immediately and never rest on an
     exchange; paper mode never reaches an exchange account. `get_cex_balance` shows the paper wallet.
   - Fix: these only work when `PAPER_MODE=false` and live execution is allowed.
+
 - **`paper_price_required`**
+
   - Meaning: paper orders and swaps fill at the market price, and the market-data bus has no usable
     price for the symbol (for a swap: no FROM/TO, TO/FROM or USDT route).
   - Fix: call `get_crypto_price` to confirm data is flowing for that symbol; see the market data
     section below.
+
 - **`limit_not_marketable`**
+
   - Meaning: a paper limit BUY below the market (or SELL above it). It would rest on the book, and
     paper mode does not simulate resting orders. `data` has `limit_price` and `market_price`.
   - Fix: use a market order, or a limit at or through the market (it fills at the market price).
+
 - **`invalid_side`**, **`invalid_order_type`**, **`invalid_amount`**
+
   - Meaning: `place_cex_order` / `swap_tokens` got a side other than buy/sell, an order type other
     than market/limit, or a non-positive amount.
+
 - **`approval_required`**
+
   - Meaning: `replace_cex_order` with `EXECUTION_APPROVAL_MODE=approve_each`. A replacement is a new
     order, and it cannot be proposed.
   - Fix: `cancel_cex_order`, then `place_cex_order` (which returns a proposal).
+
 - **`live_trading_disabled`**, **`trading_halted`**
+
   - Meaning: live execution refused by `LIVE_TRADING_ENABLED` (not `true`) or the kill switch
     `TRADING_HALTED`.
+
 - **`execution_mode_blocked`**
+
   - Meaning: The requested tool is blocked by `EXECUTION_MODE` (`dex`/`cex`/`hybrid`) for that venue.
   - Fix: set `EXECUTION_MODE` to allow the venue you want, or use the corresponding venue tool.
+
 - **`invalid_price`**
+
   - Meaning: `place_cex_order` was given a non-positive or non-numeric `price`, or a limit order
     without one.
   - Fix: pass a positive price for a limit order; a market order needs none.
+
 - **`timeout`**
+
   - Meaning: `wait_for_cex_order` did not see a terminal order state within `timeout_sec`.
   - Fix: poll again with `get_cex_order`, or raise `timeout_sec`.
+
 - **`cex_error`**, **`execution_error`**, **`transfer_error`**
+
   - Meaning: an unexpected exchange/RPC/signing failure. The message is a fixed string ("Exchange
     operation failed."); the exception is in the server's process log. The operator's own switches
     and policy never answer with these: they have their own codes (above and below).
   - Fix: check the server log for the underlying exception and the exchange's or RPC's status.
+
 - **`rate_limited`**
+
   - Meaning: the HTTP API's rate limit (`RATE_LIMIT_DEFAULT_PER_MIN`, per client) was exceeded for
     the current 60 s window. MCP tools are not rate-limited.
   - Fix: slow down, or raise `RATE_LIMIT_DEFAULT_PER_MIN`.
@@ -153,7 +192,7 @@ No MCP tool raises these; they only appear in HTTP responses. See
   - Fix:
     - check `GET /api/marketdata/status` (HTTP) for per-provider candidates/health
     - tune thresholds: `MARKETDATA_MAX_AGE_MS*`, `MARKETDATA_OUTLIER_MAX_PCT`, `MARKETDATA_OUTLIER_WINDOW_MS`
-    - disable fail-closed: `MARKETDATA_FAIL_CLOSED=false`
+    - paper-only experiments may disable fail-closed; live/non-paper startup requires `MARKETDATA_FAIL_CLOSED=true`
 - **`market_regime_error`** (from `get_market_regime`)
   - Meaning: regime detection failed (usually the same underlying OHLCV fetch problem above).
 
@@ -166,3 +205,9 @@ No MCP tool raises these; they only appear in HTTP responses. See
   - Fix: set the key (`docs/SENTIMENT.md`), or use `get_free_news` (no key).
 - **`source_unavailable`** (`get_financial_news`, `get_news`, `get_free_news`, `get_sentiment`, `get_social_sentiment`)
   - Meaning: the source did not answer. A failure is never reported as "no news".
+
+### Resource and durable execution limits
+
+- **`idempotency_persistence_required`**: live effects require a persistent SQLite claim store; in-memory databases are refused.
+- **`resource_busy`**: research concurrency capacity is full; wait before another request.
+- **`invalid_insight`**: an insight violates bounded fields, confidence or TTL requirements.

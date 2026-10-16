@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -204,11 +205,16 @@ class TestAuditLogging:
 class TestMarketDataIntegration:
     """Test market data integration with execution."""
 
-    def test_marketdata_bus_ticker_fetch(self, fresh_container):
+    def test_marketdata_bus_ticker_fetch(self, fresh_container, monkeypatch):
         """Test market data bus can fetch ticker data."""
-        # Store mock data in the ingest store
+        # A stale fixed timestamp falls through to CCXT instead of testing ingestion.
+        # Prohibit external fallback even if this test regresses.
+        fallback = Mock(side_effect=AssertionError("unexpected external market-data request"))
+        for provider in fresh_container.marketdata_bus._providers:
+            if provider.provider_id == "ccxt_rest":
+                monkeypatch.setattr(type(provider), "fetch_ticker", fallback)
         fresh_container.marketdata_store.put_ticker(
-            symbol="BTC/USDT", last=50000.0, bid=49999.0, ask=50001.0, timestamp_ms=1704067200000, source="test_ingest", ttl_sec=60.0
+            symbol="BTC/USDT", last=50000.0, bid=49999.0, ask=50001.0, timestamp_ms=int(time.time() * 1000), source="test_ingest", ttl_sec=60.0
         )
 
         # Fetch should return our ingested data
@@ -216,3 +222,5 @@ class TestMarketDataIntegration:
 
         assert result.data["last"] == 50000.0
         assert result.source == "ingest"
+        assert result.meta["stale"] is False
+        fallback.assert_not_called()

@@ -1,6 +1,6 @@
 Authlib==1.8.0
 CacheControl==0.14.4
-PyJWT==2.14.0
+PyJWT==2.15.1
 PyYAML==6.0.3
 Pygments==2.21.0
 RestrictedPython==8.4
@@ -82,10 +82,9 @@ mdit-py-plugins==0.6.1
 mdurl==0.1.2
 more-itertools==11.1.0
 msgpack==1.2.2
-multidict==6.9.0
+multidict==6.9.1
 newsapi-python==0.2.7
 numpy==2.5.3
-oauthlib==3.3.1
 openapi-pydantic==0.5.1
 opentelemetry-api==1.44.0
 opentelemetry-exporter-otlp-proto-common==1.44.0
@@ -138,7 +137,6 @@ pyunormalize==17.0.0
 redis==8.1.0
 referencing==0.37.0
 regex==2026.9.10
-requests-oauthlib==2.0.0
 requests==2.33.0
 respx==0.23.1
 rich-rst==2.1.0
@@ -157,7 +155,6 @@ ta==0.11.0
 tomli==2.4.1
 tomli_w==1.2.0
 toolz==1.1.0
-tweepy==4.16.0
 types-requests==2.33.0.20260906
 typing-inspection==0.4.4
 typing_extensions==4.16.0
