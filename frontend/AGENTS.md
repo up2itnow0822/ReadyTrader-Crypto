@@ -101,6 +101,9 @@ file and the tests that enforce them.
 - New dependencies: keep `npm audit` at zero findings, including
   `devDependencies`. Check before adding, not after. `npm audit --omit=dev` is
   not the gate — it hides eslint/tsc toolchain advisories.
+- `package.json` `overrides` maps `fast-glob` to `tinyglobby` (API-compatible for
+  `eslint-config-next`) because `fast-glob` → `micromatch` → `braces` has an unpatched
+  advisory; drop the override once a patched `braces` exists.
 - Ports for local dev/e2e must come from the 3100-3199 (Next) / 8100-8199 (API)
   ranges used by this repo's other worktrees, to avoid colliding with a sibling
   worktree's servers.
