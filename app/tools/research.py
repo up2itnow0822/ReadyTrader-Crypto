@@ -95,8 +95,11 @@ def register_research_tools(mcp: FastMCP):
     @tool_budget(limit=60)
     def get_latest_insights(symbol: str = "") -> str:
         """[PHASE 3] Get the most recent high-signal insights."""
-        insights = global_container.insight_store.get_latest_insights(symbol if symbol else None)
-        return _json_ok({"insights": [vars(i) for i in insights]})
+        try:
+            insights = global_container.insight_store.get_latest_insights(symbol if symbol else None)
+            return _json_ok({"insights": [vars(i) for i in insights]})
+        except ValueError as e:
+            return _json_err("invalid_insight", str(e))
 
     @mcp.tool()
     @tool_budget(limit=6, backtest=True)

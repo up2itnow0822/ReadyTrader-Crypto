@@ -39,6 +39,11 @@ boundary. **No git tag or GitHub Release exists for 0.2.0 yet** (`git tag -l` an
 
 ### Unreleased
 
+- **PR #23 Copilot follow-up:** `get_latest_insights` returns `invalid_insight` instead of
+  letting store `ValueError`s escape; `apiFetch` clears a 401 only when that request's
+  token is still the current session; `GET /api/insights` translates store validation
+  (`limit` outside `[1, 100]`, blank/oversized `symbol`) to HTTP 400.
+
 - **Public-release UAT, 2026-09-24** (`uat/UAT-LOG.md`, run `2026-09-24-01`):
 
   - **The Agent Zero integration works in current Agent Zero** (DOC-06, found by the Agent Zero

@@ -806,7 +806,10 @@ async def list_strategies(user: dict = Depends(require_auth), limit: int = 20):
 @app.get("/api/insights")
 async def list_insights(user: dict = Depends(require_auth), symbol: str = "", limit: int = 10):
     """List recent market insights."""
-    insights = global_container.insight_store.get_latest_insights(symbol=symbol if symbol else None, limit=limit)
+    try:
+        insights = global_container.insight_store.get_latest_insights(symbol=symbol if symbol else None, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"insights": [vars(i) for i in insights]}
 
 
